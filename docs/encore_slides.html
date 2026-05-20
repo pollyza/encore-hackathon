@@ -1,0 +1,1963 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚡ ENCORE · V2G Engine — Pitch Deck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=JetBrains+Mono:wght@400;700&display=swap">
+<style>
+/* ===========================================
+   CSS CUSTOM PROPERTIES — Encore theme
+   =========================================== */
+:root {
+    --bg-primary:    #050810;
+    --bg-secondary:  #0a0d14;
+    --bg-panel:      #0e1422;
+    --bg-line:       #1a2030;
+
+    --c-red:         #ff4655;
+    --c-gold:        #ffcd75;
+    --c-teal:        #5af5e0;
+    --c-purple:      #a044ff;
+    --c-green:       #5ff5a0;
+    --c-orange:      #ff8800;
+
+    --text-primary:    #f4f4f4;
+    --text-secondary:  #b3bccc;
+    --text-muted:      #6a7588;
+    --text-dim:        #3a4458;
+
+    --font-pixel:    'Press Start 2P', monospace;
+    --font-crt:      'VT323', monospace;
+    --font-mono:     'JetBrains Mono', monospace;
+
+    --title-size:    clamp(2rem, 6.5vw, 5.5rem);
+    --h2-size:       clamp(1.4rem, 4vw, 2.8rem);
+    --h3-size:       clamp(1rem, 2.5vw, 1.6rem);
+    --body-size:     clamp(0.85rem, 1.4vw, 1.15rem);
+    --small-size:    clamp(0.7rem, 1.1vw, 0.95rem);
+    --tiny-size:     clamp(0.55rem, 0.85vw, 0.78rem);
+
+    --slide-padding: clamp(1.2rem, 4vw, 3.5rem);
+    --content-gap:   clamp(0.6rem, 2vw, 1.6rem);
+    --element-gap:   clamp(0.3rem, 1vw, 0.8rem);
+
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --duration-fast:   0.3s;
+    --duration-normal: 0.7s;
+    --duration-slow:   1.2s;
+}
+
+/* ===========================================
+   VIEWPORT-BASE.CSS (mandatory)
+   =========================================== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; overflow-x: hidden; }
+html {
+    scroll-snap-type: y mandatory;
+    scroll-behavior: smooth;
+    background: var(--bg-primary);
+}
+body {
+    font-family: var(--font-crt);
+    color: var(--text-primary);
+    background: var(--bg-primary);
+    /* Background atmosphere: corner radial accents */
+    background-image:
+        radial-gradient(ellipse 80% 50% at 0% 0%,   rgba(255,70,85,0.10),  transparent),
+        radial-gradient(ellipse 70% 50% at 100% 0%, rgba(255,205,117,0.07), transparent),
+        radial-gradient(ellipse 60% 40% at 0% 100%, rgba(160,68,255,0.08), transparent),
+        radial-gradient(ellipse 70% 40% at 100% 100%, rgba(90,245,224,0.06), transparent);
+    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
+}
+.slide {
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+.slide-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    max-height: 100%;
+    overflow: hidden;
+    padding: var(--slide-padding);
+    position: relative;
+    z-index: 2;
+}
+img, .image-container {
+    max-width: 100%;
+    max-height: min(50vh, 400px);
+    object-fit: contain;
+}
+
+/* ===========================================
+   GLOBAL BACKGROUND EFFECTS
+   - subtle grid pattern overlay
+   - scanline overlay (CRT)
+   =========================================== */
+body::before {
+    /* Grid pattern */
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+        linear-gradient(rgba(90,245,224,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(90,245,224,0.025) 1px, transparent 1px);
+    background-size: clamp(28px, 4vw, 48px) clamp(28px, 4vw, 48px);
+    z-index: 1;
+}
+body::after {
+    /* Scanlines */
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+        180deg,
+        rgba(0,0,0,0) 0,
+        rgba(0,0,0,0) 2px,
+        rgba(0,0,0,0.12) 3px,
+        rgba(0,0,0,0) 4px
+    );
+    z-index: 999;
+    mix-blend-mode: multiply;
+}
+
+/* ===========================================
+   PROGRESS BAR + NAV DOTS + HINT
+   =========================================== */
+.progress-bar {
+    position: fixed;
+    top: 0; left: 0;
+    width: 0%;
+    height: 3px;
+    background: linear-gradient(90deg, var(--c-red), var(--c-gold), var(--c-teal), var(--c-purple));
+    box-shadow: 0 0 12px rgba(255,70,85,0.6);
+    z-index: 1000;
+    transition: width 0.4s ease;
+}
+.nav-dots {
+    position: fixed;
+    right: clamp(0.6rem, 2vw, 1.4rem);
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.4rem, 1vw, 0.7rem);
+}
+.nav-dot {
+    width: 8px; height: 8px;
+    border: 1px solid var(--text-dim);
+    background: transparent;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.3s var(--ease-out-expo);
+}
+.nav-dot:hover { border-color: var(--c-teal); transform: scale(1.4); }
+.nav-dot.active {
+    background: var(--c-red);
+    border-color: var(--c-red);
+    box-shadow: 0 0 12px rgba(255,70,85,0.6);
+    transform: scale(1.3);
+}
+.keyboard-hint {
+    position: fixed;
+    bottom: clamp(0.8rem, 2vw, 1.4rem);
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--text-muted);
+    font-size: var(--tiny-size);
+    letter-spacing: 2px;
+    font-family: var(--font-mono);
+    z-index: 1000;
+    pointer-events: none;
+    opacity: 0.6;
+}
+.keyboard-hint .key {
+    border: 1px solid var(--text-dim);
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin: 0 4px;
+}
+.slide-counter {
+    position: fixed;
+    top: clamp(0.6rem, 2vw, 1.2rem);
+    right: clamp(0.6rem, 2vw, 1.4rem);
+    color: var(--c-red);
+    font-family: var(--font-pixel);
+    font-size: clamp(0.5rem, 0.85vw, 0.7rem);
+    letter-spacing: 2px;
+    z-index: 1000;
+    opacity: 0.85;
+}
+
+/* ===========================================
+   REVEAL ANIMATIONS
+   Triggered when .slide.visible is set by intersection observer
+   =========================================== */
+.reveal {
+    opacity: 0;
+    transform: translateY(28px);
+    transition: opacity 0.7s var(--ease-out-expo),
+                transform 0.7s var(--ease-out-expo);
+    transition-delay: var(--delay, 0s);
+}
+.visible .reveal { opacity: 1; transform: translateY(0); }
+.reveal-left  { opacity: 0; transform: translateX(-36px); transition: opacity 0.8s var(--ease-out-expo), transform 0.8s var(--ease-out-expo); transition-delay: var(--delay, 0s); }
+.visible .reveal-left  { opacity: 1; transform: translateX(0); }
+.reveal-right { opacity: 0; transform: translateX(36px); transition: opacity 0.8s var(--ease-out-expo), transform 0.8s var(--ease-out-expo); transition-delay: var(--delay, 0s); }
+.visible .reveal-right { opacity: 1; transform: translateX(0); }
+.reveal-scale { opacity: 0; transform: scale(0.85); transition: opacity 0.8s var(--ease-out-expo), transform 0.8s var(--ease-out-back); transition-delay: var(--delay, 0s); }
+.visible .reveal-scale { opacity: 1; transform: scale(1); }
+.reveal-blur  { opacity: 0; filter: blur(12px); transition: opacity 1s var(--ease-out-expo), filter 1s var(--ease-out-expo); transition-delay: var(--delay, 0s); }
+.visible .reveal-blur { opacity: 1; filter: blur(0); }
+
+/* ===========================================
+   COMMON TEXT STYLES
+   =========================================== */
+.eyebrow {
+    color: var(--c-red);
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: clamp(0.7rem, 1.1vw, 0.95rem);
+    letter-spacing: 0.4em;
+    margin-bottom: clamp(0.5rem, 1.2vw, 1rem);
+}
+.eyebrow::before { content: '⚡ '; }
+h2.section-title {
+    font-family: var(--font-crt);
+    font-size: var(--h2-size);
+    line-height: 1.05;
+    color: var(--text-primary);
+    margin-bottom: clamp(0.8rem, 2vw, 1.6rem);
+    letter-spacing: 1px;
+    max-width: 22ch;
+}
+h2.section-title .accent { color: var(--c-gold); }
+h2.section-title .red { color: var(--c-red); }
+.lead {
+    font-family: var(--font-mono);
+    color: var(--text-secondary);
+    font-size: var(--body-size);
+    line-height: 1.55;
+    max-width: 56ch;
+}
+.lead strong { color: var(--text-primary); }
+.cursor-blink::after {
+    content: '_';
+    display: inline-block;
+    margin-left: 4px;
+    color: var(--c-red);
+    animation: blink 1s steps(2) infinite;
+}
+@keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+}
+
+/* ===========================================
+   SLIDE 1 — TITLE
+   Big ENCORE wordmark + boot-screen feel + glitch
+   =========================================== */
+.title-slide {
+    align-items: center;
+    justify-content: center;
+}
+.title-slide .slide-content {
+    align-items: center;
+    text-align: center;
+    gap: clamp(0.6rem, 2vw, 1.4rem);
+}
+.boot-badge {
+    color: var(--c-red);
+    border: 1px solid var(--c-red);
+    padding: clamp(0.3rem, 0.9vw, 0.5rem) clamp(0.8rem, 2vw, 1.5rem);
+    font-family: var(--font-mono);
+    font-weight: 700;
+    letter-spacing: 0.4em;
+    font-size: clamp(0.6rem, 0.95vw, 0.85rem);
+    border-radius: 3px;
+    box-shadow: 0 0 24px rgba(255,70,85,0.25), inset 0 0 12px rgba(255,70,85,0.1);
+}
+.title-encore {
+    font-family: var(--font-pixel);
+    font-size: clamp(2.2rem, 9vw, 7rem);
+    color: var(--text-primary);
+    letter-spacing: 0.04em;
+    line-height: 1;
+    position: relative;
+    text-shadow:
+        0 0 4px var(--text-primary),
+        0 0 20px rgba(255,70,85,0.4),
+        4px 0 0 rgba(255,70,85,0.35),
+       -4px 0 0 rgba(90,245,224,0.35);
+}
+.title-encore .bolt {
+    color: var(--c-red);
+    font-size: 0.7em;
+    margin-right: 0.12em;
+    vertical-align: 0.05em;
+    animation: pulse-bolt 2.4s ease-in-out infinite;
+}
+@keyframes pulse-bolt {
+    0%, 100% { opacity: 1; text-shadow: 0 0 16px var(--c-red); }
+    50%      { opacity: 0.7; text-shadow: 0 0 4px var(--c-red); }
+}
+.title-cn {
+    color: var(--text-secondary);
+    font-size: clamp(1rem, 2.4vw, 1.8rem);
+    letter-spacing: clamp(0.5rem, 2vw, 1.5rem);
+    font-family: var(--font-crt);
+}
+.title-tagline {
+    color: var(--c-gold);
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: clamp(0.85rem, 1.5vw, 1.2rem);
+    letter-spacing: 0.4em;
+    margin-top: clamp(0.4rem, 1.5vw, 1rem);
+}
+.title-stamp {
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    font-size: clamp(0.6rem, 0.9vw, 0.8rem);
+    letter-spacing: 0.3em;
+    margin-top: clamp(0.2rem, 0.5vw, 0.4rem);
+}
+.title-rails {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+}
+.title-rails::before,
+.title-rails::after {
+    content: '';
+    position: absolute;
+    top: 8%; bottom: 8%;
+    width: 1px;
+    background: linear-gradient(180deg, transparent, rgba(255,70,85,0.4), transparent);
+    box-shadow: 0 0 8px rgba(255,70,85,0.5);
+}
+.title-rails::before { left: 22%; }
+.title-rails::after  { right: 22%; }
+
+/* ===========================================
+   SLIDE 2 — PROBLEM (stat pair)
+   =========================================== */
+.problem-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(1rem, 2.5vw, 2.4rem);
+    margin-top: clamp(1rem, 2.5vw, 2rem);
+    max-width: 90vw;
+}
+.stat {
+    background: rgba(255,70,85,0.05);
+    border-left: 3px solid var(--c-red);
+    padding: clamp(1rem, 2.5vw, 1.8rem);
+    border-radius: 0 6px 6px 0;
+}
+.stat.good {
+    background: rgba(90,245,224,0.04);
+    border-left-color: var(--c-teal);
+}
+.stat .num {
+    font-family: var(--font-pixel);
+    color: var(--c-red);
+    font-size: clamp(1.4rem, 4vw, 2.8rem);
+    line-height: 1;
+    margin-bottom: clamp(0.4rem, 1.2vw, 0.9rem);
+}
+.stat.good .num { color: var(--c-teal); }
+.stat .lbl {
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: var(--small-size);
+    line-height: 1.5;
+}
+
+/* ===========================================
+   SLIDE 3 — VISION (3 columns)
+   =========================================== */
+.vision-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: clamp(0.8rem, 2vw, 1.6rem);
+    margin-top: clamp(1rem, 2.5vw, 1.8rem);
+    max-width: 1100px;
+}
+.v-step {
+    background: var(--bg-panel);
+    border: 1px solid var(--bg-line);
+    padding: clamp(1rem, 2vw, 1.6rem);
+    border-radius: 6px;
+    position: relative;
+    overflow: hidden;
+}
+.v-step::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent, var(--c-red));
+}
+.v-step:nth-child(1) { --accent: var(--c-red); }
+.v-step:nth-child(2) { --accent: var(--c-gold); }
+.v-step:nth-child(3) { --accent: var(--c-teal); }
+.v-step .step-num {
+    color: var(--accent);
+    font-family: var(--font-pixel);
+    font-size: clamp(0.6rem, 0.9vw, 0.85rem);
+    letter-spacing: 2px;
+    margin-bottom: clamp(0.6rem, 1.5vw, 1rem);
+}
+.v-step .ico {
+    font-size: clamp(1.8rem, 4vw, 2.6rem);
+    line-height: 1;
+    margin-bottom: clamp(0.4rem, 1vw, 0.8rem);
+}
+.v-step h3 {
+    color: var(--text-primary);
+    font-family: var(--font-pixel);
+    font-size: clamp(0.7rem, 1.1vw, 1rem);
+    letter-spacing: 2px;
+    margin-bottom: clamp(0.5rem, 1.2vw, 0.9rem);
+}
+.v-step p {
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: var(--small-size);
+    line-height: 1.55;
+}
+
+/* ===========================================
+   SLIDE 4 — LOOP
+   3-stage flow with pulsing arrows
+   =========================================== */
+.loop-row {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto 1fr;
+    align-items: stretch;
+    gap: clamp(0.5rem, 1.5vw, 1.2rem);
+    max-width: 1200px;
+    margin-top: clamp(1rem, 2.5vw, 1.8rem);
+}
+.loop-box {
+    background: var(--bg-panel);
+    border: 2px solid;
+    border-radius: 8px;
+    padding: clamp(1rem, 2vw, 1.6rem) clamp(0.8rem, 1.5vw, 1.2rem);
+    text-align: center;
+    position: relative;
+    display: flex; flex-direction: column;
+    justify-content: center; gap: clamp(0.3rem, 0.8vw, 0.6rem);
+}
+.loop-box.watch  { border-color: var(--c-teal); box-shadow: 0 0 24px rgba(90,245,224,0.15); }
+.loop-box.play   { border-color: var(--c-gold); box-shadow: 0 0 24px rgba(255,205,117,0.15); }
+.loop-box.replay { border-color: var(--c-purple);box-shadow: 0 0 24px rgba(160,68,255,0.18); }
+.loop-stage {
+    font-family: var(--font-pixel);
+    font-size: clamp(0.5rem, 0.8vw, 0.7rem);
+    letter-spacing: 2px;
+}
+.loop-box.watch .loop-stage  { color: var(--c-teal); }
+.loop-box.play .loop-stage   { color: var(--c-gold); }
+.loop-box.replay .loop-stage { color: var(--c-purple); }
+.loop-box .ico { font-size: clamp(2rem, 4.5vw, 3rem); line-height: 1; }
+.loop-box .label {
+    color: var(--text-primary);
+    font-family: var(--font-pixel);
+    font-size: clamp(0.7rem, 1.2vw, 1rem);
+    letter-spacing: 2px;
+}
+.loop-box .desc {
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: var(--small-size);
+    line-height: 1.5;
+}
+.loop-arrow {
+    align-self: center;
+    color: var(--c-red);
+    font-family: var(--font-pixel);
+    font-size: clamp(1rem, 2vw, 1.6rem);
+    animation: arrow-pulse 1.8s ease-in-out infinite;
+}
+.loop-arrow.a2 { animation-delay: 0.6s; }
+@keyframes arrow-pulse {
+    0%, 100% { opacity: 0.4; transform: translateX(-4px); }
+    50%      { opacity: 1; transform: translateX(0); text-shadow: 0 0 10px rgba(255,70,85,0.7); }
+}
+.loop-cn {
+    margin-top: clamp(1.5rem, 3.5vw, 2.5rem);
+    text-align: center;
+    color: var(--c-gold);
+    font-family: var(--font-crt);
+    font-size: clamp(1.4rem, 3.5vw, 2.4rem);
+    letter-spacing: clamp(0.8rem, 3vw, 1.8rem);
+}
+
+/* ===========================================
+   SLIDE 5 — 3 TEMPLATES (cards)
+   =========================================== */
+.tpl-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: clamp(0.6rem, 1.6vw, 1.4rem);
+    margin-top: clamp(0.8rem, 2vw, 1.4rem);
+    max-width: 1200px;
+    max-height: 100%;
+}
+.tpl {
+    background: var(--bg-panel);
+    border: 2px solid;
+    border-radius: 8px;
+    padding: clamp(0.8rem, 1.8vw, 1.4rem);
+    position: relative;
+    overflow: hidden;
+}
+.tpl.fps  { border-color: var(--c-teal);   box-shadow: 0 0 18px rgba(90,245,224,0.12); }
+.tpl.moba { border-color: var(--c-orange); box-shadow: 0 0 18px rgba(255,136,0,0.12); }
+.tpl.br   { border-color: var(--c-purple); box-shadow: 0 0 18px rgba(160,68,255,0.14); }
+.tpl .badge {
+    display: inline-block;
+    font-family: var(--font-pixel);
+    font-size: clamp(0.5rem, 0.75vw, 0.65rem);
+    letter-spacing: 2px;
+    padding: clamp(0.2rem, 0.4vw, 0.3rem) clamp(0.4rem, 0.9vw, 0.7rem);
+    border-radius: 3px;
+    margin-bottom: clamp(0.5rem, 1.2vw, 0.9rem);
+}
+.tpl.fps .badge  { color: var(--c-teal);   background: rgba(90,245,224,0.12); border: 1px solid var(--c-teal); }
+.tpl.moba .badge { color: var(--c-orange); background: rgba(255,136,0,0.12);  border: 1px solid var(--c-orange); }
+.tpl.br .badge   { color: var(--c-purple); background: rgba(160,68,255,0.12); border: 1px solid var(--c-purple); }
+.tpl h3 {
+    color: var(--text-primary);
+    font-family: var(--font-crt);
+    font-size: clamp(1.1rem, 2vw, 1.7rem);
+    letter-spacing: 2px;
+    margin-bottom: clamp(0.1rem, 0.4vw, 0.3rem);
+    line-height: 1;
+}
+.tpl .ref {
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: clamp(0.6rem, 0.85vw, 0.78rem);
+    margin-bottom: clamp(0.6rem, 1.4vw, 1.1rem);
+}
+.tpl ul {
+    list-style: none;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: var(--small-size);
+    line-height: 1.55;
+    margin-bottom: clamp(0.5rem, 1.2vw, 0.9rem);
+}
+.tpl ul li { padding: clamp(0.15rem, 0.3vw, 0.25rem) 0; }
+.tpl ul li::before { content: '· '; color: var(--text-dim); }
+.tpl .feel {
+    font-family: var(--font-mono);
+    font-style: italic;
+    font-size: var(--small-size);
+    border-top: 1px solid var(--bg-line);
+    padding-top: clamp(0.4rem, 1vw, 0.7rem);
+    line-height: 1.4;
+}
+.tpl.fps .feel  { color: var(--c-teal); }
+.tpl.moba .feel { color: var(--c-orange); }
+.tpl.br .feel   { color: var(--c-purple); }
+
+/* ===========================================
+   SLIDE 6 — UX RULE (phone mockup + rules)
+   =========================================== */
+.ux-row {
+    display: grid;
+    grid-template-columns: clamp(180px, 24vw, 280px) 1fr;
+    gap: clamp(1.5rem, 4vw, 3rem);
+    align-items: center;
+    margin-top: clamp(0.8rem, 2vw, 1.4rem);
+    max-width: 1100px;
+}
+.phone {
+    width: 100%;
+    aspect-ratio: 9 / 18;
+    max-height: 64vh;
+    background: var(--bg-secondary);
+    border: clamp(5px, 1vw, 8px) solid var(--bg-line);
+    border-radius: clamp(14px, 2vw, 28px);
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 10px 50px rgba(255,70,85,0.18), 0 0 0 1px rgba(255,70,85,0.2);
+}
+.phone .live-bg {
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse at 30% 30%, rgba(160,68,255,0.4), transparent 50%),
+        linear-gradient(135deg, #2a3344, var(--bg-secondary));
+}
+.phone .live-bg::after {
+    content: '';
+    position: absolute; inset: 0;
+    background-image:
+        linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 12px 12px;
+}
+.phone .live-badge {
+    position: absolute;
+    top: 8px; left: 8px;
+    background: var(--c-red); color: white;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: clamp(0.45rem, 0.7vw, 0.6rem);
+    padding: 2px 6px;
+    border-radius: 3px;
+    letter-spacing: 1px;
+    z-index: 3;
+}
+.phone .live-badge::before { content: '● '; animation: blink 1.4s infinite; }
+.phone .live-content {
+    position: absolute;
+    top: clamp(20px, 4vh, 36px); left: 8px; right: 8px;
+    color: rgba(255,255,255,0.35);
+    font-family: var(--font-mono);
+    font-size: clamp(0.45rem, 0.65vw, 0.6rem);
+    line-height: 1.5;
+}
+.phone .sheet {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 64%;
+    background: var(--bg-secondary);
+    border-top: 2px solid var(--c-red);
+    border-radius: clamp(8px, 1.5vw, 14px) clamp(8px, 1.5vw, 14px) 0 0;
+    padding: clamp(6px, 1vw, 10px);
+    animation: sheet-slide 2.2s var(--ease-out-expo) 0.6s both;
+}
+@keyframes sheet-slide {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+}
+.phone .sheet-title {
+    text-align: center;
+    color: var(--c-red);
+    font-family: var(--font-pixel);
+    font-size: clamp(0.4rem, 0.6vw, 0.55rem);
+    letter-spacing: 2px;
+    margin-bottom: clamp(4px, 0.8vw, 8px);
+}
+.phone .sheet-game {
+    height: 70%;
+    background:
+        repeating-linear-gradient(45deg, #3a7838 0 8px, #4a8848 8px 16px);
+    border-radius: 4px;
+    position: relative;
+    margin-bottom: clamp(4px, 0.8vw, 8px);
+    overflow: hidden;
+}
+.phone .sheet-game::before {
+    content: '👾';
+    position: absolute;
+    bottom: 12%; left: 12%;
+    font-size: clamp(0.8rem, 1.4vw, 1.2rem);
+    animation: bob 2s ease-in-out infinite;
+}
+.phone .sheet-game::after {
+    content: '🔥';
+    position: absolute;
+    top: 10%; right: 12%;
+    font-size: clamp(0.8rem, 1.4vw, 1.2rem);
+    animation: bob 2s ease-in-out infinite 1s;
+}
+@keyframes bob { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-3px);} }
+.phone .sheet-hud {
+    display: flex;
+    justify-content: space-around;
+    color: var(--c-gold);
+    font-family: var(--font-mono);
+    font-size: clamp(0.4rem, 0.6vw, 0.55rem);
+    letter-spacing: 1px;
+}
+.ux-text h4 {
+    color: var(--c-gold);
+    font-family: var(--font-pixel);
+    font-size: clamp(0.7rem, 1.1vw, 0.95rem);
+    letter-spacing: 2px;
+    margin-bottom: clamp(0.6rem, 1.5vw, 1rem);
+}
+.ux-text p.iron {
+    color: var(--c-red);
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: var(--body-size);
+    margin-bottom: clamp(0.6rem, 1.4vw, 1rem);
+    line-height: 1.45;
+}
+.ux-rules {
+    list-style: none;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: var(--small-size);
+    line-height: 1.7;
+}
+.ux-rules li { padding: clamp(0.15rem, 0.4vw, 0.3rem) 0; }
+.ux-rules li::before { content: '⊳ '; color: var(--c-red); font-weight: bold; }
+
+/* ===========================================
+   SLIDE 7 — GIFT ECONOMY
+   =========================================== */
+.gift-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: clamp(0.6rem, 1.6vw, 1.2rem);
+    margin-top: clamp(0.8rem, 2vw, 1.5rem);
+    max-width: 1200px;
+}
+.gift {
+    background: var(--bg-panel);
+    padding: clamp(0.8rem, 1.8vw, 1.4rem);
+    border-radius: 0 0 6px 6px;
+    border-top: 3px solid;
+    position: relative;
+}
+.gift:nth-child(1) { border-top-color: var(--c-teal); }
+.gift:nth-child(2) { border-top-color: var(--c-gold); }
+.gift:nth-child(3) { border-top-color: var(--c-red); }
+.gift:nth-child(4) { border-top-color: var(--c-purple); }
+.gift .name {
+    font-family: var(--font-pixel);
+    font-size: clamp(0.55rem, 0.85vw, 0.7rem);
+    letter-spacing: 2px;
+    margin-bottom: clamp(0.5rem, 1.2vw, 0.9rem);
+}
+.gift:nth-child(1) .name { color: var(--c-teal); }
+.gift:nth-child(2) .name { color: var(--c-gold); }
+.gift:nth-child(3) .name { color: var(--c-red); }
+.gift:nth-child(4) .name { color: var(--c-purple); }
+.gift .what {
+    color: var(--text-primary);
+    font-family: var(--font-crt);
+    font-size: clamp(0.95rem, 1.4vw, 1.2rem);
+    margin-bottom: clamp(0.4rem, 1vw, 0.7rem);
+    line-height: 1.3;
+}
+.gift .ex {
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: var(--small-size);
+    line-height: 1.5;
+}
+.gift-iron {
+    margin-top: clamp(1.2rem, 3vw, 2rem);
+    color: var(--c-red);
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: var(--small-size);
+    text-align: center;
+}
+.gift-iron::before { content: '⚠ '; }
+
+/* ===========================================
+   SLIDE 8 — ARCHITECTURE (ASCII diagram)
+   =========================================== */
+.arch-panel {
+    margin-top: clamp(0.8rem, 2vw, 1.2rem);
+    background: rgba(5,8,16,0.85);
+    border: 1px solid var(--c-teal);
+    border-radius: 6px;
+    padding: clamp(0.8rem, 1.8vw, 1.4rem);
+    max-width: 1100px;
+    align-self: center;
+    width: 100%;
+    box-shadow: 0 0 24px rgba(90,245,224,0.1), inset 0 0 24px rgba(90,245,224,0.04);
+}
+.arch-panel pre {
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: clamp(0.55rem, 0.85vw, 0.85rem);
+    line-height: 1.55;
+    overflow-x: auto;
+    white-space: pre;
+}
+.arch-panel .red    { color: var(--c-red); }
+.arch-panel .gold   { color: var(--c-gold); }
+.arch-panel .teal   { color: var(--c-teal); }
+.arch-panel .purple { color: var(--c-purple); }
+.arch-panel .dim    { color: var(--text-dim); }
+.arch-foot {
+    margin-top: clamp(0.6rem, 1.5vw, 1rem);
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: var(--tiny-size);
+    text-align: right;
+}
+.arch-foot code {
+    color: var(--c-teal);
+    margin-left: 6px;
+}
+
+/* ===========================================
+   SLIDE — LIVE DEMO (embedded iframe)
+   Two-column: phone-aspect game iframe (left) + controls/FYI (right)
+   =========================================== */
+.demo-row {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: clamp(1rem, 3vw, 2.4rem);
+    align-items: center;
+    margin-top: clamp(0.6rem, 1.6vw, 1.2rem);
+    max-width: 1100px;
+    max-height: 100%;
+}
+.demo-frame {
+    position: relative;
+    /* Lock aspect to the game's 9:16 canvas; size with the viewport.
+       Was capped at 360px which felt small on desktop; now grows up to
+       460px on big screens while staying within 80vh on phones. */
+    width: clamp(280px, 50vh, 460px);
+    aspect-ratio: 9 / 16;
+    max-height: 80vh;
+    background: var(--bg-secondary);
+    border: 2px solid var(--c-red);
+    border-radius: clamp(12px, 1.8vw, 22px);
+    overflow: hidden;
+    box-shadow:
+        0 16px 60px rgba(255,70,85,0.28),
+        0 0 0 1px rgba(255,70,85,0.18),
+        inset 0 0 20px rgba(255,70,85,0.05);
+    flex-shrink: 0;
+}
+.demo-frame iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: var(--bg-primary);
+    display: block;
+}
+.demo-frame-glow {
+    position: absolute;
+    inset: -4px;
+    border-radius: inherit;
+    background: linear-gradient(135deg,
+        rgba(255,70,85,0.35),
+        rgba(255,205,117,0.2),
+        rgba(90,245,224,0.25),
+        rgba(160,68,255,0.3));
+    z-index: -1;
+    filter: blur(18px);
+    opacity: 0.7;
+    animation: glow-cycle 8s ease-in-out infinite;
+}
+@keyframes glow-cycle {
+    0%, 100% { opacity: 0.55; filter: blur(18px) hue-rotate(0deg); }
+    50%      { opacity: 0.85; filter: blur(24px) hue-rotate(40deg); }
+}
+.demo-side {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.8rem, 1.8vw, 1.4rem);
+    align-self: stretch;
+    justify-content: center;
+}
+.demo-side-block {
+    background: var(--bg-panel);
+    border: 1px solid var(--bg-line);
+    border-left: 2px solid var(--c-gold);
+    padding: clamp(0.7rem, 1.6vw, 1.1rem) clamp(0.9rem, 1.8vw, 1.4rem);
+    border-radius: 0 6px 6px 0;
+}
+.demo-side-block:last-child { border-left-color: var(--c-teal); }
+.demo-side-label {
+    font-family: var(--font-pixel);
+    font-size: clamp(0.5rem, 0.8vw, 0.7rem);
+    letter-spacing: 2px;
+    color: var(--c-gold);
+    margin-bottom: clamp(0.4rem, 1vw, 0.7rem);
+}
+.demo-side-block:last-child .demo-side-label { color: var(--c-teal); }
+.demo-side-list {
+    list-style: none;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: var(--small-size);
+    line-height: 1.6;
+}
+.demo-side-list li {
+    padding: clamp(0.15rem, 0.3vw, 0.25rem) 0;
+}
+.demo-side-list li::before { content: '· '; color: var(--text-dim); }
+.demo-side-list strong { color: var(--text-primary); }
+.key-inline {
+    display: inline-block;
+    border: 1px solid var(--text-dim);
+    color: var(--c-teal);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    margin: 0 1px;
+}
+.demo-slide .lead code.key-inline { color: var(--c-teal); }
+
+/* Inline iframe-failure fallback panel (sits inside .demo-frame) */
+.demo-fallback {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, var(--bg-secondary), var(--bg-primary));
+    color: var(--text-primary);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(1rem, 3vw, 1.8rem);
+    text-align: center;
+    z-index: 2;
+}
+.demo-fallback[hidden] { display: none; }
+.demo-fallback-icon {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    margin-bottom: clamp(0.6rem, 1.5vw, 1rem);
+    filter: drop-shadow(0 0 12px rgba(255,70,85,0.5));
+}
+.demo-fallback-title {
+    color: var(--c-red);
+    font-family: var(--font-crt);
+    font-size: clamp(1rem, 1.8vw, 1.4rem);
+    letter-spacing: 1px;
+    margin-bottom: clamp(0.5rem, 1.2vw, 0.9rem);
+}
+.demo-fallback-text {
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: var(--small-size);
+    line-height: 1.55;
+    margin-bottom: clamp(0.8rem, 2vw, 1.4rem);
+    max-width: 32ch;
+}
+.demo-fallback-text code,
+.demo-fallback-hint code {
+    color: var(--c-teal);
+    background: rgba(90,245,224,0.08);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 0.95em;
+}
+.demo-fallback-btn {
+    display: inline-block;
+    font-family: var(--font-pixel);
+    font-size: clamp(0.6rem, 0.95vw, 0.8rem);
+    letter-spacing: 2px;
+    color: var(--c-red);
+    border: 2px solid var(--c-red);
+    background: rgba(255,70,85,0.08);
+    padding: clamp(0.5rem, 1.2vw, 0.8rem) clamp(0.9rem, 2vw, 1.4rem);
+    text-decoration: none;
+    border-radius: 4px;
+    transition: all 0.3s var(--ease-out-expo);
+    margin-bottom: clamp(0.8rem, 2vw, 1.2rem);
+}
+.demo-fallback-btn:hover {
+    background: rgba(255,70,85,0.2);
+    box-shadow: 0 0 24px rgba(255,70,85,0.5);
+    transform: translateY(-2px);
+}
+.demo-fallback-hint {
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: var(--tiny-size);
+    line-height: 1.5;
+    max-width: 32ch;
+}
+
+/* "Open in new tab" link in the side panel — always available */
+.demo-open-btn {
+    display: inline-block;
+    margin-top: clamp(0.4rem, 1vw, 0.6rem);
+    font-family: var(--font-pixel);
+    font-size: clamp(0.5rem, 0.78vw, 0.66rem);
+    letter-spacing: 2px;
+    color: var(--c-teal);
+    border: 1px solid var(--c-teal);
+    background: rgba(90,245,224,0.05);
+    padding: clamp(0.4rem, 0.9vw, 0.6rem) clamp(0.7rem, 1.4vw, 1rem);
+    text-decoration: none;
+    border-radius: 3px;
+    text-align: center;
+    transition: all 0.3s var(--ease-out-expo);
+}
+.demo-open-btn:hover {
+    background: rgba(90,245,224,0.15);
+    box-shadow: 0 0 16px rgba(90,245,224,0.4);
+    transform: translateY(-2px);
+}
+.demo-open-btn[hidden] { display: none; }
+
+/* On narrower viewports stack vertically; iframe shrinks */
+@media (max-width: 900px) {
+    .demo-row { grid-template-columns: 1fr; }
+    .demo-frame {
+        width: min(60vw, 320px);
+        max-height: 60vh;
+        margin: 0 auto;
+    }
+}
+
+/* ===========================================
+   SLIDE 9 — BUILT TODAY
+   =========================================== */
+.built-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(0.6rem, 1.4vw, 1.2rem) clamp(1rem, 2.5vw, 2.5rem);
+    margin-top: clamp(0.8rem, 2vw, 1.4rem);
+    max-width: 1100px;
+    font-family: var(--font-mono);
+    font-size: var(--small-size);
+}
+.built-grid li {
+    list-style: none;
+    display: flex;
+    align-items: flex-start;
+    gap: clamp(0.5rem, 1vw, 0.8rem);
+    padding: clamp(0.4rem, 1vw, 0.7rem) 0;
+    border-bottom: 1px dashed var(--bg-line);
+    line-height: 1.45;
+}
+.built-grid li.partial { color: var(--c-gold); }
+.built-grid li.done    { color: var(--text-primary); }
+.built-grid .mark {
+    flex-shrink: 0;
+    font-weight: 700;
+    width: 1.4em;
+}
+.built-grid .done .mark    { color: var(--c-teal); }
+.built-grid .partial .mark { color: var(--c-gold); }
+.built-grid .meta { color: var(--text-muted); font-size: var(--tiny-size); }
+
+/* ===========================================
+   SLIDE 10 — LOCKED DECISIONS (2x4 grid)
+   =========================================== */
+.dec-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: clamp(0.6rem, 1.4vw, 1rem);
+    margin-top: clamp(0.8rem, 2vw, 1.4rem);
+    max-width: 1100px;
+}
+.dec {
+    background: rgba(255,70,85,0.05);
+    border-left: 2px solid var(--c-red);
+    padding: clamp(0.7rem, 1.6vw, 1.1rem) clamp(0.9rem, 1.8vw, 1.4rem);
+    border-radius: 0 4px 4px 0;
+}
+.dec .label {
+    color: var(--c-red);
+    font-family: var(--font-pixel);
+    font-size: clamp(0.5rem, 0.78vw, 0.66rem);
+    letter-spacing: 2px;
+    margin-bottom: clamp(0.3rem, 0.7vw, 0.5rem);
+}
+.dec .text {
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: var(--small-size);
+    line-height: 1.45;
+}
+.dec .text strong { color: var(--text-primary); }
+
+/* ===========================================
+   SLIDE 11 — ROADMAP (vertical timeline)
+   =========================================== */
+.roadmap {
+    position: relative;
+    padding-left: clamp(1.6rem, 4vw, 3rem);
+    max-width: 900px;
+    margin-top: clamp(0.6rem, 1.6vw, 1.2rem);
+    align-self: stretch;
+}
+.roadmap::before {
+    content: '';
+    position: absolute;
+    left: clamp(0.5rem, 1.4vw, 1rem); top: 0; bottom: clamp(0.5rem, 1vw, 1rem);
+    width: 2px;
+    background: linear-gradient(180deg, var(--c-teal), var(--c-gold), var(--c-red), var(--c-purple));
+    box-shadow: 0 0 12px rgba(255,70,85,0.4);
+    transform-origin: top;
+    animation: track-draw 1.4s var(--ease-out-expo) 0.3s both;
+}
+@keyframes track-draw {
+    from { transform: scaleY(0); }
+    to   { transform: scaleY(1); }
+}
+.rm {
+    position: relative;
+    padding: clamp(0.4rem, 1vw, 0.7rem) 0 clamp(0.5rem, 1.2vw, 0.9rem) 0;
+}
+.rm::before {
+    content: '';
+    position: absolute;
+    left: calc(-1 * clamp(1.3rem, 3.2vw, 2.4rem));
+    top: clamp(0.6rem, 1.4vw, 1rem);
+    width: clamp(12px, 1.8vw, 16px);
+    height: clamp(12px, 1.8vw, 16px);
+    border-radius: 50%;
+    background: var(--bg-primary);
+    border: 2px solid var(--accent);
+}
+.rm.done   { --accent: var(--c-teal); }
+.rm.now    { --accent: var(--c-gold); }
+.rm.next   { --accent: var(--c-red); }
+.rm.phase2 { --accent: var(--c-purple); }
+.rm.done::before { background: var(--c-teal); box-shadow: 0 0 12px var(--c-teal); }
+.rm.now::before  { box-shadow: 0 0 12px rgba(255,205,117,0.6); animation: dot-pulse 2s infinite; }
+@keyframes dot-pulse {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.3); }
+}
+.rm .when {
+    font-family: var(--font-pixel);
+    font-size: clamp(0.5rem, 0.8vw, 0.65rem);
+    letter-spacing: 2px;
+    color: var(--accent);
+    margin-bottom: clamp(0.15rem, 0.4vw, 0.25rem);
+}
+.rm .title {
+    color: var(--text-primary);
+    font-family: var(--font-crt);
+    font-size: clamp(1rem, 1.6vw, 1.4rem);
+    margin-bottom: clamp(0.15rem, 0.4vw, 0.3rem);
+    letter-spacing: 1px;
+}
+.rm .body {
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: var(--tiny-size);
+    line-height: 1.5;
+    max-width: 70ch;
+}
+
+/* ===========================================
+   SLIDE 12 — CLOSING
+   =========================================== */
+.closing-slide {
+    align-items: center;
+    justify-content: center;
+}
+.closing-slide .slide-content {
+    align-items: center;
+    text-align: center;
+    gap: clamp(1rem, 2.5vw, 1.8rem);
+}
+.closing-title {
+    font-family: var(--font-pixel);
+    font-size: clamp(1.4rem, 4vw, 3rem);
+    color: var(--text-primary);
+    line-height: 1.3;
+    letter-spacing: 0.05em;
+    text-shadow:
+        0 0 20px var(--c-red),
+        0 0 40px rgba(255,70,85,0.4);
+}
+.closing-title .x { color: var(--c-gold); }
+.closing-sub {
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: var(--body-size);
+    max-width: 56ch;
+    line-height: 1.7;
+}
+.closing-links {
+    margin-top: clamp(0.6rem, 1.5vw, 1.2rem);
+    display: flex;
+    gap: clamp(0.8rem, 2vw, 1.6rem);
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.closing-link {
+    color: var(--c-teal);
+    font-family: var(--font-mono);
+    font-size: var(--small-size);
+    text-decoration: none;
+    border: 1px solid var(--c-teal);
+    padding: clamp(0.4rem, 1vw, 0.6rem) clamp(0.8rem, 2vw, 1.4rem);
+    border-radius: 3px;
+    letter-spacing: 2px;
+    transition: all 0.3s var(--ease-out-expo);
+}
+.closing-link:hover {
+    background: rgba(90,245,224,0.12);
+    box-shadow: 0 0 24px rgba(90,245,224,0.4);
+    transform: translateY(-2px);
+}
+.closing-stamp {
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    font-size: var(--tiny-size);
+    letter-spacing: 3px;
+    margin-top: clamp(1rem, 2.5vw, 1.8rem);
+}
+
+/* ===========================================
+   RESPONSIVE BREAKPOINTS
+   =========================================== */
+@media (max-height: 700px) {
+    :root {
+        --slide-padding: clamp(0.7rem, 3vw, 2rem);
+        --content-gap: clamp(0.4rem, 1.4vw, 1rem);
+        --h2-size: clamp(1.1rem, 3vw, 2rem);
+        --body-size: clamp(0.7rem, 1.2vw, 1rem);
+    }
+}
+@media (max-height: 600px) {
+    :root {
+        --slide-padding: clamp(0.5rem, 2.5vw, 1.4rem);
+        --title-size: clamp(1.4rem, 4vw, 2.4rem);
+    }
+    .nav-dots, .keyboard-hint, .decorative { display: none; }
+}
+@media (max-width: 760px) {
+    .vision-grid, .tpl-grid, .gift-grid, .dec-grid, .built-grid, .problem-grid {
+        grid-template-columns: 1fr;
+    }
+    .loop-row {
+        grid-template-columns: 1fr;
+    }
+    .loop-arrow { transform: rotate(90deg); justify-self: center; }
+    .ux-row { grid-template-columns: 1fr; }
+    .phone { max-height: 40vh; max-width: 180px; margin: 0 auto; }
+    .title-rails::before, .title-rails::after { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.2s !important;
+    }
+    html { scroll-behavior: auto; }
+}
+</style>
+</head>
+<body>
+
+<div class="progress-bar"></div>
+<div class="slide-counter" id="slideCounter">01 / 12</div>
+<nav class="nav-dots" id="navDots"></nav>
+<div class="keyboard-hint">
+    <span class="key">←</span><span class="key">→</span> 翻页 ·
+    <span class="key">Space</span> 下一张
+</div>
+
+<!-- ============================================
+     SLIDE 1 — TITLE
+     ============================================ -->
+<section class="slide title-slide">
+    <div class="title-rails"></div>
+    <div class="slide-content">
+        <div class="boot-badge reveal" style="--delay:0.05s">TIKTOK · GAMING · HACKATHON</div>
+        <h1 class="title-encore reveal-scale" style="--delay:0.2s"><span class="bolt">⚡</span>ENCORE</h1>
+        <div class="title-cn reveal" style="--delay:0.45s">安 可</div>
+        <div class="title-tagline reveal" style="--delay:0.65s cursor-blink"><span class="cursor-blink">LIVE-NATIVE V2G ENGINE</span></div>
+        <div class="title-stamp reveal" style="--delay:0.85s">v0.6 · 2026 · TIKTOK GAMING · DEMO</div>
+    </div>
+</section>
+
+<!-- ============================================
+     SLIDE 2 — THE PROBLEM
+     ============================================ -->
+<section class="slide">
+    <div class="slide-content">
+        <div class="eyebrow reveal" style="--delay:0.05s">01 · THE PROBLEM</div>
+        <h2 class="section-title reveal" style="--delay:0.15s">游戏 LIVE 的观众,<br><span class="accent">是被动消费的。</span></h2>
+        <p class="lead reveal" style="--delay:0.3s">
+            主播打出 ace、抢龙、决赛圈最后一击 —— 观众只能看,然后刷条弹幕。
+            高光发生的那 5 秒,观众的注意力是峰值的,但<strong>他们没有任何动作可以"参与"。</strong>
+            礼物是单向,弹幕是文字。<strong>观众的高光时刻情绪没被接住,转化为关注和回访的概率被白白浪费。</strong>
+        </p>
+        <div class="problem-grid">
+            <div class="stat reveal" style="--delay:0.5s">
+                <div class="num">~3.5s</div>
+                <div class="lbl">高光发生时观众平均互动延迟<br>(刷弹幕 → 提交)</div>
+            </div>
+            <div class="stat good reveal" style="--delay:0.65s">
+                <div class="num">30s</div>
+                <div class="lbl">Encore 给观众的"参与窗口" ——<br>直接玩一局基于高光的 mini game</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================
+     SLIDE 3 — VISION
+     ============================================ -->
+<section class="slide">
+    <div class="slide-content">
+        <div class="eyebrow reveal" style="--delay:0.05s">02 · WHAT IS ENCORE</div>
+        <h2 class="section-title reveal" style="--delay:0.15s">把主播的高光时刻,<span class="accent">实时重构成观众能玩的 30 秒迷你游戏。</span></h2>
+        <div class="vision-grid">
+            <div class="v-step reveal-scale" style="--delay:0.3s">
+                <div class="step-num">STEP 01</div>
+                <div class="ico">👁</div>
+                <h3>OBSERVE</h3>
+                <p>AI Vision 持续观察 LIVE 画面,识别 kill / clutch / ace / 抢龙 等高光事件。本质是把"主播按高光按钮"自动化。</p>
+            </div>
+            <div class="v-step reveal-scale" style="--delay:0.45s">
+                <div class="step-num">STEP 02</div>
+                <div class="ico">🧬</div>
+                <h3>STRUCTURE</h3>
+                <p>把高光时刻提取成一份 JSON config:游戏类型、地图主题、敌人数、起始 HP、武器、场景描述。这就是 V2G 的"语言"。</p>
+            </div>
+            <div class="v-step reveal-scale" style="--delay:0.6s">
+                <div class="step-num">STEP 03</div>
+                <div class="ico">🎮</div>
+                <h3>RECONSTRUCT</h3>
+                <p>客户端在 30 秒内把 config 渲染成一个体素像素风的 mini game,以 bottom sheet 形式弹给当时在场的观众。</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================
+     SLIDE 4 — THE LOOP
+     ============================================ -->
+<section class="slide">
+    <div class="slide-content">
+        <div class="eyebrow reveal" style="--delay:0.05s">03 · THE LOOP</div>
+        <h2 class="section-title reveal" style="--delay:0.15s">看 → 玩 → 播 <span class="accent">三元闭环</span></h2>
+        <div class="loop-row">
+            <div class="loop-box watch reveal-left" style="--delay:0.3s">
+                <div class="loop-stage">STAGE 01</div>
+                <div class="ico">📺</div>
+                <div class="label">WATCH</div>
+                <div class="desc">主播打游戏,AI 全程观察。识别到高光时刻 → 自动触发。</div>
+            </div>
+            <div class="loop-arrow reveal" style="--delay:0.5s">▶</div>
+            <div class="loop-box play reveal-scale" style="--delay:0.55s">
+                <div class="loop-stage">STAGE 02</div>
+                <div class="ico">🕹</div>
+                <div class="label">PLAY</div>
+                <div class="desc">观众在 bottom sheet 玩 30 秒,玩法/场景/配色与刚才高光一致。</div>
+            </div>
+            <div class="loop-arrow a2 reveal" style="--delay:0.7s">▶</div>
+            <div class="loop-box replay reveal-right" style="--delay:0.75s">
+                <div class="loop-stage">STAGE 03</div>
+                <div class="ico">🎬</div>
+                <div class="label">BROADCAST</div>
+                <div class="desc">AI 剪 15s 录像回流直播间。主播实时锐评 Top 3 录像。</div>
+            </div>
+        </div>
+        <div class="loop-cn reveal" style="--delay:1s">看 · 玩 · 播</div>
+    </div>
+</section>
+
+<!-- ============================================
+     SLIDE 5 — 3 TEMPLATES
+     ============================================ -->
+<section class="slide">
+    <div class="slide-content">
+        <div class="eyebrow reveal" style="--delay:0.05s">04 · THE 3 TEMPLATES (PHASE 1)</div>
+        <h2 class="section-title reveal" style="--delay:0.15s">不是真生成式,<span class="accent">是模板参数化。</span></h2>
+        <p class="lead reveal" style="--delay:0.25s">Path B 决策:AI 不写游戏代码,只产 JSON config。3 个预制模板覆盖 TikTok 游戏 LIVE 内容供给的 <strong>60-70%</strong>。</p>
+        <div class="tpl-grid">
+            <div class="tpl fps reveal" style="--delay:0.4s">
+                <span class="badge">FPS · 战术射击</span>
+                <h3>COVER STRIKE</h3>
+                <div class="ref">参考: Valorant / CS / COD</div>
+                <ul>
+                    <li>右手拖屏瞄准 · 后坐力曲线</li>
+                    <li>弹匣 12 发 + 快速换弹</li>
+                    <li>掩体战术 + Peek 爆头</li>
+                    <li>1v3 残局节奏</li>
+                </ul>
+                <div class="feel">"3 发的窗口 · 谁先 peek 谁赢"</div>
+            </div>
+            <div class="tpl moba reveal" style="--delay:0.55s">
+                <span class="badge">MOBA · 端游 / 王者</span>
+                <h3>DRAGON PIT</h3>
+                <div class="ref">参考: LoL / Honor of Kings</div>
+                <ul>
+                    <li>技能预瞄拖拽 · 4 技能 + 法力</li>
+                    <li>小兵线 + 补刀经济</li>
+                    <li>草丛隐身 + 防御塔反制</li>
+                    <li>1v3 龙坑反杀</li>
+                </ul>
+                <div class="feel">"补刀和草丛是决策 · 技能会 miss"</div>
+            </div>
+            <div class="tpl br reveal" style="--delay:0.7s">
+                <span class="badge">BR · 大逃杀</span>
+                <h3>FINAL CIRCLE</h3>
+                <div class="ref">参考: PUBG / Apex / Fortnite</div>
+                <ul>
+                    <li>大地图跟随相机 · 缩圈毒气</li>
+                    <li>武器稀有度 4 档 (C/R/E/L)</li>
+                    <li>长按 E 开镜 · 小队 AI 互打</li>
+                    <li>最后一人活到时间归零</li>
+                </ul>
+                <div class="feel">"听见远处枪声 · 捡到 SR 才有决赛圈"</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================
+     SLIDE 6 — UX RULE
+     ============================================ -->
+<section class="slide">
+    <div class="slide-content">
+        <div class="eyebrow reveal" style="--delay:0.05s">05 · INTERACTION & UX</div>
+        <h2 class="section-title reveal" style="--delay:0.15s">Bottom sheet,<span class="accent">永不压缩 LIVE 主画面。</span></h2>
+        <div class="ux-row">
+            <div class="phone reveal-scale" style="--delay:0.35s">
+                <div class="live-bg"></div>
+                <div class="live-badge">LIVE</div>
+                <div class="live-content">// streamer's gameplay<br>visible as background<br>not paused, not muted<br>not pushed off-screen</div>
+                <div class="sheet">
+                    <div class="sheet-title">⚡ ENCORE · FPS · DESERT</div>
+                    <div class="sheet-game"></div>
+                    <div class="sheet-hud">HP · MP · 12/12</div>
+                </div>
+            </div>
+            <div class="ux-text reveal-right" style="--delay:0.5s">
+                <h4>UX 铁律</h4>
+                <p class="iron">⊳ 永不 pause LIVE · 永不静音 · 永不挤压 main view</p>
+                <ul class="ux-rules">
+                    <li>Bottom sheet 上滑覆盖,占屏 80%;LIVE 仍播放</li>
+                    <li>玩家任意时刻可下滑回 LIVE,游戏自动结束</li>
+                    <li>30 秒自动结束,弹回 LIVE,无侵入</li>
+                    <li>千元机也跑得动:Canvas 2D + 体素方块,无 WebGL</li>
+                    <li>8 状态 FSM:SAMPLING / DETECTED / WARMUP / PLAY /<br>END / REPLAY_PEEK / GIFT / RESET</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================
+     SLIDE 7 — GIFT ECONOMY
+     ============================================ -->
+<section class="slide">
+    <div class="slide-content">
+        <div class="eyebrow reveal" style="--delay:0.05s">06 · GIFT ECONOMY</div>
+        <h2 class="section-title reveal" style="--delay:0.15s">4 层礼物分层,<span class="accent">不送礼也能玩。</span></h2>
+        <div class="gift-grid">
+            <div class="gift reveal" style="--delay:0.3s">
+                <div class="name">ENHANCE</div>
+                <div class="what">改造你的<br>下一局</div>
+                <div class="ex">"火焰子弹"皮肤 · "双倍 HP" 开局 · "额外一条命"…… 个人增益。</div>
+            </div>
+            <div class="gift reveal" style="--delay:0.42s">
+                <div class="name">SPOTLIGHT</div>
+                <div class="what">高分录像<br>加曝光</div>
+                <div class="ex">让你的录像更可能进入主播 Top 3 锐评池。社交向。</div>
+            </div>
+            <div class="gift reveal" style="--delay:0.54s">
+                <div class="name">SPONSOR</div>
+                <div class="what">下一局主播<br>强化</div>
+                <div class="ex">给主播下次 LIVE 高光的 Encore 加强化 / 主题。礼物流向主播。</div>
+            </div>
+            <div class="gift reveal" style="--delay:0.66s">
+                <div class="name">LOOT</div>
+                <div class="what">概率宝箱<br>皮肤</div>
+                <div class="ex">开箱拿稀有装备外观,送回个人收藏。常驻收益。</div>
+            </div>
+        </div>
+        <div class="gift-iron reveal" style="--delay:0.85s">铁律:禁止"送礼换试玩" · 主播分成 ≥ 普通 LIVE 礼物分成</div>
+    </div>
+</section>
+
+<!-- ============================================
+     SLIDE 8 — V2G ARCHITECTURE
+     ============================================ -->
+<section class="slide">
+    <div class="slide-content">
+        <div class="eyebrow reveal" style="--delay:0.05s">07 · V2G ARCHITECTURE</div>
+        <h2 class="section-title reveal" style="--delay:0.15s">观察 → 推理 → 配置 → 播放,<span class="accent">全链路 ≤ 6 秒。</span></h2>
+        <div class="arch-panel reveal-blur" style="--delay:0.3s">
+<pre>
+<span class="dim">┌─────────────────────────────────────────────────────────────────┐</span>
+<span class="dim">│</span>  <span class="red">LIVE Source</span>      <span class="dim">→</span>   <span class="teal">Frame Sampler</span>     <span class="dim">→</span>     <span class="gold">Claude Vision</span>   <span class="dim">│</span>
+<span class="dim">│</span>  (TikTok / video)        (every 4s, 480px JPEG)    (returns JSON)  <span class="dim">│</span>
+<span class="dim">│</span>                                  <span class="dim">↓</span>                              <span class="dim">│</span>
+<span class="dim">│</span>                ┌─────────────────────────────┐                   <span class="dim">│</span>
+<span class="dim">│</span>                <span class="dim">│</span>  <span class="red">V2G Config JSON</span>            <span class="dim">│</span>                   <span class="dim">│</span>
+<span class="dim">│</span>                <span class="dim">│</span>  template: <span class="teal">fps</span>                <span class="dim">│</span>                   <span class="dim">│</span>
+<span class="dim">│</span>                <span class="dim">│</span>  theme:    <span class="gold">desert</span>             <span class="dim">│</span>                   <span class="dim">│</span>
+<span class="dim">│</span>                <span class="dim">│</span>  scenario: enemy_count: 3   <span class="dim">│</span>                   <span class="dim">│</span>
+<span class="dim">│</span>                <span class="dim">│</span>            hp_start:    55  <span class="dim">│</span>                   <span class="dim">│</span>
+<span class="dim">│</span>                <span class="dim">│</span>            weapon: rifle    <span class="dim">│</span>                   <span class="dim">│</span>
+<span class="dim">│</span>                <span class="dim">│</span>            desc: "1v3 retake"<span class="dim">│</span>                   <span class="dim">│</span>
+<span class="dim">│</span>                └─────────────────────────────┘                   <span class="dim">│</span>
+<span class="dim">│</span>                                  <span class="dim">↓</span>                              <span class="dim">│</span>
+<span class="dim">│</span>  <span class="teal">Streamer page</span>   <span class="dim">─→</span>   postMessage   <span class="dim">─→</span>  <span class="purple">iframe (game)</span>      <span class="dim">│</span>
+<span class="dim">│</span>  ▸ video player        {type:'launch',         ▸ apply theme      <span class="dim">│</span>
+<span class="dim">│</span>  ▸ status overlay       config: {...}}         ▸ apply scenario   <span class="dim">│</span>
+<span class="dim">│</span>  ▸ sheet animation                             ▸ startGame()     <span class="dim">│</span>
+<span class="dim">│</span>                                                <span class="dim">↓</span>  30s play       <span class="dim">│</span>
+<span class="dim">│</span>  <span class="teal">Streamer page</span>   <span class="dim">←─</span>   postMessage   <span class="dim">←─</span>   <span class="purple">iframe (game)</span>      <span class="dim">│</span>
+<span class="dim">│</span>  ▸ slide sheet down    {type:'encore_done',    ▸ game over        <span class="dim">│</span>
+<span class="dim">│</span>  ▸ cooldown 8s          stats: {won, kills}}   ▸ post stats       <span class="dim">│</span>
+<span class="dim">│</span>  ▸ resume sampling                                                <span class="dim">│</span>
+<span class="dim">└─────────────────────────────────────────────────────────────────┘</span>
+</pre>
+        </div>
+        <div class="arch-foot reveal" style="--delay:0.8s">
+            <code>observer.py</code> · <code>streamer.html</code> · <code>encore_prototype.html?embedded=1</code>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================
+     SLIDE 9 — LIVE DEMO (embedded iframe)
+     ============================================ -->
+<section class="slide demo-slide">
+    <div class="slide-content">
+        <div class="eyebrow reveal" style="--delay:0.05s">⚡ DEMO · PLAY IT NOW</div>
+        <h2 class="section-title reveal" style="--delay:0.15s">点一下 <span class="accent">就能玩。</span></h2>
+        <p class="lead reveal" style="--delay:0.25s">
+            选一个模板 — FPS / MOBA / BR — 30 秒玩完。
+            <strong>点击 iframe 进入游戏</strong>,按键盘 <code class="key-inline">←</code> <code class="key-inline">→</code> 回到 deck。
+        </p>
+        <div class="demo-row">
+            <div class="demo-frame reveal-scale" style="--delay:0.4s">
+                <div class="demo-frame-glow"></div>
+                <!-- iframe src is set by JS after probing multiple candidate paths,
+                     so this works whether slides are at /docs/, project root, or
+                     somewhere else. Falls back to a clear "open in new tab" if no
+                     candidate resolves. -->
+                <iframe id="demo-iframe"
+                        title="Encore mini game"
+                        allow="autoplay; fullscreen"
+                        loading="lazy"></iframe>
+                <div class="demo-fallback" id="demo-fallback" hidden>
+                    <div class="demo-fallback-icon">🎮</div>
+                    <div class="demo-fallback-title">无法在此环境内嵌运行</div>
+                    <div class="demo-fallback-text">
+                        当前 URL 找不到 <code>encore_prototype.html</code> 的相对路径。<br>
+                        新窗口打开就能玩:
+                    </div>
+                    <a id="demo-fallback-link" class="demo-fallback-btn" target="_blank" rel="noopener">▶ OPEN IN NEW TAB</a>
+                    <div class="demo-fallback-hint">
+                        要在 iframe 内运行,确保 <code>encore_prototype.html</code><br>
+                        和这份 slides 在同一个 HTTP 服务下可达。
+                    </div>
+                </div>
+            </div>
+            <div class="demo-side reveal-right" style="--delay:0.55s">
+                <div class="demo-side-block">
+                    <div class="demo-side-label">CONTROLS</div>
+                    <ul class="demo-side-list">
+                        <li><span class="key-inline">←</span> <span class="key-inline">→</span> deck 翻页</li>
+                        <li>左侧虚拟摇杆 / WASD 移动</li>
+                        <li>右侧 Q · W · E · R 技能</li>
+                        <li>右侧拖屏(FPS)瞄准</li>
+                        <li>30 秒后自动结束</li>
+                    </ul>
+                </div>
+                <div class="demo-side-block">
+                    <div class="demo-side-label">FYI</div>
+                    <ul class="demo-side-list">
+                        <li>每次开局随机滚 1 套 <strong>主题</strong></li>
+                        <li>角色是<strong>程序化像素美术</strong>占位 ——<br>真 AI 精灵管道已就绪</li>
+                        <li>无需安装,Canvas2D 跑在浏览器里</li>
+                    </ul>
+                </div>
+                <a id="demo-open-link" class="demo-open-btn" target="_blank" rel="noopener" hidden>▶ Open game in new tab</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================
+     SLIDE 10 — WHAT'S BUILT TODAY
+     ============================================ -->
+<section class="slide">
+    <div class="slide-content">
+        <div class="eyebrow reveal" style="--delay:0.05s">08 · WHAT'S BUILT TODAY (v0.6)</div>
+        <h2 class="section-title reveal" style="--delay:0.15s">原型已跑通,<span class="accent">完整 V2G 链路演示就绪。</span></h2>
+        <ul class="built-grid">
+            <li class="done reveal-left" style="--delay:0.3s"><span class="mark">✓</span><span>Iso 体素渲染器(w2s 投影 + 块体 + z-sort + 静态 bg bake)</span></li>
+            <li class="done reveal-right" style="--delay:0.35s"><span class="mark">✓</span><span>3 模板核心机制(掩体战 / 技能预瞄 / 武器稀有度)</span></li>
+            <li class="done reveal-left" style="--delay:0.4s"><span class="mark">✓</span><span>12 套主题(每模板 4 套调色板 + tile)</span></li>
+            <li class="done reveal-right" style="--delay:0.45s"><span class="mark">✓</span><span>22 个精灵程序化 atlas(占位 / AI 切换无需改代码)</span></li>
+            <li class="done reveal-left" style="--delay:0.5s"><span class="mark">✓</span><span>每模板独立 ambient FX(粒子 + 色调 grading)</span></li>
+            <li class="done reveal-right" style="--delay:0.55s"><span class="mark">✓</span><span>地面散落贴花(打破 voxel-grid 模板感)</span></li>
+            <li class="done reveal-left" style="--delay:0.6s"><span class="mark">✓</span><span>AI 精灵流水线(prompts → rembg → pack)</span></li>
+            <li class="done reveal-right" style="--delay:0.65s"><span class="mark">✓</span><span>Claude Vision 实时观察 LIVE 视频帧</span></li>
+            <li class="done reveal-left" style="--delay:0.7s"><span class="mark">✓</span><span>streamer.html + postMessage iframe 协议</span></li>
+            <li class="done reveal-right" style="--delay:0.75s"><span class="mark">✓</span><span>JSON config 注入到游戏(theme + scenario 覆盖)</span></li>
+            <li class="partial reveal-left" style="--delay:0.8s"><span class="mark">◐</span><span>真 AI 精灵切入 <span class="meta">(管道就绪 / 待跑 MJ-DALL-E 批次)</span></span></li>
+            <li class="partial reveal-right" style="--delay:0.85s"><span class="mark">◐</span><span>TikTok feed shell 集成 <span class="meta">(UI 仿真版已有 · 真 SDK 待 M11)</span></span></li>
+        </ul>
+    </div>
+</section>
+
+<!-- ============================================
+     SLIDE 10 — LOCKED DECISIONS
+     ============================================ -->
+<section class="slide">
+    <div class="slide-content">
+        <div class="eyebrow reveal" style="--delay:0.05s">09 · LOCKED PRODUCT DECISIONS</div>
+        <h2 class="section-title reveal" style="--delay:0.15s">设计真理在飞书,<span class="accent">代码追随文档。</span></h2>
+        <div class="dec-grid">
+            <div class="dec reveal-left" style="--delay:0.3s">
+                <div class="label">PATH</div>
+                <div class="text"><strong>Path B</strong>(模板参数化),不做真生成式。AI 出 JSON config → 路由到 3 模板。</div>
+            </div>
+            <div class="dec reveal-right" style="--delay:0.35s">
+                <div class="label">ART</div>
+                <div class="text"><strong>抽象像素风</strong>(Roblox / MC 系)。规避所有游戏 IP 风险,千元机兼容。</div>
+            </div>
+            <div class="dec reveal-left" style="--delay:0.4s">
+                <div class="label">ENTRY POINT</div>
+                <div class="text"><strong>LIVE-first</strong>。M12 之前不做短视频流入口(转化率塌方)。</div>
+            </div>
+            <div class="dec reveal-right" style="--delay:0.45s">
+                <div class="label">UX RULE</div>
+                <div class="text"><strong>Bottom sheet 上滑覆盖</strong>,永不压缩 LIVE 主画面。8-状态 FSM。</div>
+            </div>
+            <div class="dec reveal-left" style="--delay:0.5s">
+                <div class="label">MONETIZATION</div>
+                <div class="text"><strong>4 层礼物经济</strong>(Enhance / Spotlight / Sponsor / Loot)。禁止"送礼换试玩"。</div>
+            </div>
+            <div class="dec reveal-right" style="--delay:0.55s">
+                <div class="label">TEMPLATE COVERAGE</div>
+                <div class="text"><strong>3 套模板必备</strong>(FPS + MOBA + BR)。覆盖约 60-70% 游戏 LIVE 内容。</div>
+            </div>
+            <div class="dec reveal-left" style="--delay:0.6s">
+                <div class="label">CREATOR SHARE</div>
+                <div class="text">Encore 礼物中<strong>主播分成 ≥ 普通 LIVE 礼物分成</strong>。生态绑定。</div>
+            </div>
+            <div class="dec reveal-right" style="--delay:0.65s">
+                <div class="label">DEMO SCOPE</div>
+                <div class="text">客户端 + 局域网部署。<strong>无后端服务</strong>(observer.py 是本地代理)。</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================
+     SLIDE 11 — ROADMAP
+     ============================================ -->
+<section class="slide">
+    <div class="slide-content">
+        <div class="eyebrow reveal" style="--delay:0.05s">10 · ROADMAP</div>
+        <h2 class="section-title reveal" style="--delay:0.15s">从 demo 到 M12,<span class="accent">5 个里程碑。</span></h2>
+        <div class="roadmap">
+            <div class="rm done reveal-left" style="--delay:0.3s">
+                <div class="when">M8 · DONE</div>
+                <div class="title">Demo prototype (v0.6)</div>
+                <div class="body">3 模板 + 主题切换 + V2G 链路打通 + Claude Vision 接入。可上台演示。</div>
+            </div>
+            <div class="rm now reveal-left" style="--delay:0.42s">
+                <div class="when">M9 · NOW</div>
+                <div class="title">AI 美术批量切入</div>
+                <div class="body">跑 22 个 prompt 通过 Midjourney / DALL-E / SD,过 process.py → pack.py。视觉接近 Astrocade 水准。</div>
+            </div>
+            <div class="rm next reveal-left" style="--delay:0.54s">
+                <div class="when">M10 · NEXT</div>
+                <div class="title">TikTok feed shell + 真分享链路</div>
+                <div class="body">15 秒录像剪回 LIVE / 主播 Top 3 锐评池。需接 TikTok SDK + CDN。</div>
+            </div>
+            <div class="rm next reveal-left" style="--delay:0.66s">
+                <div class="when">M11 · NEXT</div>
+                <div class="title">第 4 个模板家族(可选)</div>
+                <div class="body">塔防 / 自走棋 / Vampire-Survivors 三选一。需先改飞书 Brief。</div>
+            </div>
+            <div class="rm phase2 reveal-left" style="--delay:0.78s">
+                <div class="when">PHASE 2 · M14+</div>
+                <div class="title">生成式行为 DSL</div>
+                <div class="body">LLM 每条 Encore 输出独立 DSL(波次 / 单位 / 技能 / 胜负条件)。是 Astrocade-tier 的竞争位。</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================
+     SLIDE 12 — CLOSING
+     ============================================ -->
+<section class="slide closing-slide">
+    <div class="title-rails"></div>
+    <div class="slide-content">
+        <div class="boot-badge reveal" style="--delay:0.05s">END OF PITCH</div>
+        <h2 class="closing-title reveal-scale" style="--delay:0.2s">
+            看. 玩. 播.<br>
+            <span class="x">⚡</span> RUN IT BACK.
+        </h2>
+        <p class="closing-sub reveal" style="--delay:0.5s">
+            高光不再只属于主播。<br>
+            观众在 30 秒里参与那一刻 —— 然后把它变成主播的下一段内容。
+        </p>
+        <div class="closing-links reveal" style="--delay:0.7s">
+            <a class="closing-link" href="../prototype/encore_prototype.html" target="_blank">🎮 PLAY THE DEMO</a>
+        </div>
+        <div class="closing-stamp reveal" style="--delay:0.95s">⚡ ENCORE · TIKTOK GAMING · HACKATHON · 2026</div>
+    </div>
+</section>
+
+<script>
+/* ===========================================
+   ACCESS GATE — casual "soft" filter, not real security
+   ----------------------------------------------------
+   Prompts for an access code on first visit. Sets a localStorage flag
+   so subsequent loads from the same browser skip the prompt.
+   This is NOT cryptographically secure — anyone can read the source
+   and skip the check, or inspect the network tab. It only cuts down
+   on casual link-sharing leaks. If you need real protection, use
+   Vercel Pro's password-protected deployments.
+   To rotate the code, change ACCESS_CODE below.
+   To clear local memory and re-prompt, run in console:
+       localStorage.removeItem('encore-access');
+   =========================================== */
+(function gate() {
+    const ACCESS_CODE = 'encore-demo';
+    const STORAGE_KEY = 'encore-access';
+    try {
+        if (localStorage.getItem(STORAGE_KEY) === ACCESS_CODE) return;
+    } catch (_) { /* localStorage unavailable — fall through to prompt */ }
+    const entered = window.prompt(
+        '⚡ ENCORE — DEMO ACCESS\n\n' +
+        'This preview is gated. Enter the access code shared with you:'
+    );
+    if (entered && entered.trim().toLowerCase() === ACCESS_CODE) {
+        try { localStorage.setItem(STORAGE_KEY, ACCESS_CODE); } catch (_) {}
+        return;
+    }
+    // Wrong code or cancel — show a friendly lockout screen and stop the script.
+    document.documentElement.innerHTML = `
+        <body style="margin:0;background:#050810;color:#888;
+                     font-family:'Courier New',monospace;letter-spacing:3px;
+                     display:flex;align-items:center;justify-content:center;
+                     min-height:100vh;text-align:center;">
+            <div>
+                <div style="color:#ff4655;font-size:48px;margin-bottom:24px;">⚡</div>
+                <div style="font-size:14px;margin-bottom:12px;">ACCESS DENIED</div>
+                <div style="font-size:11px;color:#555;">
+                    Request the demo code from the team.<br>
+                    <a href="javascript:location.reload()"
+                       style="color:#5af5e0;letter-spacing:2px;">RETRY</a>
+                </div>
+            </div>
+        </body>`;
+    throw new Error('encore: access gate');
+})();
+
+/* ===========================================
+   SLIDE PRESENTATION CONTROLLER
+   - Intersection observer adds .visible to trigger CSS reveals
+   - Keyboard / wheel / touch / nav-dot click navigation
+   - Progress bar tracks slide index
+   =========================================== */
+class SlidePresentation {
+    constructor() {
+        this.slides = Array.from(document.querySelectorAll('.slide'));
+        this.currentSlide = 0;
+        this.wheelLock = false;
+        this.touchStartY = null;
+
+        this.progressBar = document.querySelector('.progress-bar');
+        this.counter = document.getElementById('slideCounter');
+        this.navDotsHost = document.getElementById('navDots');
+
+        this.buildNavDots();
+        this.setupIntersectionObserver();
+        this.setupKeyboardNav();
+        this.setupTouchNav();
+        this.setupWheelNav();
+        this.updateUI(0);
+    }
+
+    buildNavDots() {
+        this.slides.forEach((_, i) => {
+            const d = document.createElement('button');
+            d.className = 'nav-dot';
+            d.setAttribute('aria-label', `Slide ${i + 1}`);
+            d.addEventListener('click', () => this.goTo(i));
+            this.navDotsHost.appendChild(d);
+        });
+        this.navDots = Array.from(this.navDotsHost.querySelectorAll('.nav-dot'));
+    }
+
+    setupIntersectionObserver() {
+        const io = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
+                    entry.target.classList.add('visible');
+                    const idx = this.slides.indexOf(entry.target);
+                    if (idx !== -1) this.updateUI(idx);
+                }
+            });
+        }, { threshold: [0.3, 0.55, 0.85] });
+        this.slides.forEach(s => io.observe(s));
+    }
+
+    setupKeyboardNav() {
+        document.addEventListener('keydown', (e) => {
+            if (['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)) {
+                e.preventDefault();
+                this.next();
+            } else if (['ArrowLeft','ArrowUp','PageUp'].includes(e.key)) {
+                e.preventDefault();
+                this.prev();
+            } else if (e.key === 'Home') {
+                e.preventDefault();
+                this.goTo(0);
+            } else if (e.key === 'End') {
+                e.preventDefault();
+                this.goTo(this.slides.length - 1);
+            }
+        });
+    }
+
+    setupTouchNav() {
+        document.addEventListener('touchstart', (e) => {
+            this.touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+        document.addEventListener('touchend', (e) => {
+            if (this.touchStartY == null) return;
+            const dy = e.changedTouches[0].clientY - this.touchStartY;
+            if (Math.abs(dy) > 50) {
+                if (dy < 0) this.next(); else this.prev();
+            }
+            this.touchStartY = null;
+        }, { passive: true });
+    }
+
+    setupWheelNav() {
+        let wheelTimer = null;
+        window.addEventListener('wheel', (e) => {
+            if (this.wheelLock) return;
+            if (Math.abs(e.deltaY) < 30) return;
+            this.wheelLock = true;
+            if (e.deltaY > 0) this.next(); else this.prev();
+            clearTimeout(wheelTimer);
+            wheelTimer = setTimeout(() => this.wheelLock = false, 700);
+        }, { passive: true });
+    }
+
+    next() { this.goTo(Math.min(this.currentSlide + 1, this.slides.length - 1)); }
+    prev() { this.goTo(Math.max(this.currentSlide - 1, 0)); }
+
+    goTo(i) {
+        this.slides[i].scrollIntoView({ behavior: 'smooth', block: 'start' });
+        this.updateUI(i);
+    }
+
+    updateUI(i) {
+        this.currentSlide = i;
+        const pct = ((i + 1) / this.slides.length) * 100;
+        this.progressBar.style.width = pct + '%';
+        const total = String(this.slides.length).padStart(2, '0');
+        const cur = String(i + 1).padStart(2, '0');
+        this.counter.textContent = `${cur} / ${total}`;
+        this.navDots.forEach((d, idx) => d.classList.toggle('active', idx === i));
+    }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    new SlidePresentation();
+    // Mark first slide visible immediately for initial entrance animation
+    document.querySelectorAll('.slide')[0].classList.add('visible');
+    setupDemoEmbed();
+});
+
+/* ===========================================
+   DEMO IFRAME — robust path resolution
+   Strategy depends on protocol:
+     • HTTP(S): try iframe load + contentDocument check for each candidate
+       until one renders the game. Uses real iframe events (not fetch HEAD)
+       so the same logic works under restricted sandboxes too.
+     • file://  : skip verification entirely (fetch blocked, cross-origin
+       blocks contentDocument access). Just set src to the canonical
+       relative path and trust the file exists. Always show the open-tab
+       link in the side panel so the user has a manual escape hatch.
+   =========================================== */
+function setupDemoEmbed() {
+    const iframe   = document.getElementById('demo-iframe');
+    const fallback = document.getElementById('demo-fallback');
+    const openLink = document.getElementById('demo-open-link');
+    const fbLink   = document.getElementById('demo-fallback-link');
+    if (!iframe) return;
+
+    const candidates = [
+        '../prototype/encore_prototype.html',   // canonical: docs/ → ../prototype/
+        'prototype/encore_prototype.html',      // siblings at server root
+        './encore_prototype.html',              // co-located in the same dir
+        '/prototype/encore_prototype.html',     // absolute server-root + prototype/
+        '/encore_prototype.html',               // absolute root
+    ];
+
+    // file:// — browser cross-origin blocks both fetch and contentDocument access.
+    // Don't bother verifying; trust the relative path and show the open-tab link.
+    if (location.protocol === 'file:') {
+        iframe.src = candidates[0];
+        openLink.href = candidates[0];
+        fbLink.href = candidates[0];
+        openLink.hidden = false;
+        return;
+    }
+
+    function tryCandidate(idx) {
+        if (idx >= candidates.length) {
+            // Exhausted all candidates — show inline fallback
+            const best = candidates[0];
+            fbLink.href = best;
+            openLink.href = best;
+            openLink.hidden = false;
+            fallback.hidden = false;
+            return;
+        }
+        const path = candidates[idx];
+        let settled = false;
+        const onLoad = () => {
+            if (settled) return;
+            settled = true;
+            iframe.removeEventListener('load', onLoad);
+            // Brief tick to let the iframe doc populate
+            setTimeout(() => {
+                let ok = false;
+                try {
+                    ok = !!iframe.contentDocument?.querySelector('.template-card');
+                } catch (_) {
+                    // Cross-origin access blocked → assume it loaded (we can't tell)
+                    ok = true;
+                }
+                if (ok) {
+                    openLink.href = path;
+                    fbLink.href = path;
+                    openLink.hidden = false;
+                    fallback.hidden = true;
+                } else {
+                    tryCandidate(idx + 1);
+                }
+            }, 600);
+        };
+        iframe.addEventListener('load', onLoad);
+        iframe.src = path;
+        // Safety net: if onload doesn't fire within 4s (network hang, blocked
+        // by sandbox), advance to the next candidate.
+        setTimeout(() => {
+            if (!settled) {
+                settled = true;
+                iframe.removeEventListener('load', onLoad);
+                tryCandidate(idx + 1);
+            }
+        }, 4000);
+    }
+    tryCandidate(0);
+}
+</script>
+</body>
+</html>

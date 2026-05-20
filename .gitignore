@@ -1,0 +1,33 @@
+# Mac
+.DS_Store
+
+# Reference videos are large, fetch on demand
+reference/videos/*.mp4
+
+# Frame caches regenerable from videos
+reference/frames/
+
+# Local IDE / editor
+.vscode/
+.idea/
+
+# Python virtual env (if any)
+.venv/
+__pycache__/
+*.pyc
+
+# Logs
+*.log
+
+# Local-only Claude state (keep settings.local.json + launch.json in repo)
+.claude/projects/
+.claude/cache/
+
+# Vercel CLI artifacts (created when deploying from /tmp/encore-deploy)
+.vercel/
+
+# Sprite pipeline scratch — regenerable via pack.py / process.py
+prototype/assets/raw/
+prototype/assets/sprites/
+prototype/assets/suggested_anchors.json
+

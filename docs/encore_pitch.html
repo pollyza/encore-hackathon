@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Encore — V2G Engine for TikTok LIVE</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: #050810;
+    color: #f4f4f4;
+    font-family: 'Courier New', Menlo, monospace;
+    line-height: 1.6;
+    font-size: 14px;
+  }
+  body {
+    background:
+      radial-gradient(ellipse at top, rgba(255,70,85,0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at bottom, rgba(160,68,255,0.06) 0%, transparent 50%),
+      #050810;
+    min-height: 100vh;
+  }
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 32px; }
+  section { padding: 80px 0; border-top: 1px solid #1a2030; }
+  section:first-of-type { border-top: none; }
+
+  /* === Hero === */
+  header {
+    padding: 120px 0 80px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before, header::after {
+    content: '';
+    position: absolute;
+    width: 1px; height: 100%;
+    background: linear-gradient(180deg, transparent, rgba(255,70,85,0.3), transparent);
+  }
+  header::before { left: 24%; top: 0; }
+  header::after { right: 24%; top: 0; }
+  .hero-badge {
+    display: inline-block;
+    color: #ff4655;
+    border: 1px solid #ff4655;
+    padding: 6px 16px;
+    letter-spacing: 4px;
+    font-size: 11px;
+    border-radius: 3px;
+    margin-bottom: 24px;
+  }
+  .hero-title {
+    font-size: clamp(56px, 10vw, 120px);
+    color: #fff;
+    margin: 0;
+    letter-spacing: 12px;
+    font-weight: bold;
+    line-height: 1;
+  }
+  .hero-title .bolt { color: #ff4655; font-size: 0.6em; vertical-align: 0.2em; margin-right: 0.1em; }
+  .hero-cn {
+    font-size: 16px; color: #888;
+    letter-spacing: 12px;
+    margin-top: 20px;
+  }
+  .hero-tagline {
+    color: #ffcd75;
+    font-size: 14px;
+    letter-spacing: 6px;
+    margin-top: 32px;
+  }
+  .hero-stamp {
+    color: #555;
+    font-size: 10px;
+    letter-spacing: 4px;
+    margin-top: 12px;
+  }
+
+  /* === Section headings === */
+  h2 {
+    color: #ff4655;
+    font-size: 14px;
+    letter-spacing: 6px;
+    margin: 0 0 8px;
+    font-weight: bold;
+  }
+  h2::before { content: '⚡ '; opacity: 0.6; }
+  .h2-sub {
+    color: #fff;
+    font-size: 32px;
+    letter-spacing: 1px;
+    margin: 0 0 40px;
+    line-height: 1.2;
+  }
+  .h2-sub .accent { color: #ffcd75; }
+
+  /* === Problem === */
+  #problem .pair {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+    margin-top: 24px;
+  }
+  .stat-card {
+    background: #0e1422;
+    border-left: 3px solid #ff4655;
+    padding: 24px;
+  }
+  .stat-card .num {
+    color: #ff4655;
+    font-size: 36px; font-weight: bold;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .stat-card .lbl { color: #ccc; font-size: 12px; }
+  .stat-card.good { border-left-color: #5af5e0; }
+  .stat-card.good .num { color: #5af5e0; }
+
+  /* === Vision === */
+  .vision-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;
+  }
+  .v-card {
+    background: rgba(20, 26, 40, 0.5);
+    border: 1px solid #2a3344;
+    padding: 24px;
+    border-radius: 6px;
+  }
+  .v-card .ico {
+    color: #ff4655;
+    font-size: 32px;
+    line-height: 1;
+    margin-bottom: 16px;
+  }
+  .v-card h3 {
+    color: #fff; margin: 0 0 8px;
+    font-size: 14px; letter-spacing: 2px;
+  }
+  .v-card p { color: #999; font-size: 13px; margin: 0; }
+
+  /* === Loop diagram === */
+  .loop {
+    display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; gap: 20px;
+    align-items: center;
+  }
+  .loop-step {
+    background: #0e1422;
+    border: 2px solid #2a3344;
+    padding: 28px 20px;
+    text-align: center;
+    border-radius: 6px;
+    position: relative;
+  }
+  .loop-step.watch  { border-color: #5af5e0; }
+  .loop-step.play   { border-color: #ffcd75; }
+  .loop-step.replay { border-color: #a044ff; }
+  .loop-step .stage {
+    font-size: 11px; letter-spacing: 4px; color: #888;
+    margin-bottom: 12px;
+  }
+  .loop-step.watch  .stage { color: #5af5e0; }
+  .loop-step.play   .stage { color: #ffcd75; }
+  .loop-step.replay .stage { color: #a044ff; }
+  .loop-step .ico {
+    font-size: 36px; margin-bottom: 12px; line-height: 1;
+  }
+  .loop-step .label {
+    color: #fff; font-size: 18px; font-weight: bold;
+    letter-spacing: 2px; margin-bottom: 8px;
+  }
+  .loop-step .desc {
+    color: #999; font-size: 11px; line-height: 1.5;
+  }
+  .loop-arrow {
+    color: #ff4655;
+    font-size: 24px;
+    font-weight: bold;
+  }
+  .loop-cn {
+    text-align: center;
+    margin-top: 40px;
+    color: #ffcd75;
+    letter-spacing: 16px;
+    font-size: 20px;
+  }
+
+  /* === Templates === */
+  .tpl-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;
+  }
+  .tpl-card {
+    background: #0e1422;
+    border: 2px solid;
+    border-radius: 8px;
+    padding: 28px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .tpl-card.fps  { border-color: #5af5e0; }
+  .tpl-card.moba { border-color: #ff8800; }
+  .tpl-card.br   { border-color: #a044ff; }
+  .tpl-card .badge {
+    display: inline-block;
+    font-size: 10px; letter-spacing: 3px;
+    padding: 3px 10px; border-radius: 3px;
+    font-weight: bold;
+    margin-bottom: 12px;
+  }
+  .fps  .badge { background: #5af5e022; color: #5af5e0; border: 1px solid #5af5e0; }
+  .moba .badge { background: #ff880022; color: #ff8800; border: 1px solid #ff8800; }
+  .br   .badge { background: #a044ff22; color: #a044ff; border: 1px solid #a044ff; }
+  .tpl-card h3 {
+    color: #fff; font-size: 22px; margin: 0 0 6px;
+    letter-spacing: 2px;
+  }
+  .tpl-card .ref { color: #666; font-size: 11px; margin-bottom: 18px; }
+  .tpl-card ul {
+    list-style: none; padding: 0; margin: 0 0 18px;
+    color: #ccc; font-size: 12px;
+  }
+  .tpl-card ul li { padding: 3px 0; }
+  .tpl-card ul li::before { content: '· '; color: #555; }
+  .tpl-card .feel {
+    color: #5af5e0;
+    font-style: italic;
+    font-size: 12px;
+    border-top: 1px solid #1a2030;
+    padding-top: 12px;
+  }
+  .fps  .feel { color: #5af5e0; }
+  .moba .feel { color: #ff8800; }
+  .br   .feel { color: #a044ff; }
+  .tpl-card .themes {
+    margin-top: 10px;
+    font-size: 10px; color: #666;
+    letter-spacing: 1px;
+  }
+
+  /* === Architecture diagram === */
+  .arch-diagram {
+    background: #050810;
+    border: 1px solid #2a3344;
+    padding: 24px;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #888;
+    overflow-x: auto;
+    line-height: 1.55;
+  }
+  .arch-diagram pre {
+    margin: 0;
+    color: inherit;
+    font-family: inherit;
+    white-space: pre;
+  }
+  .arch-diagram .hl  { color: #ff4655; }
+  .arch-diagram .ok  { color: #5af5e0; }
+  .arch-diagram .y   { color: #ffcd75; }
+  .arch-diagram .p   { color: #a044ff; }
+  .arch-diagram .dim { color: #555; }
+
+  /* === UX wireframe === */
+  .ux-row {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 40px;
+    align-items: start;
+  }
+  .phone {
+    width: 260px;
+    height: 480px;
+    background: #0a0d14;
+    border: 8px solid #1a2030;
+    border-radius: 32px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+  }
+  .phone .live-bg {
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, #2a3344, #0a0d14);
+  }
+  .phone .live-badge {
+    position: absolute; top: 12px; left: 12px;
+    background: #ff4655; color: #fff;
+    font-size: 8px; padding: 3px 7px;
+    border-radius: 3px; letter-spacing: 1px;
+    font-weight: bold;
+  }
+  .phone .sheet {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    height: 64%;
+    background: #0a0d14;
+    border-top: 2px solid #ff4655;
+    border-radius: 12px 12px 0 0;
+    padding: 12px;
+    transition: transform 0.4s;
+  }
+  .phone .sheet-title {
+    text-align: center; color: #ff4655;
+    font-size: 9px; letter-spacing: 3px;
+    margin-bottom: 8px;
+  }
+  .phone .sheet-game {
+    background: #4a8050;
+    height: 70%;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    background:
+      linear-gradient(135deg, #3a7838 50%, #4a8848 50%),
+      #4a8050;
+    background-size: 20px 20px;
+    position: relative;
+  }
+  .phone .sheet-game::before {
+    content: '👾';
+    position: absolute; bottom: 16px; left: 16px;
+    font-size: 14px;
+  }
+  .phone .sheet-game::after {
+    content: '🔥';
+    position: absolute; top: 16px; right: 16px;
+    font-size: 14px;
+  }
+  .phone .sheet-hud {
+    display: flex; justify-content: space-around;
+    font-size: 8px; color: #ffcd75;
+  }
+  .phone .live-content {
+    position: absolute; top: 40px; left: 12px; right: 12px;
+    color: rgba(255,255,255,0.4);
+    font-size: 8px; line-height: 1.5;
+  }
+  .ux-text h4 {
+    color: #ffcd75; font-size: 16px;
+    margin: 0 0 12px;
+    letter-spacing: 2px;
+  }
+  .ux-text p { color: #aaa; margin: 0 0 16px; font-size: 13px; }
+  .ux-rules { color: #aaa; font-size: 12px; }
+  .ux-rules li { padding: 4px 0; }
+  .ux-rules li::before { content: '⊳ '; color: #ff4655; font-weight: bold; }
+  .ux-rules { list-style: none; padding: 0; }
+
+  /* === Gift economy === */
+  .gift-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+  }
+  .gift-card {
+    background: #0e1422;
+    border-top: 3px solid;
+    padding: 20px 16px;
+    border-radius: 0 0 4px 4px;
+  }
+  .gift-card:nth-child(1) { border-top-color: #5af5e0; }
+  .gift-card:nth-child(2) { border-top-color: #ffcd75; }
+  .gift-card:nth-child(3) { border-top-color: #ff4655; }
+  .gift-card:nth-child(4) { border-top-color: #a044ff; }
+  .gift-card .name {
+    font-size: 11px; letter-spacing: 3px;
+    margin-bottom: 8px;
+    font-weight: bold;
+  }
+  .gift-card:nth-child(1) .name { color: #5af5e0; }
+  .gift-card:nth-child(2) .name { color: #ffcd75; }
+  .gift-card:nth-child(3) .name { color: #ff4655; }
+  .gift-card:nth-child(4) .name { color: #a044ff; }
+  .gift-card .what {
+    color: #fff; font-size: 13px; margin-bottom: 8px;
+  }
+  .gift-card .ex {
+    color: #777; font-size: 11px; line-height: 1.5;
+  }
+
+  /* === Status / Build progress === */
+  .build-list {
+    list-style: none; padding: 0; margin: 0;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px 32px;
+  }
+  .build-list li {
+    padding: 10px 0;
+    border-bottom: 1px dashed #1a2030;
+    display: flex; align-items: center; gap: 12px;
+    font-size: 13px;
+  }
+  .build-list .tick {
+    color: #5af5e0; font-weight: bold;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .build-list .x { color: #555; }
+  .build-list .partial { color: #ffcd75; }
+  .build-list .desc { color: #ccc; }
+  .build-list .meta { color: #666; font-size: 11px; margin-left: 6px; }
+  .build-list .done .desc { color: #fff; }
+  .build-list .partial .desc { color: #ffcd75; }
+
+  /* === Locked decisions === */
+  .decisions {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+  }
+  .dec-card {
+    background: rgba(255, 70, 85, 0.05);
+    border-left: 2px solid #ff4655;
+    padding: 14px 18px;
+    border-radius: 0 4px 4px 0;
+  }
+  .dec-card .label {
+    color: #ff4655; font-size: 10px;
+    letter-spacing: 2px;
+    margin-bottom: 4px; font-weight: bold;
+  }
+  .dec-card .text {
+    color: #ddd; font-size: 13px;
+  }
+
+  /* === Roadmap === */
+  .roadmap {
+    position: relative;
+    margin-top: 24px;
+    padding-left: 40px;
+  }
+  .roadmap::before {
+    content: ''; position: absolute;
+    left: 12px; top: 0; bottom: 20px;
+    width: 2px;
+    background: linear-gradient(180deg, #5af5e0, #ffcd75, #ff4655, #a044ff);
+  }
+  .rm-item {
+    position: relative;
+    padding: 12px 0 20px;
+  }
+  .rm-item::before {
+    content: '';
+    position: absolute;
+    left: -34px; top: 18px;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: #0a0d14;
+    border: 2px solid;
+  }
+  .rm-item.done::before    { border-color: #5af5e0; background: #5af5e0; }
+  .rm-item.now::before     { border-color: #ffcd75; }
+  .rm-item.next::before    { border-color: #ff4655; }
+  .rm-item.phase2::before  { border-color: #a044ff; }
+  .rm-item .when {
+    font-size: 10px; letter-spacing: 3px;
+    color: #666;
+    margin-bottom: 4px;
+  }
+  .rm-item.done .when    { color: #5af5e0; }
+  .rm-item.now  .when    { color: #ffcd75; }
+  .rm-item.next .when    { color: #ff4655; }
+  .rm-item.phase2 .when  { color: #a044ff; }
+  .rm-item .title {
+    color: #fff;
+    font-size: 15px;
+    font-weight: bold;
+    letter-spacing: 1px;
+  }
+  .rm-item .body {
+    color: #999;
+    font-size: 12px;
+    margin-top: 4px;
+    line-height: 1.6;
+  }
+
+  /* === Footer === */
+  footer {
+    padding: 60px 0;
+    border-top: 1px solid #1a2030;
+    text-align: center;
+    color: #555;
+    font-size: 11px;
+    letter-spacing: 2px;
+  }
+  footer a {
+    color: #5af5e0; text-decoration: none;
+    margin: 0 8px;
+  }
+  footer a:hover { text-decoration: underline; }
+  footer .meta { margin-top: 12px; font-size: 10px; color: #444; }
+
+  /* === Responsive === */
+  @media (max-width: 760px) {
+    .container { padding: 0 20px; }
+    section { padding: 56px 0; }
+    .vision-grid, .tpl-grid, .gift-grid { grid-template-columns: 1fr; }
+    .loop { grid-template-columns: 1fr; }
+    .loop-arrow { transform: rotate(90deg); justify-self: center; }
+    .build-list { grid-template-columns: 1fr; }
+    .decisions { grid-template-columns: 1fr; }
+    .ux-row { grid-template-columns: 1fr; }
+    .h2-sub { font-size: 24px; }
+    #problem .pair { grid-template-columns: 1fr; }
+    .arch-diagram { font-size: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============== HERO ============== -->
+<header>
+  <div class="container">
+    <span class="hero-badge">TIKTOK · GAMING · HACKATHON</span>
+    <h1 class="hero-title"><span class="bolt">⚡</span>ENCORE</h1>
+    <div class="hero-cn">安 可</div>
+    <div class="hero-tagline">LIVE-NATIVE V2G ENGINE</div>
+    <div class="hero-stamp">v0.6 · 2026 · INTERNAL PREVIEW</div>
+  </div>
+</header>
+
+<!-- ============== PROBLEM ============== -->
+<section id="problem">
+  <div class="container">
+    <h2>1 · THE PROBLEM</h2>
+    <div class="h2-sub">游戏 LIVE 的观众,<span class="accent">是被动消费的。</span></div>
+    <p style="color:#aaa;max-width:760px;">主播打出 ace、抢龙、决赛圈最后一击 —— 观众只能看,然后刷条弹幕。
+高光发生的那 5 秒,观众的注意力是峰值的,但他们没有任何动作可以"参与"。
+礼物是单向的,弹幕是文字的,看完就走。<strong style="color:#fff">观众的高光时刻情绪没被接住,转化成关注和回访的概率被白白浪费。</strong></p>
+
+    <div class="pair">
+      <div class="stat-card">
+        <div class="num">~3.5s</div>
+        <div class="lbl">高光发生时观众平均互动延迟(刷弹幕到提交)</div>
+      </div>
+      <div class="stat-card good">
+        <div class="num">30s</div>
+        <div class="lbl">Encore 给观众的"参与窗口" —— 直接玩一局基于高光的 mini game</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== VISION ============== -->
+<section id="vision">
+  <div class="container">
+    <h2>2 · WHAT IS ENCORE</h2>
+    <div class="h2-sub">把主播的高光时刻,<span class="accent">实时重构成观众能玩的 30 秒迷你游戏。</span></div>
+
+    <div class="vision-grid">
+      <div class="v-card">
+        <div class="ico">👁</div>
+        <h3>OBSERVE</h3>
+        <p>AI Vision 持续观察 LIVE 画面,识别 kill / clutch / ace / 抢龙 等高光事件。本质是把"主播按高光按钮"自动化。</p>
+      </div>
+      <div class="v-card">
+        <div class="ico">🧬</div>
+        <h3>STRUCTURE</h3>
+        <p>把高光时刻提取成一份 JSON config:游戏类型、地图主题、敌人数、起始 HP、武器、场景描述。这就是 V2G 的"语言"。</p>
+      </div>
+      <div class="v-card">
+        <div class="ico">🎮</div>
+        <h3>RECONSTRUCT</h3>
+        <p>客户端在 30 秒内把 config 渲染成一个体素像素风的 mini game,以 bottom sheet 形式弹给当时在场的观众。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== LOOP ============== -->
+<section id="loop">
+  <div class="container">
+    <h2>3 · THE LOOP</h2>
+    <div class="h2-sub">看 → 玩 → 播 <span class="accent">三元闭环</span></div>
+
+    <div class="loop">
+      <div class="loop-step watch">
+        <div class="stage">STAGE 1</div>
+        <div class="ico">📺</div>
+        <div class="label">WATCH</div>
+        <div class="desc">主播打游戏,AI 全程观察。<br>识别到高光时刻 → 自动触发。</div>
+      </div>
+      <div class="loop-arrow">▶</div>
+      <div class="loop-step play">
+        <div class="stage">STAGE 2</div>
+        <div class="ico">🕹</div>
+        <div class="label">PLAY</div>
+        <div class="desc">观众在 bottom sheet 玩 30 秒,<br>玩法 / 场景 / 配色 与刚才的高光一致。</div>
+      </div>
+      <div class="loop-arrow">▶</div>
+      <div class="loop-step replay">
+        <div class="stage">STAGE 3</div>
+        <div class="ico">🎬</div>
+        <div class="label">BROADCAST</div>
+        <div class="desc">AI 剪 15s 录像回流直播间。<br>主播实时锐评 Top 3 录像。</div>
+      </div>
+    </div>
+
+    <div class="loop-cn">看  ·  玩  ·  播</div>
+  </div>
+</section>
+
+<!-- ============== TEMPLATES ============== -->
+<section id="templates">
+  <div class="container">
+    <h2>4 · THE 3 TEMPLATES (PHASE 1)</h2>
+    <div class="h2-sub">不是真生成式,<span class="accent">是模板参数化。</span></div>
+    <p style="color:#888;max-width:760px;margin-bottom:32px;font-size:13px;">
+      Phase 1 (Path B) 的核心决定:AI 不写游戏代码,只产 JSON config。3 个预制模板分别对位 TikTok 游戏 LIVE 的三大内容供给。
+      <strong style="color:#ccc">覆盖率约 60-70%。</strong>
+    </p>
+
+    <div class="tpl-grid">
+      <div class="tpl-card fps">
+        <span class="badge">FPS · 战术射击</span>
+        <h3>COVER STRIKE</h3>
+        <div class="ref">参考: Valorant / CS / COD</div>
+        <ul>
+          <li>右手拖屏瞄准 · 后坐力曲线</li>
+          <li>弹匣 12 发 + 快速换弹</li>
+          <li>掩体战术 + Peek 加爆头</li>
+          <li>1v3 残局节奏</li>
+        </ul>
+        <div class="feel">"每杀都是 3 发的窗口 · 谁先 peek 谁赢"</div>
+        <div class="themes">主题: DESERT · SNOW · CYBER · JUNGLE</div>
+      </div>
+
+      <div class="tpl-card moba">
+        <span class="badge">MOBA · 端游 / 王者</span>
+        <h3>DRAGON PIT</h3>
+        <div class="ref">参考: LoL / Honor of Kings / Dota</div>
+        <ul>
+          <li>技能预瞄拖拽 · 4 技能 + 法力</li>
+          <li>小兵线 + 补刀经济</li>
+          <li>草丛隐身 + 防御塔反制</li>
+          <li>1v3 龙坑反杀</li>
+        </ul>
+        <div class="feel">"补刀和草丛是决策 · 技能会 miss"</div>
+        <div class="themes">主题: GRASS · LAVA · ICE · TWILIGHT</div>
+      </div>
+
+      <div class="tpl-card br">
+        <span class="badge">BR · 大逃杀</span>
+        <h3>FINAL CIRCLE</h3>
+        <div class="ref">参考: PUBG / Apex / Fortnite</div>
+        <ul>
+          <li>大地图跟随相机 · 缩圈毒气</li>
+          <li>武器稀有度 4 档 (C / R / E / L)</li>
+          <li>长按 E 开镜 · 小队 AI 互打</li>
+          <li>最后一人活到时间归零</li>
+        </ul>
+        <div class="feel">"听见远处的枪声 · 捡到 SR 才有决赛圈"</div>
+        <div class="themes">主题: FOREST · DESERT · ISLAND · WASTELAND</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== UX ============== -->
+<section id="ux">
+  <div class="container">
+    <h2>5 · INTERACTION & UX</h2>
+    <div class="h2-sub">Bottom sheet,<span class="accent">永不压缩 LIVE 主画面。</span></div>
+
+    <div class="ux-row">
+      <div class="phone">
+        <div class="live-bg"></div>
+        <div class="live-badge">● LIVE</div>
+        <div class="live-content">// streamer's gameplay<br>visible as background<br>not paused, not muted<br>not pushed off-screen</div>
+        <div class="sheet">
+          <div class="sheet-title">⚡ ENCORE · FPS · DESERT</div>
+          <div class="sheet-game"></div>
+          <div class="sheet-hud">HP · MP · 12/12</div>
+        </div>
+      </div>
+
+      <div class="ux-text">
+        <h4>核心 UX 铁律</h4>
+        <p>Encore mini game 以 bottom sheet 形式上滑覆盖,占屏 80%。LIVE 视频依然在播,主播声音依然在响,只是被推到背景层。</p>
+        <ul class="ux-rules">
+          <li>永不 pause LIVE,永不静音,永不挤压 main view</li>
+          <li>玩家任意时刻可以下滑回 LIVE,游戏自动结束</li>
+          <li>30 秒后自动结束,弹回 LIVE,无侵入</li>
+          <li>千元机也跑得动:Canvas 2D + 体素方块,无 WebGL</li>
+          <li>UX 状态机 8 个状态(见飞书 §11.7) —— SAMPLING / DETECTED / WARMUP / PLAY / END / REPLAY_PEEK / GIFT / RESET</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== GIFT ECONOMY ============== -->
+<section id="economy">
+  <div class="container">
+    <h2>6 · GIFT ECONOMY</h2>
+    <div class="h2-sub">4 层礼物分层,<span class="accent">不送礼也能玩。</span></div>
+    <p style="color:#888;max-width:760px;margin-bottom:32px;font-size:13px;">
+      <strong style="color:#ff4655">铁律:禁止"送礼换试玩"。</strong>送礼是放大体验,不是入场券。
+      主播分成 ≥ 普通 LIVE 礼物分成。
+    </p>
+
+    <div class="gift-grid">
+      <div class="gift-card">
+        <div class="name">ENHANCE</div>
+        <div class="what">改造你的下一局</div>
+        <div class="ex">"火焰子弹"皮肤、"双倍 HP"开局、"额外一条命"…… 个人增益。</div>
+      </div>
+      <div class="gift-card">
+        <div class="name">SPOTLIGHT</div>
+        <div class="what">为高分录像加曝光</div>
+        <div class="ex">让你的录像更可能进入主播 Top 3 锐评池。社交向。</div>
+      </div>
+      <div class="gift-card">
+        <div class="name">SPONSOR</div>
+        <div class="what">主播下一局的强化</div>
+        <div class="ex">给主播在下次 LIVE 高光生成的 Encore 加强化 / 主题。礼物流向主播。</div>
+      </div>
+      <div class="gift-card">
+        <div class="name">LOOT</div>
+        <div class="what">概率宝箱皮肤</div>
+        <div class="ex">开箱拿稀有装备外观,送回个人收藏。常驻收益。</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== ARCHITECTURE ============== -->
+<section id="architecture">
+  <div class="container">
+    <h2>7 · V2G ARCHITECTURE</h2>
+    <div class="h2-sub">观察 → 推理 → 配置 → 播放,<span class="accent">全链路 ≤ 6 秒。</span></div>
+
+    <div class="arch-diagram">
+<pre>
+<span class="dim">┌────────────────────────────────────────────────────────────────────────┐</span>
+<span class="dim">│</span>  <span class="hl">LIVE Source</span>           <span class="dim">→</span>     <span class="ok">Frame Sampler</span>      <span class="dim">→</span>    <span class="y">Claude Vision</span>     <span class="dim">│</span>
+<span class="dim">│</span>  (TikTok stream /              (every 4s,               (system prompt    <span class="dim">│</span>
+<span class="dim">│</span>   video / OBS cam)             480px JPEG q60)           returns JSON)    <span class="dim">│</span>
+<span class="dim">│</span>                                                                         <span class="dim">│</span>
+<span class="dim">│</span>                                          <span class="dim">↓</span>                              <span class="dim">│</span>
+<span class="dim">│</span>                                                                         <span class="dim">│</span>
+<span class="dim">│</span>                          ┌─────────────────────────┐                    <span class="dim">│</span>
+<span class="dim">│</span>                          <span class="dim">│</span>  <span class="hl">V2G Config JSON</span>       <span class="dim">│</span>                    <span class="dim">│</span>
+<span class="dim">│</span>                          <span class="dim">│</span>  template: fps          <span class="dim">│</span>                    <span class="dim">│</span>
+<span class="dim">│</span>                          <span class="dim">│</span>  theme: desert          <span class="dim">│</span>                    <span class="dim">│</span>
+<span class="dim">│</span>                          <span class="dim">│</span>  scenario:              <span class="dim">│</span>                    <span class="dim">│</span>
+<span class="dim">│</span>                          <span class="dim">│</span>    enemy_count: 3       <span class="dim">│</span>                    <span class="dim">│</span>
+<span class="dim">│</span>                          <span class="dim">│</span>    hp_start: 55         <span class="dim">│</span>                    <span class="dim">│</span>
+<span class="dim">│</span>                          <span class="dim">│</span>    weapon: rifle        <span class="dim">│</span>                    <span class="dim">│</span>
+<span class="dim">│</span>                          <span class="dim">│</span>    desc: "1v3 retake"   <span class="dim">│</span>                    <span class="dim">│</span>
+<span class="dim">│</span>                          └─────────────────────────┘                    <span class="dim">│</span>
+<span class="dim">│</span>                                          <span class="dim">↓</span>                              <span class="dim">│</span>
+<span class="dim">│</span>                                                                         <span class="dim">│</span>
+<span class="dim">│</span>   <span class="ok">Streamer page</span>   <span class="dim">───→</span>   postMessage   <span class="dim">───→</span>   <span class="p">iframe (game)</span>      <span class="dim">│</span>
+<span class="dim">│</span>   ▸ video player              {type:'launch',           ▸ embedded mode  <span class="dim">│</span>
+<span class="dim">│</span>   ▸ status overlay              config: {...}}          ▸ apply theme    <span class="dim">│</span>
+<span class="dim">│</span>   ▸ sheet animation                                     ▸ apply scenario <span class="dim">│</span>
+<span class="dim">│</span>   ▸ cost tally                                          ▸ startGame()   <span class="dim">│</span>
+<span class="dim">│</span>                                                                         <span class="dim">│</span>
+<span class="dim">│</span>                                                       <span class="dim">↓</span>  (30s play)    <span class="dim">│</span>
+<span class="dim">│</span>                                                                         <span class="dim">│</span>
+<span class="dim">│</span>   <span class="ok">Streamer page</span>   <span class="dim">←──</span>   postMessage   <span class="dim">←───</span>   <span class="p">iframe (game)</span>      <span class="dim">│</span>
+<span class="dim">│</span>   ▸ slide sheet down            {type:'encore_done',     ▸ game over     <span class="dim">│</span>
+<span class="dim">│</span>   ▸ cooldown 8s                  stats: {won, kills}}    ▸ post stats    <span class="dim">│</span>
+<span class="dim">│</span>   ▸ resume sampling                                                      <span class="dim">│</span>
+<span class="dim">│</span>                                                                         <span class="dim">│</span>
+<span class="dim">└────────────────────────────────────────────────────────────────────────┘</span>
+</pre>
+    </div>
+
+    <div style="margin-top:24px;color:#666;font-size:11px;text-align:right;">
+      <code style="color:#5af5e0">observer.py</code> · <code style="color:#5af5e0">streamer.html</code> · <code style="color:#5af5e0">encore_prototype.html?embedded=1</code>
+    </div>
+  </div>
+</section>
+
+<!-- ============== BUILD STATUS ============== -->
+<section id="status">
+  <div class="container">
+    <h2>8 · WHAT'S BUILT TODAY (v0.6)</h2>
+    <div class="h2-sub">原型已跑通,<span class="accent">完整 V2G 链路演示就绪。</span></div>
+
+    <ul class="build-list">
+      <li class="done"><span class="tick">✓</span><span class="desc">Iso 体素渲染器(w2s 投影 + 块体 + z-sort + 静态 bg bake)</span></li>
+      <li class="done"><span class="tick">✓</span><span class="desc">3 模板核心机制(掩体战术 / 技能预瞄 / 武器稀有度等)</span></li>
+      <li class="done"><span class="tick">✓</span><span class="desc">12 套主题(每模板 4 套调色板 + tile)</span></li>
+      <li class="done"><span class="tick">✓</span><span class="desc">22 个精灵程序化 atlas(占位 + 真 AI 切换无需改代码)</span></li>
+      <li class="done"><span class="tick">✓</span><span class="desc">每模板独立 ambient FX(粒子 + 色调 grading)</span></li>
+      <li class="done"><span class="tick">✓</span><span class="desc">地面散落贴花(打破 voxel-grid 模板感)</span></li>
+      <li class="done"><span class="tick">✓</span><span class="desc">AI 精灵流水线(prompts → rembg → pack)</span></li>
+      <li class="done"><span class="tick">✓</span><span class="desc">Claude Vision 实时观察 LIVE 视频帧</span></li>
+      <li class="done"><span class="tick">✓</span><span class="desc">streamer.html + postMessage iframe 协议</span></li>
+      <li class="done"><span class="tick">✓</span><span class="desc">JSON config 注入到游戏(theme + scenario 覆盖)</span></li>
+      <li class="partial"><span class="tick">◐</span><span class="desc">真 AI 精灵切入</span><span class="meta">(管道就绪 / 待跑 MJ-DALL-E 批次)</span></li>
+      <li class="partial"><span class="tick">◐</span><span class="desc">TikTok feed shell 集成</span><span class="meta">(UI 仿真版有,真 SDK 接入待 M11)</span></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============== LOCKED DECISIONS ============== -->
+<section id="decisions">
+  <div class="container">
+    <h2>9 · LOCKED PRODUCT DECISIONS</h2>
+    <div class="h2-sub">设计真理在飞书,<span class="accent">代码追随文档。</span></div>
+
+    <div class="decisions">
+      <div class="dec-card">
+        <div class="label">PATH</div>
+        <div class="text">Path B(模板参数化),不做真生成式。AI 出 JSON config → 路由到 3 模板。</div>
+      </div>
+      <div class="dec-card">
+        <div class="label">ART</div>
+        <div class="text">抽象像素风(Roblox / MC 系)。规避所有游戏 IP 风险,千元机兼容。</div>
+      </div>
+      <div class="dec-card">
+        <div class="label">ENTRY POINT</div>
+        <div class="text">LIVE-first。M12 之前不做短视频流入口(转化率塌方)。</div>
+      </div>
+      <div class="dec-card">
+        <div class="label">UX RULE</div>
+        <div class="text">Bottom sheet 上滑覆盖,永不压缩 LIVE 主画面。8-状态有限状态机。</div>
+      </div>
+      <div class="dec-card">
+        <div class="label">MONETIZATION</div>
+        <div class="text">4 层礼物经济(Enhance / Spotlight / Sponsor / Loot)。禁止"送礼换试玩"。</div>
+      </div>
+      <div class="dec-card">
+        <div class="label">TEMPLATE COVERAGE</div>
+        <div class="text">3 套模板必备(FPS + MOBA + BR),覆盖约 60-70% 游戏 LIVE 内容。</div>
+      </div>
+      <div class="dec-card">
+        <div class="label">CREATOR SHARE</div>
+        <div class="text">Encore 礼物中主播分成 ≥ 普通 LIVE 礼物分成。生态绑定。</div>
+      </div>
+      <div class="dec-card">
+        <div class="label">DEMO SCOPE</div>
+        <div class="text">客户端 + 局域网部署。无后端服务(observer.py 是本地代理,不是 backend)。</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== ROADMAP ============== -->
+<section id="roadmap">
+  <div class="container">
+    <h2>10 · ROADMAP</h2>
+    <div class="h2-sub">从 demo 到 M12,<span class="accent">5 个里程碑。</span></div>
+
+    <div class="roadmap">
+      <div class="rm-item done">
+        <div class="when">M8 · DONE</div>
+        <div class="title">Demo prototype (v0.6)</div>
+        <div class="body">3 模板 + 主题切换 + V2G 链路打通 + Claude Vision 接入。可上台演示。</div>
+      </div>
+
+      <div class="rm-item now">
+        <div class="when">M9 · NOW</div>
+        <div class="title">AI 美术批量切入</div>
+        <div class="body">跑 22 个 prompt 通过 Midjourney / DALL-E / SD,过 process.py → pack.py。视觉接近 Astrocade 水准。</div>
+      </div>
+
+      <div class="rm-item next">
+        <div class="when">M10 · NEXT</div>
+        <div class="title">TikTok feed shell + 真分享链路</div>
+        <div class="body">15 秒录像剪回 LIVE 弹幕区 / 主播 Top 3 锐评池。需要接 TikTok SDK + CDN。</div>
+      </div>
+
+      <div class="rm-item next">
+        <div class="when">M11 · NEXT</div>
+        <div class="title">第 4 个模板家族(可选)</div>
+        <div class="body">塔防 / 自走棋 / Vampire-Survivors 风格三选一。需先改飞书 Brief 的"模板覆盖"条款。</div>
+      </div>
+
+      <div class="rm-item phase2">
+        <div class="when">PHASE 2 · M14+</div>
+        <div class="title">生成式行为 DSL</div>
+        <div class="body">LLM 每条 Encore 输出独立 DSL(波次 / 单位 / 技能 / 胜负条件),引擎解释执行。真正打开"每条都不一样"的天花板。是 Astrocade-tier 的竞争位。</div>
+      </div>
+
+      <div class="rm-item phase2">
+        <div class="when">PHASE 2 · M16+</div>
+        <div class="title">真实直播平台 + 高并发后端</div>
+        <div class="body">TikTok LIVE 平台官方接入,frame sampling 服务端化,百万级并发观看时的成本控制(模型选型 / 缓存 / 降级)。</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== FOOTER ============== -->
+<footer>
+  <div class="container">
+    <div>📐 Design truth: <a href="https://bytedance.larkoffice.com/docx/Gu2ed1ZOqobDF9xqY7VmjLYMyQe">Product Brief v0.1</a> · <a href="https://bytedance.larkoffice.com/docx/LfbydvhwCopawvx6UthmmOcoyNf">Demo Dev Plan v0.2</a></div>
+    <div style="margin-top:8px;">🎮 Live demo: <a href="../prototype/encore_prototype.html">encore_prototype.html</a> · 🎬 V2G demo: <a href="../prototype/streamer.html">streamer.html</a></div>
+    <div class="meta">⚡ ENCORE · TIKTOK GAMING · HACKATHON · 2026 · 内部预览,请勿外传</div>
+  </div>
+</footer>
+
+</body>
+</html>

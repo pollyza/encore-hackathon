@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -m http.server *)",
+      "Bash(ffmpeg *)",
+      "Bash(ffprobe *)",
+      "Bash(curl -L -o *)",
+      "Bash(curl -s https://*)",
+      "Bash(lark-cli docs *)",
+      "Bash(lark-cli auth *)",
+      "Bash(lark-cli api *)",
+      "Bash(ls *)",
+      "Bash(mkdir -p *)",
+      "Bash(rm /tmp/*)",
+      "Read(//tmp/**)",
+      "Read(//Users/bytedance/Documents/encore-hackathon/**)"
+    ]
+  }
+}

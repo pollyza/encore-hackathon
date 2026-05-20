@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "encore-prototype-static",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-I", "-c", "import os, functools; D='/tmp/encore-preview'; os.chdir(D); from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler; H=functools.partial(SimpleHTTPRequestHandler, directory=D); ThreadingHTTPServer(('127.0.0.1', 8080), H).serve_forever()"],
+      "port": 8080
+    }
+  ]
+}
