@@ -242,6 +242,97 @@
   .br .t-name { color: #a044ff; }
   #splash .footer { color: #555; font-size: 10px; margin-top: 16px; letter-spacing: 1px; }
 
+  /* Per-template "HOW TO PLAY" coach card. Shown after startGame() and before
+     the round clock starts; dismissed on any input or auto after 4s in V2G
+     embedded mode (where the bottom sheet has limited dwell time). */
+  #howto {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.78);
+    display: none; align-items: center; justify-content: center;
+    z-index: 90;
+    padding: 20px;
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+  }
+  #howto.on { display: flex; }
+  #howto .card {
+    background: #1a1f2e;
+    border: 2px solid #333;
+    border-radius: 10px;
+    padding: 22px 24px 18px;
+    max-width: 360px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 0 50px rgba(0,0,0,0.6);
+    animation: howto-pop 0.22s ease-out;
+  }
+  #howto.fps .card { border-color: #5af5e0; box-shadow: 0 0 50px #5af5e033; }
+  #howto.moba .card { border-color: #ff8800; box-shadow: 0 0 50px #ff880033; }
+  #howto.br .card { border-color: #a044ff; box-shadow: 0 0 50px #a044ff33; }
+  @keyframes howto-pop {
+    from { opacity: 0; transform: scale(0.94); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  #howto h2 {
+    margin: 0 0 4px;
+    font-size: 11px;
+    letter-spacing: 5px;
+    color: #888;
+  }
+  #howto h1 {
+    margin: 0 0 16px;
+    font-size: 20px;
+    letter-spacing: 3px;
+  }
+  #howto.fps h1 { color: #5af5e0; }
+  #howto.moba h1 { color: #ff8800; }
+  #howto.br h1 { color: #a044ff; }
+  #howto ul {
+    list-style: none;
+    padding: 0; margin: 0 0 16px;
+    text-align: left;
+  }
+  #howto li {
+    font-size: 12px;
+    color: #cfd2db;
+    line-height: 1.55;
+    padding: 6px 0;
+    border-bottom: 1px dashed #2a2f3e;
+    display: flex; gap: 10px;
+  }
+  #howto li:last-child { border-bottom: none; }
+  #howto .key {
+    flex-shrink: 0;
+    min-width: 64px;
+    color: #ffcd75;
+    font-weight: bold;
+    letter-spacing: 1px;
+    font-size: 11px;
+  }
+  #howto .cta {
+    margin-top: 6px;
+    padding: 10px 14px;
+    background: transparent;
+    border: 1px solid #5af5e0;
+    color: #5af5e0;
+    font-family: inherit;
+    font-size: 12px;
+    letter-spacing: 3px;
+    cursor: pointer;
+    border-radius: 6px;
+    width: 100%;
+    transition: all 0.15s;
+  }
+  #howto .cta:hover { background: #5af5e022; }
+  #howto .cta:active { transform: scale(0.97); }
+  #howto .auto {
+    margin-top: 10px;
+    font-size: 10px;
+    color: #555;
+    letter-spacing: 2px;
+  }
+  #howto .auto b { color: #888; }
+
   .panel {
     background: #1a1f2e;
     border: 2px solid #ff4655;
@@ -366,6 +457,16 @@
       </div>
 
       <div class="footer">TIKTOK · GAMING · HACKATHON</div>
+    </div>
+  </div>
+
+  <div id="howto">
+    <div class="card">
+      <h2>HOW TO PLAY</h2>
+      <h1 id="howto-title">—</h1>
+      <ul id="howto-list"></ul>
+      <button class="cta" id="howto-go">TAP TO BEGIN</button>
+      <div class="auto" id="howto-auto"></div>
     </div>
   </div>
 
@@ -1223,7 +1324,7 @@
   Games.moba = {
     name: 'MOBA · DRAGON PIT',
     badge: 'MOBA',
-    duration: 30,
+    duration: 45,
     showMP: true,
     fxKey: 'moba',
     pills: { gold: true },
@@ -1321,7 +1422,7 @@
         telegraphs: [],
         particles: [],
         bushSpots,
-        dragon: { wx: cx, wy: cy, r: 38, hp: 120, maxHp: 120, atkCd:1.5 },
+        dragon: { wx: cx, wy: cy, r: 38, hp: 70, maxHp: 70, atkCd:1.5 },
         tower: { wx: Math.floor(mapW/2)*Iso.WS + Iso.WS/2,
                  wy: (mapH-3)*Iso.WS + Iso.WS/2,
                  r:18, range: 3.5*Iso.WS, atkCd:1.0 },
@@ -1488,7 +1589,7 @@
       if (state.enemies.length === 0) {
         const dd = Math.hypot(state.dragon.wx - p.wx, state.dragon.wy - p.wy);
         if (dd < state.dragon.r + 50) {
-          mobaHurtDragon((6 + p.aaPower) * dt);
+          mobaHurtDragon((14 + p.aaPower) * dt);
         }
         if (bannerT <= 0 && state.dragon.hp > 0) showBanner('DRAGON OPEN', '#ff8800', 0.8);
       }
@@ -1841,9 +1942,13 @@
             }
           });
           if (pj.life > 0) {
-            // Dragon
-            if (state.enemies.length === 0 && Math.hypot(state.dragon.wx-pj.wx, state.dragon.wy-pj.wy) < state.dragon.r) {
-              mobaHurtDragon(pj.dmg * 0.6); pj.life = 0;
+            // Dragon — Q skill-shots now chip dragon even before enemies cleared.
+            // Multiplier is lower (0.3) until enemies dead, then jumps to 0.6 —
+            // still rewards the "secure" play but gives skilled solo players a
+            // faster lane via good aiming.
+            if (Math.hypot(state.dragon.wx-pj.wx, state.dragon.wy-pj.wy) < state.dragon.r) {
+              const mult = state.enemies.length === 0 ? 0.6 : 0.3;
+              mobaHurtDragon(pj.dmg * mult); pj.life = 0;
             }
           }
         }
@@ -1875,10 +1980,11 @@
               if (m.side !== 'enemy') return;
               if (Math.hypot(m.wx - t.wx, m.wy - t.wy) < t.r) mobaHurtMinion(m, t.dmg, true);
             });
-            // Dragon
-            if (state.enemies.length === 0) {
-              const dd = Math.hypot(state.dragon.wx - t.wx, state.dragon.wy - t.wy);
-              if (dd < t.r + state.dragon.r) mobaHurtDragon(t.dmg * 0.5);
+            // Dragon — W AoE chips dragon at half-rate while enemies alive
+            const dd = Math.hypot(state.dragon.wx - t.wx, state.dragon.wy - t.wy);
+            if (dd < t.r + state.dragon.r) {
+              const mult = state.enemies.length === 0 ? 0.5 : 0.25;
+              mobaHurtDragon(t.dmg * mult);
             }
           }
           state.particles.push({ wx:t.wx, wy:t.wy, r:0, maxR:t.r, life:0.3, maxLife:0.3, type:'ring', color: t.owner==='e'?'#ff4655':'#ffcd75' });
@@ -2236,12 +2342,33 @@
       else p.shotCount = 0; // reset recoil after 0.5s no-fire
       Object.values(state.skills).forEach(s => { if (s._cd > 0) s._cd = Math.max(0, s._cd - dt); });
 
-      // Right-stick aim → set aimAng
+      // Aim sourcing (4-tier, same priority as MOBA):
+      //   1. Touch aim pad (highest — explicit drag)
+      //   2. Desktop mouse position over canvas
+      //   3. Auto-aim nearest enemy (the friendliness default — guarantees a
+      //      first-touch player who never moves the mouse still hits things)
+      //   4. Keep last aimAng
       const a = aimAngle();
-      if (a != null) {
-        p.aimAng = a;
-        // Auto-fire while aiming
-        if (state.autoFire && p.fireCd <= 0 && p.ammo > 0 && p.reloading <= 0) fpsFireBullet();
+      let hasAim = false;
+      if (a != null) { p.aimAng = a; hasAim = true; }
+      else if (mouseWorld) {
+        const dx = mouseWorld.wx - p.wx, dy = mouseWorld.wy - p.wy;
+        if (Math.hypot(dx, dy) > 8) { p.aimAng = Math.atan2(dy, dx); hasAim = true; }
+      }
+      if (!hasAim) {
+        let best = null, bd = 1e9;
+        state.enemies.forEach(en => {
+          if (en.dead) return;
+          const d = Math.hypot(en.wx - p.wx, en.wy - p.wy);
+          if (d < bd) { bd = d; best = en; }
+        });
+        if (best) { p.aimAng = Math.atan2(best.wy - p.wy, best.wx - p.wx); hasAim = true; }
+      }
+      // Auto-fire whenever we have an aim source and a living enemy on the field
+      const anyAlive = state.enemies.some(en => !en.dead);
+      if (state.autoFire && hasAim && anyAlive &&
+          p.fireCd <= 0 && p.ammo > 0 && p.reloading <= 0) {
+        fpsFireBullet();
       }
 
       // Bullets
@@ -3058,6 +3185,121 @@
   // ============================================================
   let timeLeft = 30;
   let last = 0;
+  // Tutorial gate: paused mode where world renders but update + timer are
+  // frozen until the user dismisses the HOW TO PLAY card.
+  let tutorialActive = false;
+  let tutorialAutoTimer = 0;
+  let tutorialAutoStart = 0;
+
+  // Touch input is detected at runtime — desktop pointer users get keyboard
+  // labels, mobile/embedded users get gesture labels.
+  const isTouch = ('ontouchstart' in window) ||
+                  navigator.maxTouchPoints > 0 ||
+                  matchMedia('(pointer: coarse)').matches;
+
+  const HOW_TO_PLAY = {
+    fps: {
+      title: 'COVER STRIKE',
+      rows: isTouch ? [
+        ['LEFT JOY',  '左下摇杆走位 · 躲到掩体后'],
+        ['RIGHT DRAG', '右下区域拖屏瞄准 · 自动开火'],
+        ['HUD',       '弹匣 12 发 · 红色弹道是危险'],
+        ['WIN',       '清完所有敌人或撑过 30 秒'],
+      ] : [
+        ['WASD',  '走位 · 躲到掩体后'],
+        ['MOUSE', '移动鼠标瞄准 · 自动开火'],
+        ['HUD',   '弹匣 12 发 · 红色弹道是危险'],
+        ['WIN',   '清完所有敌人或撑过 30 秒'],
+      ],
+    },
+    moba: {
+      title: 'DRAGON PIT',
+      rows: isTouch ? [
+        ['LEFT JOY',   '走位 · 推线打小兵补刀拿钱'],
+        ['RIGHT DRAG', '拖动预瞄技能方向'],
+        ['Q 技能',     '直线穿透弹道 (放手发射)'],
+        ['W 技能',     '范围 AoE 圈 (放手落地)'],
+        ['目标',       '清掉敌方英雄 → 抢龙坑大龙'],
+        ['WIN',        '在 45 秒内击败大龙'],
+      ] : [
+        ['WASD',  '走位 · 推线打小兵补刀拿钱'],
+        ['MOUSE', '移动鼠标瞄准 (会自动锁敌)'],
+        ['Q 键',  '按住预瞄 · 放手发射直线弹'],
+        ['W 键',  '按住预瞄 · 放手落 AoE'],
+        ['目标',  '清掉敌方英雄 → 抢龙坑大龙'],
+        ['WIN',   '在 45 秒内击败大龙'],
+      ],
+    },
+    br: {
+      title: 'FINAL CIRCLE',
+      rows: isTouch ? [
+        ['LEFT JOY',   '走位 · 躲毒圈 · 找掩体'],
+        ['RIGHT DRAG', '拖屏瞄准 · 自动开火'],
+        ['E 技能',     '长按开镜 · 减抖增伤'],
+        ['地上掉落',   '踩上去捡更高稀有度武器'],
+        ['WIN',        '活到最后 30 秒'],
+      ] : [
+        ['WASD',   '走位 · 躲毒圈 · 找掩体'],
+        ['MOUSE',  '移动鼠标瞄准 · 自动开火'],
+        ['E 键',   '长按开镜 · 减抖增伤'],
+        ['地上掉落', '踩上去捡更高稀有度武器'],
+        ['WIN',    '活到最后 30 秒'],
+      ],
+    },
+  };
+
+  function showTutorial(key) {
+    const data = HOW_TO_PLAY[key];
+    if (!data) return;
+    const overlay = document.getElementById('howto');
+    overlay.className = '';
+    overlay.classList.add('on', key);
+    document.getElementById('howto-title').textContent = data.title;
+    const list = document.getElementById('howto-list');
+    list.innerHTML = '';
+    data.rows.forEach(([k, v]) => {
+      const li = document.createElement('li');
+      li.innerHTML = '<span class="key">' + k + '</span><span>' + v + '</span>';
+      list.appendChild(li);
+    });
+    tutorialActive = true;
+    // Auto-dismiss countdown — quicker in V2G embedded mode (sheet dwell time
+    // is ~30s); longer for standalone play so users can actually read.
+    const totalMs = isEmbedded ? 3500 : 5500;
+    tutorialAutoStart = performance.now();
+    tutorialAutoTimer = totalMs;
+    const auto = document.getElementById('howto-auto');
+    auto.innerHTML = 'AUTO START IN <b>' + Math.ceil(totalMs/1000) + 's</b>';
+  }
+
+  function dismissTutorial() {
+    if (!tutorialActive) return;
+    tutorialActive = false;
+    document.getElementById('howto').classList.remove('on');
+    // Reset frame-time so the first post-tutorial dt isn't a huge jump that
+    // teleports the player or skips the timer. Setting last=0 makes the next
+    // tick use the 0.016 fallback (loop stores `last` in seconds, not ms).
+    last = 0;
+  }
+
+  document.getElementById('howto-go').addEventListener('click', (e) => {
+    e.stopPropagation();
+    dismissTutorial();
+  });
+  // Any tap on canvas or any keypress also dismisses (joystick/aimpad touches
+  // will hit canvas through the overlay since #howto is z-index 90 / canvas
+  // is below; we listen on the overlay itself).
+  document.getElementById('howto').addEventListener('pointerdown', (e) => {
+    // Don't dismiss if they tapped the CTA button — that handler already fires.
+    if (e.target.id === 'howto-go') return;
+    dismissTutorial();
+  });
+  window.addEventListener('keydown', (e) => {
+    if (tutorialActive) {
+      dismissTutorial();
+      e.preventDefault();
+    }
+  }, true);
 
   function startGame(key) {
     Iso.camX = 0; Iso.camY = 0;
@@ -3077,6 +3319,7 @@
     document.body.classList.add('playing');
     document.getElementById('splash').classList.remove('on');
     document.getElementById('end').classList.remove('on');
+    showTutorial(key);
   }
 
   // V2G scenario application — read pendingConfig.scenario and patch state
@@ -3177,7 +3420,7 @@
       return;
     }
 
-    if (!gameOver) {
+    if (!gameOver && !tutorialActive) {
       current.update(dt);
       updateAmbient(dt, current.fxKey);
       timeLeft -= dt;
@@ -3191,6 +3434,14 @@
           finishGame(false, 'TIME UP');
         }
       }
+    } else if (tutorialActive) {
+      // Tick the auto-start countdown — when it hits zero, begin the round
+      // automatically. This is the safety net for V2G viewers who don't tap.
+      const elapsed = performance.now() - tutorialAutoStart;
+      const remainMs = Math.max(0, tutorialAutoTimer - elapsed);
+      const auto = document.getElementById('howto-auto');
+      if (auto) auto.innerHTML = 'AUTO START IN <b>' + Math.ceil(remainMs/1000) + 's</b>';
+      if (remainMs <= 0) dismissTutorial();
     }
     current.draw();
     drawAmbient();
