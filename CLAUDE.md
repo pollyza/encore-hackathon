@@ -56,7 +56,13 @@ python3 -m http.server 8080 -d prototype/
 
 # 从新视频抽帧, 喂给 Claude Vision 做 V2G 提取
 ffmpeg -ss <sec> -i reference/videos/<file> -frames:v 1 -q:v 2 reference/frames/<name>.jpg
+
+# 编辑完 prototype 后, 同步两个镜像 + 部署到 Vercel
+# (--skip-vercel 只同步镜像, 不部署)
+bash scripts/deploy.sh
 ```
+
+每次改完游戏逻辑、输入处理、胜利条件、或教程文案后, 在声明 done / redeploy 之前先跑 `playtest-check` skill, 5 步 checklist 会算出"陌生人能不能在 round 内赢" — 这是这版项目反复踩过的坑。
 
 ## 不在范围内 (Out of scope)
 
