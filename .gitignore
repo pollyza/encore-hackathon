@@ -31,3 +31,5 @@ prototype/assets/raw/
 prototype/assets/sprites/
 prototype/assets/suggested_anchors.json
 
+.vercel
+.env*.local

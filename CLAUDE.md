@@ -27,20 +27,38 @@
 
 **本地代码是设计的"试探与原型", 飞书文档是设计的"主线真理"。** 修改设计时优先改飞书, 不是改本地。
 
-## 仓库布局
+## 仓库布局 (v0.6.1 拆分后, 为 4 人协作准备)
 
 ```
 encore-hackathon/
-├── prototype/                     # 单文件可玩 demo (H5)
-│   └── encore_prototype.html
+├── prototype/                     # 可玩 demo (H5)
+│   ├── encore_prototype.html      # 入口 HTML + (暂时) IIFE 主循环
+│   ├── styles.css                 # 全局 CSS (已抽离, 所有人共享)
+│   ├── README.md                  # 模块导航, 4 人各自看哪里
+│   ├── engine/                    # 渲染器 / 输入 / 音效 (owner: A)
+│   ├── games/                     # 3 个模板 + _interface.md 接口契约 (owner: A)
+│   ├── ui/                        # HUD / HOW_TO_PLAY / splash / end (owner: D)
+│   ├── v2g/                       # Vision 代理 + JSON schema (owner: B)
+│   │   ├── observer.py
+│   │   ├── schema.md
+│   │   └── README.md
+│   ├── live/                      # streamer.html (LIVE 仿真主页, owner: D)
+│   │   ├── streamer.html
+│   │   └── README.md
+│   └── assets/                    # 精灵 atlas + 主题 + 管道 (owner: C)
 ├── reference/                     # 测试素材
 │   ├── videos/                    # 真实 TikTok LIVE 切片
-│   └── frames/                    # ffmpeg 抽出来的关键帧, AI Vision 输入
+│   └── frames/                    # ffmpeg 抽出来的关键帧
 ├── docs/                          # 设计笔记 + 项目导航
-│   ├── README.md                  # 项目状态总览 + 飞书链接索引
-│   └── CLAUDE_PROJECT_SETUP.md    # 多项目管理 cheatsheet
-└── .claude/                       # Claude Code 项目配置
-    ├── settings.local.json        # 项目独有权限白名单
+│   ├── README.md
+│   ├── encore_product_plan.md     # 产品规划 + hackathon 分工 (v0.7)
+│   └── v2g_demo.md
+├── scripts/
+│   └── deploy.sh                  # 同步镜像 + Vercel 部署
+├── .github/
+│   └── CODEOWNERS                 # 模块归属, GitHub PR 自动 @owner
+└── .claude/
+    ├── settings.local.json        # 项目权限白名单
     └── launch.json                # 静态服务配置
 ```
 
@@ -50,11 +68,12 @@ encore-hackathon/
 # 进入项目
 cd ~/Documents/encore-hackathon
 
-# 启动静态预览 (Launch preview 面板或浏览器都能看)
-python3 -m http.server 8080 -d prototype/
-# → http://localhost:8080/encore_prototype.html
+# 启动静态预览 — 必须从项目根目录起服务, 不要从 prototype/ 起
+python3 -m http.server 8080
+# → 游戏:    http://localhost:8080/prototype/encore_prototype.html
+# → V2G 演示: http://localhost:8080/prototype/live/streamer.html
 
-# 从新视频抽帧, 喂给 Claude Vision 做 V2G 提取
+# 从新视频抽帧, 喂给 Claude Vision
 ffmpeg -ss <sec> -i reference/videos/<file> -frames:v 1 -q:v 2 reference/frames/<name>.jpg
 
 # 编辑完 prototype 后, 同步两个镜像 + 部署到 Vercel
@@ -63,6 +82,19 @@ bash scripts/deploy.sh
 ```
 
 每次改完游戏逻辑、输入处理、胜利条件、或教程文案后, 在声明 done / redeploy 之前先跑 `playtest-check` skill, 5 步 checklist 会算出"陌生人能不能在 round 内赢" — 这是这版项目反复踩过的坑。
+
+## 多人协作铁律 (Hackathon 4 人分工时强制)
+
+每个 Claude Code session 启动时都会读到本节, 请严格遵守:
+
+1. **只改自己 CODEOWNERS 的文件**。要改别人的 → 先在群里 @, 等同意。
+2. **不要重构未在本 task 范围内的代码**。用 Edit 不用 Write — Write 会触发 Claude 大段重写, 几乎必产生 merge conflict。
+3. **`prototype/games/_interface.md` 是契约**, 改动需要全员同意。同理 `prototype/v2g/schema.md`。
+4. **提交前必跑**: `bash scripts/deploy.sh --skip-vercel` (镜像同步) + 浏览器手玩一局 + 如果改了游戏逻辑就跑 `/playtest-check`。
+5. **CSS 用模块前缀**: `.fps-*`, `.moba-*`, `.br-*`, `.sheet-*`, `.howto-*`, `.hud-*`, `.splash-*`, `.end-*`。不要用裸 class。
+6. **PR 标题格式**: `[A/B/C/D] <一句话>`, 前缀 = 模块负责人。
+7. **单个 commit diff > 200 行**就拆开。Claude 自然倾向于一次性大改, 提交前 `git diff --stat` 自检。
+8. **不要 6 小时不 push**。短命分支, 每 4 小时合一次 main, 避免分支腐烂。
 
 ## 不在范围内 (Out of scope)
 

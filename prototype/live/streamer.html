@@ -190,8 +190,9 @@
 <div id="host">
   <div id="video-wrap">
     <video id="live-video" muted playsinline loop preload="metadata">
-      <!-- served from project root; see docs/v2g_demo.md -->
-      <source src="../reference/videos/encore_test2.mp4" type="video/mp4">
+      <!-- served from project root; see docs/v2g_demo.md
+           This file now lives at prototype/live/, so reference/ is two levels up. -->
+      <source src="../../reference/videos/encore_test2.mp4" type="video/mp4">
     </video>
 
     <div id="brand">⚡ ENCORE V2G</div>
@@ -214,7 +215,8 @@
   <div id="sheet">
     <div id="sheet-handle"></div>
     <div id="sheet-header">⚡ ENCORE <span class="pill" id="sheet-pill">—</span></div>
-    <iframe id="game-frame" src="encore_prototype.html?embedded=1" allow="autoplay"></iframe>
+    <!-- Game iframe lives one level up at prototype/encore_prototype.html -->
+    <iframe id="game-frame" src="../encore_prototype.html?embedded=1" allow="autoplay"></iframe>
   </div>
 
   <div id="autoplay-shim">

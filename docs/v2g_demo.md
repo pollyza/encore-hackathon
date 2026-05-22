@@ -4,9 +4,10 @@ This is the V2G pipeline that closes the 看 → 玩 → 播 loop: a host page p
 
 ## Files
 
-- **`prototype/streamer.html`** — host page. Plays the source video, samples frames, sends them to `observer.py`, slides up the iframe on detection.
-- **`prototype/observer.py`** — local Python proxy. Adds your API key and forwards frames to `api.anthropic.com`. Browser can't call Anthropic directly (key would leak; CORS).
-- **`prototype/encore_prototype.html`** — the existing game. Now accepts `?embedded=1` and listens for `postMessage({type:'launch', config})` from the parent.
+- **`prototype/live/streamer.html`** — host page. Plays the source video, samples frames, sends them to `observer.py`, slides up the iframe on detection. *(moved here in v0.6.1)*
+- **`prototype/v2g/observer.py`** — local Python proxy. Adds your API key and forwards frames to `api.anthropic.com`. Browser can't call Anthropic directly (key would leak; CORS). *(moved here in v0.6.1)*
+- **`prototype/v2g/schema.md`** — V2G JSON config contract. Read this before changing the payload shape.
+- **`prototype/encore_prototype.html`** — the existing game. Accepts `?embedded=1` and listens for `postMessage({type:'launch', config})` from the parent.
 - **`reference/videos/encore_test2.mp4`** — canonical Valorant 1v3 source. Must be served from the same origin as `streamer.html` to avoid tainting the canvas.
 
 ## Run
@@ -24,11 +25,11 @@ python3 -m http.server 8080
 cd /Users/bytedance/Documents/encore-hackathon
 export ANTHROPIC_API_KEY=sk-ant-...
 pip install anthropic           # one-time
-python3 prototype/observer.py
+python3 prototype/v2g/observer.py
 # → listening on http://127.0.0.1:8081
 ```
 
-Open in a browser: `http://localhost:8080/prototype/streamer.html`
+Open in a browser: `http://localhost:8080/prototype/live/streamer.html`
 
 Tap the play button to satisfy autoplay policy. Observer status bar narrates each sample. When Claude returns `highlight: true` with confidence ≥ 0.6, the bottom sheet slides up and the Encore mini-game starts with the matching template + theme + scenario.
 
@@ -48,8 +49,8 @@ Tap the play button to satisfy autoplay policy. Observer status bar narrates eac
 
 - Per frame: ~$0.005 with default `claude-sonnet-4-6` (input ~1500 tokens for the image + system prompt, output ~150 tokens for the JSON)
 - 4-second sample interval × 30-min demo = 450 calls ≈ **$2.25 / demo**
-- Switch to Haiku 4.5 for cheaper trial: `OBSERVER_MODEL=claude-haiku-4-5-20251001 python3 observer.py` (~$0.0008/call, $0.35/demo)
-- Switch to Opus for highest quality on a stage demo: `OBSERVER_MODEL=claude-opus-4-7 python3 observer.py` (~$0.022/call, $9.90/demo)
+- Switch to Haiku 4.5 for cheaper trial: `OBSERVER_MODEL=claude-haiku-4-5-20251001 python3 prototype/v2g/observer.py` (~$0.0008/call, $0.35/demo)
+- Switch to Opus for highest quality on a stage demo: `OBSERVER_MODEL=claude-opus-4-7 python3 prototype/v2g/observer.py` (~$0.022/call, $9.90/demo)
 
 Watch the observer.py terminal — every call logs tokens in/out and estimated cost.
 

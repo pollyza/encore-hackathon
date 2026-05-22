@@ -1,0 +1,34 @@
+# CODEOWNERS — module ownership for multi-dev hackathon (4 people, A/B/C/D)
+#
+# When someone opens a PR touching these paths, GitHub auto-requests review
+# from the listed owner. This is informational on a hackathon team — nobody
+# has merge gates — but it makes "who's about to break my stuff" obvious.
+#
+# Replace the placeholder handles below with real GitHub usernames before
+# the hackathon kicks off.
+
+# A · Engine + Games — renderer, input, the 3 templates' core mechanics
+prototype/engine/                  @placeholder-dev-a
+prototype/games/                   @placeholder-dev-a
+
+# B · V2G + AI — Vision proxy, JSON schema, prompts
+prototype/v2g/                     @placeholder-dev-b
+
+# C · 美术 + 内容 — themes, sprite atlas, asset pipeline
+prototype/assets/                  @placeholder-dev-c
+prototype/themes.js                @placeholder-dev-c
+
+# D · LIVE 集成 + UX — streamer host, sheet, HUD, tutorial, splash, docs
+prototype/live/                    @placeholder-dev-d
+prototype/ui/                      @placeholder-dev-d
+prototype/styles.css               @placeholder-dev-d
+docs/                              @placeholder-dev-d
+
+# Cross-cutting — PM-curated, all changes need a heads-up in the team chat
+CLAUDE.md                          @yixijasonzheng
+scripts/                           @yixijasonzheng
+.github/                           @yixijasonzheng
+
+# Default — the entry HTML touches everyone, please keep diffs small + announce
+prototype/encore_prototype.html    @placeholder-dev-a @placeholder-dev-d
+prototype/README.md                @placeholder-dev-a @placeholder-dev-d
