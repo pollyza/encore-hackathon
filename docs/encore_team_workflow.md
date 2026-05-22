@@ -2,9 +2,11 @@
 
 > 给非技术背景的 4 人 hackathon 小组用 — 不需要懂 git 原理,跟着操作就能跑。
 >
-> 默认你已经安装好 Claude Code,有 GitHub 账号,Mac 上能开 Terminal。
+> 默认你已经安装好 **一个 AI 编程助手**(Claude Code / Codex / Cursor 任选, 协作不挑工具), 有 GitHub 账号, Mac 上能开 Terminal。
 >
-> 一句话原则:**90% 的事让 Claude Code 帮你做,你只要会"复制粘贴"和"看红字"。**
+> 一句话原则:**90% 的事让 AI 助手帮你做,你只要会"复制粘贴"和"看红字"。**
+>
+> 项目级 AI 规则放在仓库根目录的 `CLAUDE.md` (也通过 `AGENTS.md` 符号链接暴露)。Claude Code 自动读 `CLAUDE.md`,Codex / Cursor 自动读 `AGENTS.md` — 两个文件指向同一份内容,**4 个人的 AI 看到的规则一致**。
 
 ---
 
@@ -84,22 +86,24 @@ git checkout -b feat/<你的字母>-<干啥>        # 开一个新分支
 | C | 加 jungle 主题 | `feat/C-jungle-theme` |
 | D | 改教程卡 | `feat/D-howto-tweak` |
 
-### 第 2 步 · 让 Claude Code 干活
+### 第 2 步 · 让 AI 助手干活
 
-在 Terminal 里跑 `claude`(或者你常用的方式启动 Claude Code),然后:
+启动你常用的 AI 助手(Claude Code 跑 `claude`,Codex 跑 `codex`,Cursor 打开 IDE),然后:
 
-- 用大白话告诉 Claude 你要做什么
+- 用大白话告诉它你要做什么
 - 让它改完之后,**手动浏览器打开页面玩一玩**,确认没坏
-- 如果你改的是游戏逻辑(瞄准/开火/胜利条件),让 Claude 跑 `/playtest-check` 5 步检查
+- 如果你改的是游戏逻辑(瞄准/开火/胜利条件),跑一次检查:
+  - **Claude Code 用户**:`/playtest-check`(5 步结构化报告)
+  - **其他 AI 用户**:跑 `bash scripts/playtest-check.sh`,把输出贴给你的 AI 让它判断 ✅/⚠️/❌
 
-**Claude 干活时给它的两条铁律**(直接说给 Claude 听):
+**AI 干活时给它的两条铁律**(直接说给它听 — `CLAUDE.md` / `AGENTS.md` 里也写了, 它启动时应该已经读到):
 
 1. "只改我负责的目录,别动别人的"
 2. "用 Edit 不用 Write,大段重写会撞别人"
 
 ### 第 3 步 · 保存 + 推到 GitHub + 开 PR
 
-干完一段告诉 Claude:**"帮我提交并开 PR"**。Claude 会自动做这些事:
+干完一段告诉你的 AI:**"帮我提交并开 PR"**。AI 会自动做这些事:
 
 ```bash
 git add <改过的文件>
@@ -139,7 +143,7 @@ merge 完成后,这一轮就结束了。回到第 1 步开下一个分支。
 
 ### 情况 1:跑 `git pull` 提示冲突
 
-不要慌。直接告诉 Claude Code:**"git pull 出冲突了,帮我解决,优先保留 main 上的代码"**(或者反过来,看冲突文件是不是你刚改的)。
+不要慌。直接告诉你的 AI 助手:**"git pull 出冲突了,帮我解决,优先保留 main 上的代码"**(或者反过来,看冲突文件是不是你刚改的)。
 
 ### 情况 2:别人合了一个 PR,把你正在改的文件改了
 
@@ -172,11 +176,13 @@ git clean -fd
 git reset --hard HEAD~1     # 撤销最后 1 个 commit
 ```
 
-如果**已经 push 了**,告诉 Claude Code 让它帮你 revert,不要自己 force push。
+如果**已经 push 了**,告诉你的 AI 助手让它帮你 revert,不要自己 force push。
 
-### 情况 5:Claude Code 重写了一大段不该动的代码
+### 情况 5:AI 重写了一大段不该动的代码
 
 立刻 Ctrl+C 打断它,告诉它 **"撤销刚才的改动,只动 `<你最初要它改的文件>`"**。如果实在乱了:`git checkout -- .` 全部撤销重来。
+
+> Codex / Cursor 用户尤其要警惕这一条 — 这两个工具默认比 Claude Code 更激进地一次重写整个文件。先在群里让 AI 复述一遍它打算改什么再放手。
 
 ### 情况 6:本地预览看着 OK,部署到 Vercel 之后样式坏了
 
@@ -241,13 +247,13 @@ bash scripts/deploy.sh
 
 ### 改完游戏逻辑必跑的检查
 
-在 Claude Code 里输入:
+5 步检查:输入覆盖、被动玩家能否玩、能不能赢、教程对得上、3 模板一致性。
 
-```
-/playtest-check
-```
-
-它会跑 5 步检查(输入覆盖、被动玩家能否玩、能不能赢、教程对得上、3 模板一致性),给你 ✅/⚠️/❌ 报告。
+| 你用的工具 | 怎么跑 |
+|---|---|
+| Claude Code | `/playtest-check` 直接出 ✅/⚠️/❌ 报告 |
+| Codex / Cursor / 其他 AI | 跑 `bash scripts/playtest-check.sh`,把输出贴给 AI 让它出判断 |
+| 不用 AI | 跑 `bash scripts/playtest-check.sh`,自己看证据 |
 
 ### PR 标题格式
 
