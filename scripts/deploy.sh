@@ -61,19 +61,30 @@ sync_file() {
 }
 
 echo "[1/2] syncing mirrors from $REPO_ROOT"
+
+# Game prototype + extracted CSS — the core deliverable
 sync_file "$REPO_ROOT/prototype/encore_prototype.html" "$PREVIEW_DIR/encore_prototype.html"
 sync_file "$REPO_ROOT/prototype/encore_prototype.html" "$DEPLOY_DIR/prototype/encore_prototype.html"
+if [[ -f "$REPO_ROOT/prototype/styles.css" ]]; then
+    sync_file "$REPO_ROOT/prototype/styles.css" "$PREVIEW_DIR/styles.css"
+    sync_file "$REPO_ROOT/prototype/styles.css" "$DEPLOY_DIR/prototype/styles.css"
+fi
 
-# Slides + streamer are also part of the deploy bundle; sync if they exist on
-# both sides. (Preview mirror has them at the top level; deploy mirror nests
-# slides under docs/.)
+# Slides — used by the access-gated deck in the deploy bundle
 if [[ -f "$REPO_ROOT/docs/encore_slides.html" ]]; then
     [[ -d "$DEPLOY_DIR/docs" ]] && sync_file "$REPO_ROOT/docs/encore_slides.html" "$DEPLOY_DIR/docs/encore_slides.html"
     [[ -d "$PREVIEW_DIR" ]] && sync_file "$REPO_ROOT/docs/encore_slides.html" "$PREVIEW_DIR/encore_slides.html"
 fi
-if [[ -f "$REPO_ROOT/prototype/streamer.html" && -d "$DEPLOY_DIR/prototype" ]]; then
-    sync_file "$REPO_ROOT/prototype/streamer.html" "$DEPLOY_DIR/prototype/streamer.html"
+
+# LIVE streamer host — now under prototype/live/ (was prototype/) as of v0.6.1
+if [[ -f "$REPO_ROOT/prototype/live/streamer.html" && -d "$DEPLOY_DIR/prototype" ]]; then
+    mkdir -p "$DEPLOY_DIR/prototype/live"
+    sync_file "$REPO_ROOT/prototype/live/streamer.html" "$DEPLOY_DIR/prototype/live/streamer.html"
 fi
+
+# Note: prototype/v2g/observer.py is intentionally NOT synced to the deploy
+# bundle. It's a local Python process that runs on the demo machine; the
+# deployed Vercel build is client-side only.
 
 if [[ $SKIP_VERCEL -eq 1 ]]; then
     echo "[2/2] --skip-vercel set — skipping deploy."
