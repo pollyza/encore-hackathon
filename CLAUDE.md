@@ -1,3 +1,6 @@
+<!-- This file is also exposed as AGENTS.md (symlink) so non-Claude-Code AI tools
+     (Codex, Cursor, Aider, etc.) read the same project rules at session start. -->
+
 # Encore — AI Hackathon Project
 
 ## 我是谁
@@ -81,7 +84,10 @@ ffmpeg -ss <sec> -i reference/videos/<file> -frames:v 1 -q:v 2 reference/frames/
 bash scripts/deploy.sh
 ```
 
-每次改完游戏逻辑、输入处理、胜利条件、或教程文案后, 在声明 done / redeploy 之前先跑 `playtest-check` skill, 5 步 checklist 会算出"陌生人能不能在 round 内赢" — 这是这版项目反复踩过的坑。
+每次改完游戏逻辑、输入处理、胜利条件、或教程文案后, 在声明 done / redeploy 之前先跑 5 步 checklist 算出"陌生人能不能在 round 内赢" — 这是这版项目反复踩过的坑:
+
+- **Claude Code**: 调用 `playtest-check` skill (输入 `/playtest-check`)
+- **Codex / Cursor / 其他 AI**: 跑 `bash scripts/playtest-check.sh`, 把输出贴给 AI 出判断
 
 ## 多人协作铁律 (Hackathon 4 人分工时强制)
 
