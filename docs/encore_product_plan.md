@@ -130,10 +130,17 @@
 | **M10** | TikTok feed shell + 真 SDK 接入 | 完整看→玩→播闭环, 录像回流 |
 | **M11** | 4 层礼物经济实装(Enhance / Spotlight / Sponsor / Loot)| 商业化验证 |
 | **M12** | 第 4 个模板家族(塔防 / 自走棋 / Survivors 三选一)| 模板覆盖率 60% → 75% |
+| **M12 spike** | **试做 1 个新模板用 Godot Engine 替代 hand-written Canvas**(2-3 天小成本验证,只跑这一个模板,与 HTML5 三模板并存) | 评估 Godot 在"非 LIVE 嵌入"形态下的 dev velocity / 美术 polish 是否真的更顺。结果决定 Phase 2 是否大改 |
 | **M13** | **多人 PK / 实时对战**(同一直播间观众 1v1 / 3v3)| 社交杠杆撬动留存 |
 | **M14** | 排行榜 + 主播 Encore 专属任务 | 主播 - 观众生态绑定 |
-| **M14+** | 生成式行为 DSL(LLM 直接输出波次 / 单位 / 技能 DSL)| 每条 Encore 不一样, Astrocade-tier 竞争位 |
+| **M14+** | 生成式行为 DSL(LLM 直接输出波次 / 单位 / 技能 DSL)| 每条 Encore 不一样, Astrocade-tier 竞争位 — Godot 的 scene 组合天然契合 |
 | **M16+** | 真实平台 + 高并发后端 | 百万级并发,模型缓存与降级 |
+
+> **关于 Godot Engine 的判断(2026-05-22 评估)**:
+> 短期(Phase 1, 千元机 + LIVE 嵌入硬约束)**不迁** — Godot Web 1-2MB 起步 + 不确定 cold-start 不适合 30 秒一局的 bottom-sheet 体验。
+> 长期(Phase 2, 独立小程序 / 站立 H5 / native 形态,bundle 大小不再硬限)**值得做 1 个模板试水**(见 M12 spike 行),hybrid 栈可接受。
+> V2G JSON schema (`prototype/v2g/schema.md`) 是工具无关的稳定接口 — 它隔离了 streamer / observer 与 game 引擎,所以将来要切 Godot 时不破坏上游。
+> 完整评估见 [/Users/bytedance/.claude/plans/rosy-honking-river.md](file:///Users/bytedance/.claude/plans/rosy-honking-river.md)(本地 plan 文件, 决策依据 + 3 条 verification 步骤)。
 
 ### 4.4 礼物变现(M11 设计)
 
