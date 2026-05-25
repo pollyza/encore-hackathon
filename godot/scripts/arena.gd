@@ -38,6 +38,18 @@ const TILE_SIZE := SRC_TILE * RENDER_SCALE
 @export var player_sprite: Texture2D
 @export var enemy_sprites: Array[Texture2D] = []
 
+@export_group("Terrain overrides (Midjourney pass)")
+## Optional MJ-generated textures. If set, override the Kenney defaults below.
+## Drop your MJ outputs here via inspector — no GDScript edit needed.
+## See assets/MIDJOURNEY_PROMPTS.md for the exact prompts.
+@export var override_grass_a: Texture2D
+@export var override_grass_b: Texture2D
+@export var override_grass_c: Texture2D
+@export var override_water_a: Texture2D
+@export var override_water_b: Texture2D
+@export var override_bush: Texture2D
+@export var override_rock: Texture2D
+
 ## Hero sprite scale. Source PNGs are 512×512 vector chars but the actual
 ## character occupies ~40% of that. 0.25 → ~128px source = ~50px visible
 ## char, fits cleanly inside the 64px team ring.
@@ -134,6 +146,9 @@ func _build_terrain() -> void:
 ## River tuned so neither spawn (player bottom-left, enemies top-right)
 ## sits on water, and the river ACTUALLY separates the two teams the way
 ## a Dota lane does — top-left to bottom-right diagonal.
+##
+## Each tile pick consults the @export override first; falls back to the
+## Kenney const if no MJ override is dragged into the inspector slot.
 func _terrain_at(x: int, y: int) -> Texture2D:
 	# River: y ≈ 0.5x + 3. Goes from top-left (x=0, y=3) to bottom-right
 	# (x=16, y=11). 1.0-tile wide band — narrow enough to walk around but
@@ -141,18 +156,18 @@ func _terrain_at(x: int, y: int) -> Texture2D:
 	var river_line: float = 0.5 * x + 3.0
 	var dist_from_river: float = abs(float(y) - river_line)
 	if dist_from_river < 0.6:
-		return TILE_WATER_B  # core river
+		return override_water_b if override_water_b else TILE_WATER_B
 	if dist_from_river < 1.1:
-		return TILE_WATER_A  # river edge
+		return override_water_a if override_water_a else TILE_WATER_A
 	# Grass: 3 variants, deterministic-hash by position so the player sees
 	# the same layout every run (helps with learning the map).
 	var h: int = (x * 7 + y * 13) % 12
 	if h < 8:
-		return TILE_GRASS_A
+		return override_grass_a if override_grass_a else TILE_GRASS_A
 	elif h < 11:
-		return TILE_GRASS_B
+		return override_grass_b if override_grass_b else TILE_GRASS_B
 	else:
-		return TILE_GRASS_C
+		return override_grass_c if override_grass_c else TILE_GRASS_C
 
 func _place_tile(x: int, y: int, tex: Texture2D) -> void:
 	var s := Sprite2D.new()
@@ -166,15 +181,22 @@ func _build_decorations() -> void:
 	for entry in DECORATIONS:
 		var tile: Vector2i = entry[0]
 		var tex: Texture2D = entry[1]
+		# Apply MJ override if dropped into inspector
+		var is_bush: bool = (tex == TILE_BUSH)
+		var is_rock: bool = (tex == TILE_ROCK)
+		if is_bush and override_bush:
+			tex = override_bush
+		elif is_rock and override_rock:
+			tex = override_rock
 		var s := Sprite2D.new()
 		s.texture = tex
-		s.scale = DECORATION_SCALE  # 1.3× terrain scale, visibly stands out
+		s.scale = DECORATION_SCALE  # 1.0× terrain scale, blends in size-wise
 		s.position = tile_to_world(tile)
-		# Bushes get a subtle warmer tint to differentiate from grass-flowers;
-		# rocks get a cooler gray tint.
-		if tex == TILE_BUSH:
+		# Tints applied to KENNEY defaults only — MJ outputs assumed to already
+		# have correct color from the prompt, no tinting needed.
+		if is_bush and not override_bush:
 			s.modulate = Color(0.85, 1.05, 0.85)
-		elif tex == TILE_ROCK:
+		elif is_rock and not override_rock:
 			s.modulate = Color(0.75, 0.75, 0.8)
 		s.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		_decorations_layer.add_child(s)

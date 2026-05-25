@@ -1,0 +1,315 @@
+[gd_scene load_steps=8 format=3 uid="uid://b8hudencoremoba"]
+
+[ext_resource type="Script" path="res://scripts/hud.gd" id="1_hud"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hp_bg"]
+bg_color = Color(0.1, 0.1, 0.12, 0.65)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0, 0, 0, 0.6)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hp_fg"]
+bg_color = Color(0.95, 0.25, 0.35, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mp_fg"]
+bg_color = Color(0.35, 0.65, 0.95, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_skill_bg"]
+bg_color = Color(0.08, 0.1, 0.13, 0.85)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.4, 0.9, 0.85, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_end_card"]
+bg_color = Color(0.06, 0.09, 0.12, 0.92)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.4, 1, 0.85, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_cd_overlay"]
+bg_color = Color(0, 0, 0, 0.65)
+
+[node name="HUD" type="CanvasLayer"]
+script = ExtResource("1_hud")
+
+[node name="TopBar" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = -12.0
+offset_bottom = 96.0
+grow_horizontal = 2
+
+[node name="HPBar" type="ProgressBar" parent="TopBar"]
+layout_mode = 0
+offset_right = 280.0
+offset_bottom = 22.0
+max_value = 100.0
+value = 100.0
+show_percentage = false
+theme_override_styles/background = SubResource("StyleBoxFlat_hp_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_hp_fg")
+
+[node name="HPLabel" type="Label" parent="TopBar/HPBar"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+horizontal_alignment = 1
+vertical_alignment = 1
+text = "HP 100 / 100"
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+
+[node name="MPBar" type="ProgressBar" parent="TopBar"]
+layout_mode = 0
+offset_top = 28.0
+offset_right = 280.0
+offset_bottom = 50.0
+max_value = 100.0
+value = 100.0
+show_percentage = false
+theme_override_styles/background = SubResource("StyleBoxFlat_hp_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_mp_fg")
+
+[node name="MPLabel" type="Label" parent="TopBar/MPBar"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+horizontal_alignment = 1
+vertical_alignment = 1
+text = "MP 100 / 100"
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+
+[node name="Timer" type="Label" parent="TopBar"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -60.0
+offset_right = 60.0
+offset_bottom = 50.0
+horizontal_alignment = 1
+vertical_alignment = 1
+text = "0:45"
+theme_override_font_sizes/font_size = 36
+theme_override_colors/font_color = Color(1, 0.85, 0.35, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 3
+
+[node name="KillCounter" type="Label" parent="TopBar"]
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -160.0
+offset_bottom = 36.0
+horizontal_alignment = 2
+text = "KILLS  0 / 3"
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.95, 0.95, 0.95, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+
+[node name="SkillBar" type="HBoxContainer" parent="."]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -180.0
+offset_top = -90.0
+offset_right = 180.0
+offset_bottom = -16.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_constants/separation = 12
+
+[node name="Q" type="Panel" parent="SkillBar"]
+custom_minimum_size = Vector2(72, 72)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_skill_bg")
+
+[node name="Letter" type="Label" parent="SkillBar/Q"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+horizontal_alignment = 1
+vertical_alignment = 1
+text = "Q"
+theme_override_font_sizes/font_size = 32
+theme_override_colors/font_color = Color(0.4, 1, 0.85, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+
+[node name="CD" type="ProgressBar" parent="SkillBar/Q"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+fill_mode = 3
+max_value = 1.0
+value = 0.0
+show_percentage = false
+theme_override_styles/background = SubResource("StyleBoxFlat_cd_overlay")
+theme_override_styles/fill = SubResource("StyleBoxFlat_cd_overlay")
+
+[node name="W" type="Panel" parent="SkillBar"]
+custom_minimum_size = Vector2(72, 72)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_skill_bg")
+
+[node name="Letter" type="Label" parent="SkillBar/W"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+horizontal_alignment = 1
+vertical_alignment = 1
+text = "W"
+theme_override_font_sizes/font_size = 32
+theme_override_colors/font_color = Color(0.4, 1, 0.85, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+
+[node name="CD" type="ProgressBar" parent="SkillBar/W"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+fill_mode = 3
+max_value = 1.0
+value = 0.0
+show_percentage = false
+theme_override_styles/background = SubResource("StyleBoxFlat_cd_overlay")
+theme_override_styles/fill = SubResource("StyleBoxFlat_cd_overlay")
+
+[node name="E" type="Panel" parent="SkillBar"]
+custom_minimum_size = Vector2(72, 72)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_skill_bg")
+
+[node name="Letter" type="Label" parent="SkillBar/E"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+horizontal_alignment = 1
+vertical_alignment = 1
+text = "E"
+theme_override_font_sizes/font_size = 32
+theme_override_colors/font_color = Color(0.5, 0.5, 0.55, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+
+[node name="CD" type="ProgressBar" parent="SkillBar/E"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+fill_mode = 3
+max_value = 1.0
+value = 1.0
+show_percentage = false
+theme_override_styles/background = SubResource("StyleBoxFlat_cd_overlay")
+theme_override_styles/fill = SubResource("StyleBoxFlat_cd_overlay")
+
+[node name="R" type="Panel" parent="SkillBar"]
+custom_minimum_size = Vector2(72, 72)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_skill_bg")
+
+[node name="Letter" type="Label" parent="SkillBar/R"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+horizontal_alignment = 1
+vertical_alignment = 1
+text = "R"
+theme_override_font_sizes/font_size = 32
+theme_override_colors/font_color = Color(0.5, 0.5, 0.55, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+
+[node name="CD" type="ProgressBar" parent="SkillBar/R"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+fill_mode = 3
+max_value = 1.0
+value = 1.0
+show_percentage = false
+theme_override_styles/background = SubResource("StyleBoxFlat_cd_overlay")
+theme_override_styles/fill = SubResource("StyleBoxFlat_cd_overlay")
+
+[node name="EndCard" type="Panel" parent="."]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -240.0
+offset_top = -120.0
+offset_right = 240.0
+offset_bottom = 120.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_end_card")
+
+[node name="Title" type="Label" parent="EndCard"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 36.0
+offset_bottom = 110.0
+grow_horizontal = 2
+horizontal_alignment = 1
+vertical_alignment = 1
+text = "VICTORY"
+theme_override_font_sizes/font_size = 64
+theme_override_colors/font_color = Color(0.4, 1, 0.85, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+
+[node name="Subtitle" type="Label" parent="EndCard"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 130.0
+offset_bottom = 180.0
+grow_horizontal = 2
+horizontal_alignment = 1
+vertical_alignment = 1
+text = "All enemies cleared"
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.85, 0.85, 0.9, 1)
