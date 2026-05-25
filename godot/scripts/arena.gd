@@ -50,14 +50,12 @@ const TILE_SIZE := SRC_TILE * RENDER_SCALE
 @export var override_bush: Texture2D
 @export var override_rock: Texture2D
 
-## Hero sprite scale. Source PNGs are 512×512 vector chars but the actual
-## character occupies ~40% of that. 0.25 → ~128px source = ~50px visible
-## char, fits cleanly inside the 64px team ring.
-const HERO_SPRITE_SCALE := Vector2(0.25, 0.25)
-
-## Decoration scale — same as terrain (no bump). The modulate tint
-## differentiates them from grass instead of size.
-const DECORATION_SCALE := Vector2(RENDER_SCALE, RENDER_SCALE)
+## Target on-screen sizes (pixels). Scale is computed PER-TEXTURE from
+## these so Kenney 512px sources and AI 1024px sources both end up the
+## same display size — no manual rescaling per asset pack.
+const HERO_TARGET_PX := 96.0       # ≈ 1.5 tiles, prominent but doesn't dominate
+const DECORATION_TARGET_PX := 80.0  # ≈ 1.25 tiles, between heroes and terrain
+const TILE_TARGET_PX := float(SRC_TILE * RENDER_SCALE)  # 64 px = standard tile
 
 ## Radius of the team-color ring drawn under each hero so the player can
 ## instantly distinguish friend/foe even before reading the label.
@@ -169,19 +167,31 @@ func _terrain_at(x: int, y: int) -> Texture2D:
 	else:
 		return override_grass_c if override_grass_c else TILE_GRASS_C
 
+## Auto-scale a texture so it displays at the target pixel size, regardless
+## of whether the source is 16px (Kenney) or 1024px (AI).
+func _scale_for(tex: Texture2D, target_px: float) -> Vector2:
+	var w: float = max(1.0, float(tex.get_width()))
+	var h: float = max(1.0, float(tex.get_height()))
+	var f: float = target_px / max(w, h)
+	return Vector2(f, f)
+
 func _place_tile(x: int, y: int, tex: Texture2D) -> void:
 	var s := Sprite2D.new()
 	s.texture = tex
-	s.scale = Vector2(RENDER_SCALE, RENDER_SCALE)
+	s.scale = _scale_for(tex, TILE_TARGET_PX)
 	s.position = tile_to_world(Vector2i(x, y))
-	s.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST  # pixel-perfect, no blur
+	# Bilinear filter for AI tiles (smooth), nearest for tiny Kenney pixel art
+	if tex.get_width() < 64:
+		s.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	else:
+		s.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	_terrain.add_child(s)
 
 func _build_decorations() -> void:
 	for entry in DECORATIONS:
 		var tile: Vector2i = entry[0]
 		var tex: Texture2D = entry[1]
-		# Apply MJ override if dropped into inspector
+		# Apply override if dropped into inspector
 		var is_bush: bool = (tex == TILE_BUSH)
 		var is_rock: bool = (tex == TILE_ROCK)
 		if is_bush and override_bush:
@@ -190,15 +200,19 @@ func _build_decorations() -> void:
 			tex = override_rock
 		var s := Sprite2D.new()
 		s.texture = tex
-		s.scale = DECORATION_SCALE  # 1.0× terrain scale, blends in size-wise
+		s.scale = _scale_for(tex, DECORATION_TARGET_PX)
 		s.position = tile_to_world(tile)
-		# Tints applied to KENNEY defaults only — MJ outputs assumed to already
-		# have correct color from the prompt, no tinting needed.
-		if is_bush and not override_bush:
+		# Tints applied to KENNEY defaults only — AI / MJ outputs are assumed
+		# already correctly colored from the prompt.
+		var using_override: bool = (is_bush and override_bush) or (is_rock and override_rock)
+		if is_bush and not using_override:
 			s.modulate = Color(0.85, 1.05, 0.85)
-		elif is_rock and not override_rock:
+		elif is_rock and not using_override:
 			s.modulate = Color(0.75, 0.75, 0.8)
-		s.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		if tex.get_width() < 64:
+			s.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		else:
+			s.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 		_decorations_layer.add_child(s)
 
 func _spawn_heroes() -> void:
@@ -243,9 +257,14 @@ func _apply_hero_sprite(hero: Hero, tex: Texture2D, team_color: Color) -> void:
 		var sprite := Sprite2D.new()
 		sprite.name = "Sprite"
 		sprite.texture = tex
-		sprite.scale = HERO_SPRITE_SCALE
-		# Strong team tint for instant friend/foe identification.
-		sprite.modulate = team_color
+		sprite.scale = _scale_for(tex, HERO_TARGET_PX)
+		# AI sprites are already richly colored — don't dilute with a strong
+		# team modulate. The team RING under the sprite handles friend/foe ID.
+		# Kenney soldier sprites get the heavy tint because they're all green.
+		if tex.get_width() < 600:  # heuristic: Kenney = 512px, AI = 1024px
+			sprite.modulate = team_color
+		# else: leave full AI color, ring handles team ID
+		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 		hero.add_child(sprite)
 		body.queue_free()
 
