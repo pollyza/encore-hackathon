@@ -35,6 +35,12 @@ const TILE_SIZE := SRC_TILE * RENDER_SCALE
 @export var player_sprite: Texture2D
 @export var enemy_sprites: Array[Texture2D] = []
 
+## Default Q + W abilities slotted onto the player at spawn. Hard-coded
+## preloads so the user gets a playable game on first F5 without manually
+## dragging .tres into hero inspector slots.
+const PLAYER_Q: Ability = preload("res://scripts/abilities/q_bolt_default.tres")
+const PLAYER_W: Ability = preload("res://scripts/abilities/w_blast_default.tres")
+
 # Terrain tiles preloaded — paths are stable, so use preload (compile-time).
 const TILE_GRASS_A: Texture2D = preload("res://assets/tiles/individual/tile_0000.png")
 const TILE_GRASS_B: Texture2D = preload("res://assets/tiles/individual/tile_0001.png")
@@ -144,6 +150,8 @@ func _spawn_heroes() -> void:
     _player = hero_scene.instantiate() as Hero
     _player.is_player = true
     _player.position = tile_to_world(PLAYER_SPAWN_TILE)
+    _player.ability_q = PLAYER_Q
+    _player.ability_w = PLAYER_W
     if player_sprite:
         _apply_hero_sprite(_player, player_sprite, Color(0.4, 1.0, 0.85))
     _heroes.add_child(_player)
