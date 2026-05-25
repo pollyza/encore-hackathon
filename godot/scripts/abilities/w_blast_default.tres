@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="AbilityWBlast" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/abilities/w_blast.gd" id="1_wblast"]
+[ext_resource type="PackedScene" path="res://scenes/aoe_telegraph.tscn" id="2_telegraph"]
+
+[resource]
+script = ExtResource("1_wblast")
+ability_name = "Blast"
+cooldown = 6.0
+mana_cost = 45.0
+ability_range = 280.0
+damage = 55.0
+telegraph_delay = 0.4
+aoe_radius = 100.0
+telegraph_scene = ExtResource("2_telegraph")

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="AbilityQBolt" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/abilities/q_bolt.gd" id="1_qbolt"]
+[ext_resource type="PackedScene" path="res://scenes/projectile.tscn" id="2_projectile"]
+
+[resource]
+script = ExtResource("1_qbolt")
+ability_name = "Bolt"
+cooldown = 1.5
+mana_cost = 30.0
+ability_range = 320.0
+damage = 40.0
+projectile_speed = 560.0
+projectile_radius = 16.0
+aim_assist_cone_deg = 25.0
+projectile_scene = ExtResource("2_projectile")
