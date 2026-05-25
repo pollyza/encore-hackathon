@@ -76,6 +76,7 @@ Detailed walkthrough for each step: see [`docs/build-day-1.md`](docs/build-day-1
 - **Resource-based balance** — never hardcode HP/damage/cooldown numbers in GDScript. Always `@export` them so they're editable as `.tres` resources.
 - **Signals up, references down** — child nodes emit signals; parents listen. Don't grab refs across the tree with `get_node("../../sibling")` — that's brittle.
 - **Run `bash ../scripts/playtest-check.sh godot/scenes/main.tscn`** before declaring a play session done. Script auto-detects the file type and runs the friendliness/playability checks.
+- **Run `bash ../scripts/godot-screenshot.sh`** before claiming a Godot change is shipped — renders the actual frame to `/tmp/encore_godot_frame.png` so you (and anyone reviewing) can see what users will actually see. This closes the "I smoke-tested headless but never looked at a rendered frame" gap that bit us on the first arena scaffold.
 
 ## How this fits the broader Encore project
 
