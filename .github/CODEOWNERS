@@ -24,8 +24,13 @@ prototype/ui/                      @placeholder-dev-d
 prototype/styles.css               @placeholder-dev-d
 docs/                              @placeholder-dev-d
 
+# M12 spike · Godot MOBA standalone (Phase 2 R&D, not hackathon-critical)
+# Owner is whoever picks up the spike — assign in team chat before serious work
+godot/                             @placeholder-godot-lead
+
 # Cross-cutting — PM-curated, all changes need a heads-up in the team chat
 CLAUDE.md                          @yixijasonzheng
+AGENTS.md                          @yixijasonzheng
 scripts/                           @yixijasonzheng
 .github/                           @yixijasonzheng
 

@@ -1,0 +1,24 @@
+# Godot 4+
+.godot/
+.import/
+
+# Per-OS junk
+.DS_Store
+Thumbs.db
+
+# Local exports — anything in export/ should be regenerated, never committed
+export/
+*.exe
+*.pck
+*.zip
+
+# IDE
+.vscode/
+.idea/
+
+# Kenney raw zips (we extract only what we use into assets/, not the whole pack)
+assets/kenney_raw/
+assets/_downloads/
+
+# Local-only Godot user data (e.g. saved preferences)
+*.import.bak

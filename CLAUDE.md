@@ -49,6 +49,13 @@ encore-hackathon/
 │   │   ├── streamer.html
 │   │   └── README.md
 │   └── assets/                    # 精灵 atlas + 主题 + 管道 (owner: C)
+├── godot/                         # M12 spike · Godot 4.x MOBA standalone (R&D)
+│   ├── project.godot
+│   ├── README.md                  # 跑法 + Kenney 包指引 + 3 天 build path
+│   ├── AGENTS.md / CLAUDE.md      # GDScript 模式 (4 工具同源)
+│   ├── scenes/                    # main / hero / projectile / aoe_telegraph
+│   ├── scripts/                   # hero / ability / game / hud + abilities/*
+│   └── assets/                    # tiles / sprites / sfx (Kenney + MJ)
 ├── reference/                     # 测试素材
 │   ├── videos/                    # 真实 TikTok LIVE 切片
 │   └── frames/                    # ffmpeg 抽出来的关键帧
