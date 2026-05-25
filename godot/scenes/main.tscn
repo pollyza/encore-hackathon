@@ -1,35 +1,25 @@
-[gd_scene load_steps=2 format=3 uid="uid://b8mainencoremoba"]
+[gd_scene load_steps=4 format=3 uid="uid://b8mainencoremoba"]
 
 [ext_resource type="Script" path="res://scripts/game.gd" id="1_game"]
+[ext_resource type="PackedScene" uid="uid://b8arenaencoremoba" path="res://scenes/arena.tscn" id="2_arena"]
+[ext_resource type="Script" path="res://scripts/camera_follow.gd" id="3_cam"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_game")
 
 [node name="Background" type="ColorRect" parent="."]
-offset_left = -640.0
-offset_top = -360.0
-offset_right = 640.0
-offset_bottom = 360.0
-color = Color(0.08, 0.1, 0.13, 1)
+offset_left = -2000.0
+offset_top = -2000.0
+offset_right = 2000.0
+offset_bottom = 2000.0
+color = Color(0.06, 0.09, 0.12, 1)
+
+[node name="Arena" parent="." instance=ExtResource("2_arena")]
 
 [node name="Camera2D" type="Camera2D" parent="."]
-
-[node name="ScaffoldLabel" type="Label" parent="."]
-offset_left = -360.0
-offset_top = -80.0
-offset_right = 360.0
-offset_bottom = 80.0
-horizontal_alignment = 1
-vertical_alignment = 1
-text = "⚡ ENCORE MOBA — SCAFFOLD READY
-
-Open godot/README.md for next steps.
-
-Day 1 plan:
- · download Kenney top-down pack into assets/
- · build arena.tscn (tilemap + camera)
- · build hero.tscn (assign Q + W ability resources)
- · place 1 player + 3 enemies in this scene
- · wire HUD"
-theme_override_font_sizes/font_size = 16
-theme_override_colors/font_color = Color(0.6, 0.95, 0.88, 1)
+position = Vector2(960, 640)
+zoom = Vector2(0.75, 0.75)
+position_smoothing_enabled = true
+position_smoothing_speed = 6.0
+script = ExtResource("3_cam")
+arena_node_path = NodePath("../Arena")
