@@ -3,7 +3,11 @@
  *
  * Phases:
  *   loading  → 2.7s AI-generation feel (thumbnail + scan + status cycle + progress)
- *   game     → delegates to MiniGames.start(kind, container, onComplete, tone)
+ *   game     → loads Mario's template (FPS / MOBA / BR) in an iframe via the
+ *              V2G postMessage protocol (schema v1.1):
+ *                parent → iframe: { type: 'launch', config: V2GResponse }
+ *                iframe → parent: { type: 'encore_ready' }  (after load)
+ *                iframe → parent: { type: 'encore_done', stats: {...} }
  *   result   → score chip + extension pills + gift remix + feedback + play again
  *   ranking  → leaderboard sub-view (back returns to result)
  *
@@ -34,17 +38,69 @@
     remix: { tag: 'remix',    sub: 'Generating a remix…'      },
   };
 
-  const GAME_LABEL = { aim: 'Aim', rhythm: 'Rhythm', dodge: 'Dodge' };
+  // ── Mario template catalogue (matches encore_prototype.html `Games.x`) ─
+  // Loaded into the iframe via { type: 'launch', config } on encore_ready.
+  // schema.md v1.1 documents the V2GResponse shape.
+  const TEMPLATES = ['fps', 'moba', 'br'];  // td WIP — add when Mario ships
+  const THEMES = {
+    fps:  ['desert', 'snow', 'cyber', 'jungle'],
+    moba: ['grass',  'lava', 'ice',   'twilight'],
+    br:   ['forest', 'desert', 'island', 'wasteland'],
+  };
+  const TEMPLATE_LABEL = {
+    fps:  'Cover Strike',
+    moba: 'Dragon Pit',
+    br:   'Final Circle',
+    td:   'Wave Defense',
+  };
+  const TEMPLATE_DESC = {
+    fps:  '1vN clutch',
+    moba: 'dragon pit fight',
+    br:   'final circle',
+    td:   'tower defense wave',
+  };
+  const WEAPONS = ['pistol', 'smg', 'rifle', 'sniper'];
+
+  // IFRAME URL — relative to /live/streamer.html, hits /prototype/encore_prototype.html
+  // (which the deploy mirror flattens to /encore_prototype.html). Both work.
+  const IFRAME_URL = '../encore_prototype.html?embedded=1';
+
+  // Random V2GResponse — used when no real Vision detection is available.
+  // Each open() pulls a fresh config so demo rounds feel varied.
+  function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+  function makeRandomConfig() {
+    const template = pickRandom(TEMPLATES);
+    const theme    = pickRandom(THEMES[template]);
+    const scenario = {
+      enemy_count: 2 + Math.floor(Math.random() * 3),     // 2..4
+      hp_start:    pickRandom([60, 80, 100]),
+      description: TEMPLATE_DESC[template],
+    };
+    if (template === 'fps' || template === 'br') {
+      scenario.weapon = pickRandom(WEAPONS);
+    }
+    return {
+      highlight:  true,
+      confidence: 1.0,
+      template,
+      theme,
+      scenario,
+      _meta: { tokens_in: 0, tokens_out: 0, model: 'demo-random' },
+    };
+  }
 
   // ── State ─────────────────────────────────────────────────────────────
   let cfg = null;
   let phase = 'closed';           // closed | loading | game | result | ranking
   let lastResult = null;
-  let currentGame = 'aim';
+  let currentConfig = null;       // last V2GResponse we launched the iframe with
   let loadingRAF = null;
   let loadingStageIv = null;
   let ackTimer = null;
   let mounted = false;
+  let iframe = null;              // active game iframe
+  let pendingLaunch = null;       // config waiting for encore_ready
+  let messageHandler = null;
 
   // ── DOM refs (resolved in init) ───────────────────────────────────────
   let dom = {};
@@ -65,6 +121,10 @@
     mounted = true;
     cfg.sheet.classList.remove('hidden', 'closing');
     cfg.backdrop.classList.remove('hidden', 'closing');
+    // Reset header subtitle to the generic AI tag until startGame names
+    // a concrete template
+    const subEl = document.querySelector('#sheet-header .brand .text .sub');
+    if (subEl) subEl.textContent = 'AI · forked from TK Sói';
     // Re-mount with fresh slide-up animation
     cfg.sheet.style.animation = 'none';
     // Force reflow then re-enable
@@ -77,6 +137,7 @@
     if (!mounted) return;
     clearLoading();
     clearAck();
+    destroyIframe();
     cfg.sheet.classList.add('closing');
     cfg.backdrop.classList.add('closing');
     setTimeout(() => {
@@ -162,23 +223,82 @@
   }
 
   // ── GAME phase ────────────────────────────────────────────────────────
+  //
+  // Loads Mario's encore_prototype.html in an iframe and drives it via the
+  // V2G postMessage protocol. The iframe is recreated on every launch so
+  // game state is always fresh (matches the design "discard + regenerate"
+  // decision; no pause/resume).
+  //
+  // Random template pick happens here unless cfg.pickConfig was supplied
+  // (e.g. observer-client passing a real Vision detection).
   function startGame() {
-    currentGame = cfg.pickGame ? cfg.pickGame() : 'aim';
     setPhase('game');
+    currentConfig = cfg.pickConfig
+      ? (cfg.pickConfig() || makeRandomConfig())
+      : makeRandomConfig();
+
+    // Update sheet header subtitle to show the picked template + theme
+    const subEl = document.querySelector('#sheet-header .brand .text .sub');
+    if (subEl) {
+      const label = TEMPLATE_LABEL[currentConfig.template] || currentConfig.template;
+      subEl.textContent = `${label} · ${currentConfig.theme}`;
+    }
+
     const container = document.getElementById('phase-game');
     container.innerHTML = '';
-    if (window.MiniGames && typeof window.MiniGames.start === 'function') {
-      window.MiniGames.start({
-        kind: currentGame,
-        container,
-        tone: TONE,
-        onComplete: (r) => onGameDone(r),
-      });
-    } else {
-      // Defensive fallback: skip straight to result with mock stats
-      console.warn('[encore-sheet] MiniGames not available, faking result');
-      setTimeout(() => onGameDone({ score: 5, max: 8, won: true }), 600);
+
+    // Build the iframe
+    iframe = document.createElement('iframe');
+    iframe.src = IFRAME_URL;
+    iframe.allow = 'autoplay';
+    iframe.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0;background:#000;';
+    container.appendChild(iframe);
+
+    // Queue the launch — will fire when iframe sends encore_ready
+    pendingLaunch = currentConfig;
+
+    // Defensive fallback: if encore_ready never arrives within 2.5s,
+    // try to send launch anyway (iframe may have loaded but missed
+    // the postMessage path — happens in some Safari builds).
+    setTimeout(() => {
+      if (pendingLaunch && iframe && iframe.contentWindow) {
+        try {
+          iframe.contentWindow.postMessage({ type: 'launch', config: pendingLaunch }, '*');
+          pendingLaunch = null;
+        } catch (_) {}
+      }
+    }, 2500);
+  }
+
+  function handleIframeMessage(e) {
+    const data = e && e.data;
+    if (!data || typeof data !== 'object') return;
+    if (data.type === 'encore_ready') {
+      // Iframe is up — fire the launch config we cached
+      if (pendingLaunch && iframe && iframe.contentWindow) {
+        try {
+          iframe.contentWindow.postMessage({ type: 'launch', config: pendingLaunch }, '*');
+        } catch (_) {}
+        pendingLaunch = null;
+      }
+    } else if (data.type === 'encore_done') {
+      // Map the iframe's stats payload onto our internal {score, max, won}.
+      // Mario's payload: { won, kills, time, duration, template }
+      const s = data.stats || {};
+      const max = s.duration ? Math.max(1, Math.round(s.duration)) : 30;
+      const score = (s.kills != null ? s.kills : 0);
+      onGameDone({ score, max, won: !!s.won, raw: s });
     }
+  }
+
+  function destroyIframe() {
+    if (iframe) {
+      // Setting src to about:blank releases any audio/timers running inside
+      try { iframe.src = 'about:blank'; } catch (_) {}
+      iframe.remove();
+      iframe = null;
+    }
+    pendingLaunch = null;
   }
 
   // ── RESULT phase ──────────────────────────────────────────────────────
@@ -202,6 +322,7 @@
   }
 
   function playAgain() {
+    destroyIframe();
     document.getElementById('phase-game').innerHTML = '';
     startLoading();
   }
@@ -209,8 +330,10 @@
   // ── RANKING phase ─────────────────────────────────────────────────────
   function showRanking() {
     setPhase('ranking');
+    const t = currentConfig && currentConfig.template;
+    const label = TEMPLATE_LABEL[t] || 'Encore';
     document.getElementById('ranking-sub').textContent =
-      (GAME_LABEL[currentGame] || 'Aim') + " · from TK Sói's highlight";
+      label + " · from TK Sói's highlight";
     renderRankingList();
   }
 
@@ -320,6 +443,10 @@
 
     cfg.backdrop.addEventListener('click', close);
     cfg.closeBtn.addEventListener('click', close);
+
+    // Listen for iframe messages (encore_ready / encore_done / etc.)
+    messageHandler = handleIframeMessage;
+    window.addEventListener('message', messageHandler);
 
     // Feedback row
     document.querySelectorAll('#phase-result .fb-btn').forEach(btn => {
