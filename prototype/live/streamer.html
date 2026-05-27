@@ -4,221 +4,115 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Encore — LIVE Streamer Demo (V2G)</title>
-<style>
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body {
-    margin: 0; padding: 0; height: 100%; overflow: hidden;
-    background: #000; color: #fff;
-    font-family: 'Courier New', monospace;
-    user-select: none;
-  }
-  /* Phone-vertical canvas — same aspect as the game prototype */
-  #host {
-    position: relative;
-    width: 100vw; height: 100vh;
-    max-width: 540px;
-    margin: 0 auto;
-    background: #0a0d14;
-    overflow: hidden;
-  }
-  #video-wrap {
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(ellipse at center, #1a2030 0%, #050810 100%);
-  }
-  #live-video {
-    position: absolute;
-    inset: 0;
-    width: 100%; height: 100%;
-    object-fit: cover;
-    background: #000;
-  }
-  /* TikTok-ish LIVE badge top-left */
-  #live-badge {
-    position: absolute;
-    top: 16px; left: 16px;
-    background: #ff4655; color: #fff;
-    padding: 5px 12px; border-radius: 4px;
-    font-size: 11px; letter-spacing: 2px; font-weight: bold;
-    z-index: 8;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
-  }
-  #live-badge .pulse {
-    display: inline-block; width: 6px; height: 6px;
-    background: #fff; border-radius: 50%;
-    margin-right: 6px; vertical-align: middle;
-    animation: pulse 1.4s infinite;
-  }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-
-  /* Brand top-center */
-  #brand {
-    position: absolute;
-    top: 18px; left: 50%; transform: translateX(-50%);
-    color: #ff4655;
-    font-size: 11px;
-    letter-spacing: 4px;
-    z-index: 8;
-    pointer-events: none;
-  }
-
-  /* Observer overlay — bottom bar, semi-transparent */
-  #status-bar {
-    position: absolute;
-    bottom: 20px; left: 16px; right: 16px;
-    padding: 10px 14px;
-    background: rgba(0,0,0,0.78);
-    border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 10px;
-    font-size: 11px; line-height: 1.4;
-    display: flex; align-items: center; gap: 10px;
-    z-index: 8;
-    backdrop-filter: blur(6px);
-  }
-  #status-dot {
-    width: 10px; height: 10px;
-    border-radius: 50%;
-    background: #555;
-    flex-shrink: 0;
-    transition: background 0.2s, box-shadow 0.2s;
-  }
-  #status-dot.sampling   { background: #5af5e0; box-shadow: 0 0 8px #5af5e0; }
-  #status-dot.analyzing  { background: #ffcd75; box-shadow: 0 0 10px #ffcd75; animation: pulseFast 0.9s infinite; }
-  #status-dot.detected   { background: #ff4655; box-shadow: 0 0 14px #ff4655; }
-  #status-dot.idle       { background: #555; }
-  @keyframes pulseFast { 0%,100%{opacity:1} 50%{opacity:0.4} }
-  #status-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  #cost {
-    color: #888; font-size: 10px; letter-spacing: 1px; flex-shrink: 0;
-  }
-  #trigger-btn {
-    background: #ff4655; border: 1px solid #ff7080; color: #fff;
-    padding: 4px 10px; border-radius: 4px;
-    font-family: inherit; font-size: 10px; letter-spacing: 1px;
-    cursor: pointer; flex-shrink: 0;
-    font-weight: bold;
-  }
-  #trigger-btn:active { transform: scale(0.96); }
-
-  /* TikTok-style right side action bar (decorative) */
-  #side-actions {
-    position: absolute;
-    right: 12px; bottom: 80px;
-    display: flex; flex-direction: column; gap: 18px;
-    z-index: 7; pointer-events: none;
-    color: #fff; text-align: center; font-size: 10px;
-  }
-  #side-actions .ico {
-    width: 40px; height: 40px; border-radius: 50%;
-    background: rgba(0,0,0,0.4);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px; margin-bottom: 4px;
-    border: 1px solid rgba(255,255,255,0.2);
-  }
-
-  /* Bottom sheet — game iframe slides up from bottom */
-  #sheet {
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    height: 80%;
-    background: #0a0d14;
-    border-top: 2px solid #ff4655;
-    border-radius: 14px 14px 0 0;
-    transform: translateY(100%);
-    transition: transform 0.45s cubic-bezier(0.22, 0.61, 0.36, 1);
-    z-index: 30;
-    overflow: hidden;
-    box-shadow: 0 -8px 24px rgba(0,0,0,0.6);
-  }
-  #sheet.open { transform: translateY(0); }
-  #sheet-handle {
-    position: absolute;
-    top: 6px; left: 50%; transform: translateX(-50%);
-    width: 40px; height: 3px;
-    background: rgba(255,255,255,0.3);
-    border-radius: 2px;
-  }
-  #sheet-header {
-    height: 32px;
-    padding: 12px 16px 0;
-    color: #ff4655;
-    font-size: 10px; letter-spacing: 4px;
-    text-align: center;
-  }
-  #sheet-header .pill {
-    color: #ffcd75; font-size: 10px; margin-left: 8px;
-    background: rgba(255,205,117,0.12);
-    padding: 1px 6px; border-radius: 3px; letter-spacing: 2px;
-  }
-  #game-frame {
-    width: 100%;
-    height: calc(100% - 32px);
-    border: 0;
-    background: #000;
-  }
-
-  /* Initial "click to play" interlock */
-  #autoplay-shim {
-    position: absolute;
-    inset: 0;
-    background: rgba(0,0,0,0.85);
-    display: flex; align-items: center; justify-content: center;
-    flex-direction: column;
-    z-index: 50;
-    cursor: pointer;
-  }
-  #autoplay-shim.hidden { display: none; }
-  #autoplay-shim .play {
-    width: 80px; height: 80px;
-    border-radius: 50%;
-    background: rgba(255,70,85,0.2);
-    border: 2px solid #ff4655;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 32px; color: #ff4655;
-    margin-bottom: 16px;
-  }
-  #autoplay-shim .lbl {
-    color: #ccc; font-size: 12px; letter-spacing: 3px;
-  }
-  #autoplay-shim .sub {
-    color: #666; font-size: 10px; letter-spacing: 1px;
-    margin-top: 6px;
-  }
-</style>
+<link rel="stylesheet" href="css/live-shell.css">
+<link rel="stylesheet" href="css/ai-panel.css">
 </head>
 <body>
 <div id="host">
+
+  <!-- ── BACKGROUND VIDEO ─────────────────────────────────────────── -->
   <div id="video-wrap">
     <video id="live-video" muted playsinline loop preload="metadata">
-      <!-- served from project root; see docs/v2g_demo.md
-           This file now lives at prototype/live/, so reference/ is two levels up. -->
       <source src="../../reference/videos/encore_test2.mp4" type="video/mp4">
     </video>
+  </div>
 
-    <div id="brand">⚡ ENCORE V2G</div>
-    <div id="live-badge"><span class="pulse"></span>LIVE</div>
-
-    <div id="side-actions">
-      <div><div class="ico">♥</div>2.1K</div>
-      <div><div class="ico">💬</div>148</div>
-      <div><div class="ico">↗</div>32</div>
+  <!-- ── TOP CHROME · host strip + event ribbons + LIVE badge ───── -->
+  <div id="top-chrome">
+    <div id="host-strip">
+      <div class="avatar">🎮</div>
+      <div class="meta">
+        <div class="name">polly_zazaza</div>
+        <div class="hearts">♥ 118.0K</div>
+      </div>
+      <button id="follow-btn" class="follow">+ Follow</button>
+      <div class="viewers">👥 480</div>
+      <button id="close-btn" class="close">✕</button>
     </div>
-
-    <div id="status-bar">
-      <div id="status-dot" class="idle"></div>
-      <div id="status-text">Click to start LIVE</div>
-      <div id="cost">$0.000</div>
-      <button id="trigger-btn">FORCE</button>
+    <div id="top-row-2">
+      <span class="pill ranking">🎮 Gaming Ranking</span>
     </div>
   </div>
 
-  <div id="sheet">
+  <div id="event-ribbons">
+    <span class="ribbon"><span class="emoji">🌹</span>19/22</span>
+    <span class="ribbon timer"><span class="emoji">⏱</span>01:37:57</span>
+  </div>
+
+  <div id="live-badge"><span class="pulse"></span>LIVE</div>
+
+  <!-- V2G observer status (Vision debug — small) -->
+  <div id="status-bar">
+    <div id="status-dot" class="idle"></div>
+    <div id="status-text">Click to start LIVE</div>
+    <div id="cost">$0.000</div>
+    <button id="trigger-btn">FORCE</button>
+  </div>
+
+  <!-- ── RIGHT SIDE ACTION BAR (⚡ ENCORE at top) ──────────────── -->
+  <nav id="side-actions">
+    <button class="side-btn" data-action="share">
+      <span class="ico">↗</span><span class="count" data-val="32">32</span>
+    </button>
+    <button class="side-btn" data-action="gift">
+      <span class="ico gift">🎁</span><span class="count" data-val="480">480</span>
+    </button>
+    <button class="side-btn" data-action="comment">
+      <span class="ico">💬</span><span class="count" data-val="148">148</span>
+    </button>
+    <button class="side-btn" data-action="heart">
+      <span class="ico">♥</span><span class="count" data-val="2100">2.1K</span>
+    </button>
+    <button class="side-btn" id="encore-entry">
+      <span class="ico">⚡</span><span class="label">ENCORE</span>
+    </button>
+  </nav>
+
+  <!-- ── BOTTOM CHROME · chat scroll + Type input ──────────────── -->
+  <div id="chat-area"></div>
+
+  <div id="bottom-bar">
+    <input id="chat-input" type="text" placeholder="Type..." />
+    <button class="small-btn" data-action="smile">😊</button>
+    <button class="small-btn" data-action="person">👥</button>
+    <button class="small-btn" data-action="gift">🎁<span class="badge">12</span></button>
+    <button class="small-btn" data-action="share">↗</button>
+  </div>
+
+  <!-- ── BOTTOM SHEET · AI 试玩 panel · 4-state FSM ─────────────── -->
+  <div id="sheet" data-state="closed">
     <div id="sheet-handle"></div>
-    <div id="sheet-header">⚡ ENCORE <span class="pill" id="sheet-pill">—</span></div>
-    <!-- Game iframe lives one level up at prototype/encore_prototype.html -->
-    <iframe id="game-frame" src="../encore_prototype.html?embedded=1" allow="autoplay"></iframe>
+    <div id="sheet-header">
+      <span class="label">⚡ ENCORE</span>
+      <span class="pill" id="sheet-pill">—</span>
+      <span class="timer" id="sheet-timer"></span>
+    </div>
+    <button id="sheet-close" aria-label="Close">✕</button>
+
+    <iframe id="game-frame" allow="autoplay"></iframe>
+
+    <!-- LOADING overlay -->
+    <div id="sheet-loading" class="hidden">
+      <div class="robot">🤖</div>
+      <div class="headline">AI is crafting your game…</div>
+      <div class="subline">…</div>
+      <div class="spinner"></div>
+    </div>
+
+    <!-- FEEDBACK overlay (shown when sheet[data-state="feedback"]) -->
+    <div id="feedback-card">
+      <div class="q">How was it?</div>
+      <div class="stats" id="fb-stats">—</div>
+      <div class="row">
+        <button class="fb-btn" data-fb="fun"><span class="emoji">🔥</span>Fun</button>
+        <button class="fb-btn" data-fb="hard"><span class="emoji">😅</span>Too hard</button>
+        <button class="fb-btn" data-fb="remix"><span class="emoji">🎲</span>Remix</button>
+      </div>
+    </div>
+    <div id="feedback-toast"></div>
   </div>
 
+  <!-- ── AUTOPLAY SHIM ──────────────────────────────────────────── -->
   <div id="autoplay-shim">
     <div class="play">▶</div>
     <div class="lbl">TAP TO ENTER LIVE</div>
@@ -226,195 +120,130 @@
   </div>
 </div>
 
+<script src="js/observer-client.js"></script>
+<script src="js/live-chrome.js"></script>
+<script src="js/ai-panel-fsm.js"></script>
+<script src="js/feedback.js"></script>
+
 <script>
 (() => {
-  const video        = document.getElementById('live-video');
-  const dot          = document.getElementById('status-dot');
-  const statusText   = document.getElementById('status-text');
-  const costEl       = document.getElementById('cost');
-  const sheet        = document.getElementById('sheet');
-  const frame        = document.getElementById('game-frame');
-  const triggerBtn   = document.getElementById('trigger-btn');
-  const shim         = document.getElementById('autoplay-shim');
-  const sheetPill    = document.getElementById('sheet-pill');
+  // Default config used when user clicks ⚡ ENCORE manually.
+  // Cycles through the 4 templates so demo coverage is easy.
+  const DEFAULT_CONFIGS = [
+    { template: 'fps',  theme: 'desert', scenario: { enemy_count: 3, hp_start: 60, weapon: 'rifle', description: '1v3 retake' } },
+    { template: 'moba', theme: 'grass',  scenario: { enemy_count: 3, hp_start: 80, description: 'dragon pit fight' } },
+    { template: 'br',   theme: 'forest', scenario: { enemy_count: 4, hp_start: 60, weapon: 'sniper', description: 'final circle' } },
+    { template: 'td',   theme: 'grass',  scenario: { wave_count: 3, enemy_per_wave: 8, tower_budget: 100, description: 'tower defense wave' } },
+  ];
+  let configCursor = 0;
+  // Latest cached config from observer (used when ⚡ ENCORE clicked, if available)
+  let cachedDetection = null;
+  function nextDefaultConfig() {
+    if (cachedDetection) {
+      const c = cachedDetection; cachedDetection = null;
+      return c;
+    }
+    const c = DEFAULT_CONFIGS[configCursor % DEFAULT_CONFIGS.length];
+    configCursor++;
+    return { highlight: true, confidence: 1.0, ...c, _meta: { tokens_in: 0, tokens_out: 0 } };
+  }
 
-  // -------- Config --------
-  const OBSERVER_URL = 'http://127.0.0.1:8081/analyze';
-  const SAMPLE_INTERVAL_MS    = 4000;   // poll cadence (Claude call latency 3-8s; busy = retry next tick)
-  const CONFIDENCE_THRESHOLD  = 0.6;    // below this, treat as no-highlight
-  const COOLDOWN_AFTER_TRIGGER_MS = 8000; // skip sampling for 8s after a game so we don't re-fire
-  const POST_GAME_VISIBLE_MS  = 3500;   // how long the end card is visible before sheet collapses
-  const JPEG_QUALITY          = 0.6;
-  const FRAME_MAX_WIDTH       = 480;    // downsample → smaller payload + cheaper Claude call
-
-  let sampleTimer = null;
-  let inflight    = false;
-  let totalCost   = 0;
-  let cooldownUntil = 0;
-  let gameActive  = false;
-  let iframeReady = false;
-  let pendingLaunch = null;
-  let sampleCount = 0;
-  let detectCount = 0;
+  const dom = {
+    video:     document.getElementById('live-video'),
+    dot:       document.getElementById('status-dot'),
+    statusEl:  document.getElementById('status-text'),
+    costEl:    document.getElementById('cost'),
+    sheet:     document.getElementById('sheet'),
+    frame:     document.getElementById('game-frame'),
+    pill:      document.getElementById('sheet-pill'),
+    timerEl:   document.getElementById('sheet-timer'),
+    loadingEl: document.getElementById('sheet-loading'),
+    sheetClose: document.getElementById('sheet-close'),
+    shim:      document.getElementById('autoplay-shim'),
+    forceBtn:  document.getElementById('trigger-btn'),
+    encoreBtn: document.getElementById('encore-entry'),
+    followBtn: document.getElementById('follow-btn'),
+    closeBtn:  document.getElementById('close-btn'),
+    chatArea:  document.getElementById('chat-area'),
+    chatInput: document.getElementById('chat-input'),
+    sideButtons: document.querySelectorAll('#side-actions .side-btn'),
+    fbCard:    document.getElementById('feedback-card'),
+    fbToast:   document.getElementById('feedback-toast'),
+    fbButtons: document.querySelectorAll('#feedback-card .fb-btn'),
+    fbStats:   document.getElementById('fb-stats'),
+  };
 
   function setStatus(stateClass, text) {
-    dot.className = '';
-    dot.classList.add(stateClass || 'idle');
-    statusText.textContent = text;
+    dom.dot.className = '';
+    dom.dot.classList.add(stateClass || 'idle');
+    dom.statusEl.textContent = text;
   }
+  function setCost(s) { dom.costEl.textContent = s; }
 
-  // -------- Start playback (autoplay shim) --------
-  shim.addEventListener('click', () => {
-    shim.classList.add('hidden');
-    video.play().then(startObserving).catch(err => {
-      setStatus('idle', 'video play failed: ' + err.message);
-    });
+  // ── Wire AiPanel ───────────────────────────────────────────────────
+  AiPanel.init({
+    sheet:     dom.sheet,
+    frame:     dom.frame,
+    pill:      dom.pill,
+    timerEl:   dom.timerEl,
+    loadingEl: dom.loadingEl,
+    closeBtn:  dom.sheetClose,
+    onActive:  () => ObserverClient.pause(),
+    onIdle:    () => {
+      setStatus('idle', 'panel closed · resuming sampling…');
+      setTimeout(() => ObserverClient.resume(), 500);
+    },
+    onEnd: (stats) => {
+      Feedback.show(stats);
+    },
   });
 
-  function startObserving() {
-    setStatus('sampling', `👁 sampling every ${SAMPLE_INTERVAL_MS/1000}s`);
-    if (sampleTimer) clearInterval(sampleTimer);
-    sampleTimer = setInterval(sample, SAMPLE_INTERVAL_MS);
-    // First sample 2s in so the video has buffered
-    setTimeout(sample, 2000);
-  }
+  Feedback.init({
+    card:    dom.fbCard,
+    toast:   dom.fbToast,
+    buttons: dom.fbButtons,
+    statsEl: dom.fbStats,
+    onChosen: (kind /* , stats */) => {
+      AiPanel.feedbackChosen();
+    },
+  });
 
-  // -------- Frame sampling + observer call --------
-  function grabFrame() {
-    if (!video.videoWidth) return null;
-    const c = document.createElement('canvas');
-    c.width = FRAME_MAX_WIDTH;
-    c.height = Math.round(FRAME_MAX_WIDTH * video.videoHeight / video.videoWidth);
-    const ctx = c.getContext('2d');
-    try {
-      ctx.drawImage(video, 0, 0, c.width, c.height);
-    } catch (e) {
-      // tainted canvas (cross-origin video) — bail
-      console.warn('frame grab failed (CORS?):', e);
-      return null;
-    }
-    return c.toDataURL('image/jpeg', JPEG_QUALITY);
-  }
-
-  async function sample() {
-    if (inflight || gameActive) return;
-    if (Date.now() < cooldownUntil) return;
-    const dataUrl = grabFrame();
-    if (!dataUrl) {
-      setStatus('idle', 'no video frame available yet…');
-      return;
-    }
-    sampleCount++;
-    inflight = true;
-    const t = video.currentTime;
-    setStatus('analyzing', `🤖 Claude analyzing frame @ ${t.toFixed(1)}s (#${sampleCount})…`);
-    try {
-      const resp = await fetch(OBSERVER_URL, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ image: dataUrl, t }),
+  // ── Wire LiveChrome ────────────────────────────────────────────────
+  LiveChrome.init({
+    video: dom.video,
+    shim: dom.shim,
+    forceBtn: dom.forceBtn,
+    encoreBtn: dom.encoreBtn,
+    followBtn: dom.followBtn,
+    closeBtn: dom.closeBtn,
+    chatArea: dom.chatArea,
+    chatInput: dom.chatInput,
+    sideButtons: dom.sideButtons,
+    onStatus: setStatus,
+    onStart: () => {
+      // Observer still samples in the background so we can pre-pick a
+      // template when the user eventually clicks ⚡ ENCORE — but we no
+      // longer auto-pop the panel (sub-doc decision).
+      ObserverClient.start({
+        video: dom.video,
+        onStatus: setStatus,
+        onCost: setCost,
+        onHighlight: (config) => {
+          // CACHE only — never auto-open. The user clicks ⚡ ENCORE.
+          cachedDetection = config;
+          LiveChrome.pushChat({ kind: 'host', uname: 'host', body: '⚡ encore ready — tap to play' });
+        },
       });
-      const data = await resp.json();
-      if (data.busy) {
-        setStatus('sampling', `observer busy, will retry next tick`);
-        return;
-      }
-      if (data._meta) {
-        const m = data._meta;
-        const cost = (m.tokens_in * 3 + m.tokens_out * 15) / 1_000_000;
-        totalCost += cost;
-        costEl.textContent = '$' + totalCost.toFixed(4);
-      }
-      if (data.error) {
-        setStatus('idle', 'analyze error: ' + data.error);
-        return;
-      }
-      if (data.highlight && (data.confidence || 0) >= CONFIDENCE_THRESHOLD) {
-        detectCount++;
-        const sc = data.scenario || {};
-        setStatus('detected', `🎯 HIGHLIGHT #${detectCount} (${Math.round(data.confidence*100)}%): ${sc.description || data.template}`);
-        await triggerEncore(data);
-      } else {
-        const sc = data.scenario || {};
-        const note = sc.description ? ` — ${sc.description}` : '';
-        setStatus('sampling', `· no highlight @ ${t.toFixed(1)}s (conf ${Math.round((data.confidence||0)*100)}%)${note}`);
-      }
-    } catch (e) {
-      setStatus('idle', 'observer offline: ' + e.message + ' (start observer.py?)');
-    } finally {
-      inflight = false;
-    }
-  }
-
-  // -------- Trigger encore game via iframe postMessage --------
-  function triggerEncore(config) {
-    gameActive = true;
-    if (sampleTimer) { clearInterval(sampleTimer); sampleTimer = null; }
-    sheet.classList.add('open');
-    const sc = config.scenario || {};
-    sheetPill.textContent = `${(config.template || '').toUpperCase()} · ${(config.theme || '').toUpperCase()}`;
-    // Defer the launch a tick so the slide-up animation can start
-    const fire = () => {
-      try {
-        frame.contentWindow.postMessage({ type: 'launch', config }, '*');
-      } catch (e) { console.warn('postMessage failed:', e); }
-    };
-    if (iframeReady) {
-      setTimeout(fire, 350);
-    } else {
-      pendingLaunch = config;
-      // also try after 1s as a fallback if 'encore_ready' never comes
-      setTimeout(() => {
-        if (pendingLaunch) { fire(); pendingLaunch = null; }
-      }, 1000);
-    }
-  }
-
-  // -------- Receive messages from iframe --------
-  window.addEventListener('message', (e) => {
-    const d = e.data;
-    if (!d || typeof d !== 'object') return;
-    if (d.type === 'encore_ready') {
-      iframeReady = true;
-      if (pendingLaunch) {
-        try { frame.contentWindow.postMessage({ type: 'launch', config: pendingLaunch }, '*'); } catch (_) {}
-        pendingLaunch = null;
-      }
-    } else if (d.type === 'encore_done') {
-      const s = d.stats || {};
-      setStatus('detected',
-        `✓ encore done: ${s.won ? 'WIN' : 'LOSS'} · ${s.kills||0} kills · ${s.time||0}s · template=${s.template||'?'}`);
-      // Let the end card breathe, then collapse and resume observing
-      setTimeout(() => {
-        sheet.classList.remove('open');
-        gameActive = false;
-        cooldownUntil = Date.now() + COOLDOWN_AFTER_TRIGGER_MS;
-        setStatus('idle', `cooldown ${COOLDOWN_AFTER_TRIGGER_MS/1000}s before next sample…`);
-        setTimeout(() => {
-          sampleTimer = setInterval(sample, SAMPLE_INTERVAL_MS);
-          setStatus('sampling', `👁 sampling every ${SAMPLE_INTERVAL_MS/1000}s`);
-        }, COOLDOWN_AFTER_TRIGGER_MS);
-      }, POST_GAME_VISIBLE_MS);
-    }
-  });
-
-  // -------- Manual force button (stage-rehearsal fallback) --------
-  triggerBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    triggerEncore({
-      highlight: true,
-      confidence: 1.0,
-      template: 'fps',
-      theme: 'desert',
-      scenario: {
-        enemy_count: 3,
-        hp_start: 55,
-        weapon: 'rifle',
-        description: 'forced 1v3 clutch (manual)',
-      },
-      _meta: { tokens_in: 0, tokens_out: 0 },
-    });
-    setStatus('detected', '🎯 FORCED HIGHLIGHT (manual override)');
+    },
+    onEncoreClick: () => {
+      if (AiPanel.isActive()) return;
+      AiPanel.launch(nextDefaultConfig());
+      setStatus('detected', '⚡ ENCORE launched (manual)');
+    },
+    onForceHighlight: () => {
+      AiPanel.launch(nextDefaultConfig());
+      setStatus('detected', '🎯 FORCED HIGHLIGHT (manual)');
+    },
   });
 })();
 </script>
