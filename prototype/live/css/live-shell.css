@@ -49,8 +49,25 @@ button:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; 
    Phone-frame host (iPhone 14 — 390×844 logical)
    ========================================================================= */
 
-#host {
+/* The host keeps its internal layout coordinates at 390x844 (every
+   absolute position in the chrome is sized for that canvas). When the
+   viewport is too small to fit the phone, JS sets `--scale` on :root
+   and the wrapper collapses to the visible (scaled) size so flex
+   centering places it correctly.
+   See the bottom of streamer.html for the scale calculation. */
+
+:root { --scale: 1; }
+
+#host-frame {
   position: relative;
+  width:  calc(390px * var(--scale));
+  height: calc(844px * var(--scale));
+  overflow: visible; /* allow the phone bezel shadow to extend past */
+}
+
+#host {
+  position: absolute;
+  inset: 0;
   width: 390px;
   height: 844px;
   background: #000;
@@ -60,24 +77,20 @@ button:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; 
     0 0 0 6px #1a1a1a,
     0 0 0 8px #2a2a2c,
     0 30px 80px rgba(0,0,0,.6);
-  /* Stay at 390x844 always; scale down (preserving aspect) if the
-     viewport can't fit the phone frame. Calculated against 410px wide /
-     880px tall (a little headroom for the bezel + shadow). */
-  --fit-scale: min(
-    calc((100vw - 16px) / 410),
-    calc((100vh - 16px) / 880),
-    1
-  );
-  transform: scale(var(--fit-scale));
-  transform-origin: center center;
+  transform: scale(var(--scale));
+  transform-origin: top left;
 }
 
-/* Edge-to-edge on actual phones — narrow AND short (mobile portrait).
-   Wide-but-short laptops keep the centered phone frame. */
+/* Edge-to-edge on actual phones — narrow AND short (mobile portrait). */
 @media (max-width: 410px) and (max-height: 870px) {
+  :root { --scale: 1; }
+  #host-frame {
+    width: 100vw;
+    height: 100dvh;
+  }
   #host {
     width: 100vw;
-    height: 100vh;
+    height: 100dvh;
     border-radius: 0;
     box-shadow: none;
     transform: none;

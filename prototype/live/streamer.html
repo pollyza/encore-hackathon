@@ -15,6 +15,10 @@
 </head>
 <body>
 
+<!-- Frame wrapper carries the (scaled) layout box; #host stays at
+     390x844 internally and is shrunk via transform when the viewport
+     can't fit it (e.g. desktop with browser chrome + macOS dock). -->
+<div id="host-frame">
 <div id="host">
 
   <!-- ── iOS status bar (cosmetic) ───────────────────────────────────── -->
@@ -288,14 +292,39 @@
     <div class="sub">browser autoplay policy</div>
   </div>
 
-</div>
+</div> <!-- /#host -->
+</div> <!-- /#host-frame -->
+
+<!-- Phone-frame fit-scale — keep #host at 390x844 in layout (internal
+     positions depend on it) but render smaller when the viewport can't
+     fit it (desktop with browser chrome + dock; landscape tablets, etc).
+     Recompute on resize / orientation change. -->
+<script>
+(() => {
+  const PHONE_W = 390, PHONE_H = 844, PAD = 24;
+  function fit() {
+    // Edge-to-edge on real phones — no scaling needed.
+    if (window.innerWidth <= 410 && window.innerHeight <= 870) {
+      document.documentElement.style.setProperty('--scale', '1');
+      return;
+    }
+    const sw = (window.innerWidth  - PAD) / PHONE_W;
+    const sh = (window.innerHeight - PAD) / PHONE_H;
+    const s = Math.min(1, sw, sh);
+    document.documentElement.style.setProperty('--scale', String(s));
+  }
+  fit();
+  window.addEventListener('resize', fit);
+  window.addEventListener('orientationchange', fit);
+})();
+</script>
 
 <!-- Cache-bust query string ensures JS reloads when the bundle is iterated.
      Bump the value when editing any of these modules. -->
-<script src="js/observer-client.js?v=4"></script>
-<script src="js/mini-games.js?v=4"></script>
-<script src="js/encore-sheet.js?v=4"></script>
-<script src="js/live-room.js?v=4"></script>
+<script src="js/observer-client.js?v=6"></script>
+<script src="js/mini-games.js?v=6"></script>
+<script src="js/encore-sheet.js?v=6"></script>
+<script src="js/live-room.js?v=6"></script>
 <script>
 (() => {
   // ── Wire all modules together ──────────────────────────────────────
