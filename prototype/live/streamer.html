@@ -1,251 +1,367 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Encore — LIVE Streamer Demo (V2G)</title>
+<title>Encore — TikTok LIVE (Audience demo)</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+
 <link rel="stylesheet" href="css/live-shell.css">
 <link rel="stylesheet" href="css/ai-panel.css">
+<link rel="stylesheet" href="css/mini-games.css">
 </head>
 <body>
+
 <div id="host">
 
-  <!-- ── BACKGROUND VIDEO ─────────────────────────────────────────── -->
-  <div id="video-wrap">
-    <video id="live-video" muted playsinline loop preload="metadata">
-      <source src="../../reference/videos/encore_test2.mp4" type="video/mp4">
-    </video>
+  <!-- ── iOS status bar (cosmetic) ───────────────────────────────────── -->
+  <div id="status-bar-ios">
+    <span class="time">9:41</span>
+    <span class="right">
+      <span class="signal">●●●●</span>
+      <span class="wifi">⌒</span>
+      <span class="battery">▮</span>
+    </span>
   </div>
 
-  <!-- ── TOP CHROME · host strip + event ribbons + LIVE badge ───── -->
-  <div id="top-chrome">
-    <div id="host-strip">
-      <div class="avatar">🎮</div>
+  <!-- ── Stream background ───────────────────────────────────────────── -->
+  <div id="stream-bg">
+    <video id="live-video" muted playsinline loop preload="metadata">
+      <!-- Absolute path so both /tmp/encore-preview/live/ and
+           /Users/.../prototype/live/ resolve correctly (servers run from
+           their own repo root or mirror root). -->
+      <source src="/reference/videos/encore_test2.mp4" type="video/mp4">
+    </video>
+    <div class="atmosphere"></div>
+
+    <!-- Stylised in-game HUD (purely decorative on top of the video) -->
+    <div class="stream-minimap">
+      <svg viewBox="0 0 78 78" width="78" height="78" xmlns="http://www.w3.org/2000/svg">
+        <path d="M0 40 Q20 30 40 36 T78 32 L78 78 L0 78Z" fill="#3d4f2a"/>
+        <circle cx="40" cy="40" r="3" fill="#ff3535"/>
+        <circle cx="40" cy="40" r="14" fill="none" stroke="#ff3535" stroke-width=".6" opacity=".5"/>
+        <rect x="10" y="20" width="6" height="6" fill="#a08a4a"/>
+        <circle cx="58" cy="55" r="2" fill="#26d36a"/>
+      </svg>
+      <div class="label">CẢNH BÁO</div>
+    </div>
+
+    <div class="stream-compass">
+      <span>NE</span><span>60</span><span>75</span><span>E</span><span>105</span>
+      <span class="active">125</span><span>150</span><span>S</span><span>195</span>
+    </div>
+
+    <div class="stream-weapon">
+      <div class="ammo">8<span class="of">/167</span></div>
+      <div class="reload">Thay đạn</div>
+      <div class="row"><div>61</div><div>0%</div><div>∞</div></div>
+    </div>
+
+    <div class="stream-joystick"></div>
+    <div class="stream-fire">✊</div>
+    <div class="stream-hp"><div></div></div>
+
+    <!-- Character silhouette -->
+    <div class="character">
+      <svg viewBox="0 0 56 88" width="56" height="88" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="28" cy="84" rx="22" ry="5" fill="#ff9d3a" opacity=".55"/>
+        <path d="M22 18 Q28 10 34 18 L36 38 L40 60 L34 78 L22 78 L16 60 L20 38 Z" fill="#e8e3d6"/>
+        <circle cx="28" cy="14" r="9" fill="#f1ddb6"/>
+        <path d="M19 12 Q28 4 37 12 L36 10 Q28 6 20 10Z" fill="#dcd2c0"/>
+        <rect x="36" y="28" width="22" height="3" rx="1" fill="#3a3026" transform="rotate(20 36 28)"/>
+        <circle cx="22" cy="78" r="2" fill="#ffce6a"/>
+        <circle cx="34" cy="78" r="1.5" fill="#fff1c0"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- ── Top bar (host + viewer pill) ───────────────────────────────── -->
+  <div id="top-bar">
+    <div class="host-pill">
+      <div class="avatar">🧑</div>
       <div class="meta">
-        <div class="name">polly_zazaza</div>
-        <div class="hearts">♥ 118.0K</div>
+        <div class="name">TK Sói</div>
+        <div class="hearts"><span class="hi">♥</span> 118.1K</div>
       </div>
       <button id="follow-btn" class="follow">+ Follow</button>
-      <div class="viewers">👥 480</div>
+    </div>
+    <div class="top-right">
+      <div class="viewer-pill">
+        <div class="stack"><div></div><div>20+</div></div>
+        <span class="count">476</span>
+      </div>
       <button id="close-btn" class="close">✕</button>
     </div>
-    <div id="top-row-2">
-      <span class="pill ranking">🎮 Gaming Ranking</span>
+  </div>
+
+  <!-- ── Activity rail (Gaming Ranking + gift goal + Encore-top) ────── -->
+  <div id="activity-rail">
+    <div class="rail-chip"><span class="emoji">🎮</span> Gaming Ranking</div>
+    <div class="rail-gift">
+      <span class="emoji">🌹</span>
+      <span class="num">19<span class="of">/22</span></span>
+    </div>
+    <div class="rail-timer"><span>⏱</span> 01:37</div>
+    <!-- Optional Encore chip (hidden by default, feature-flagged in JS) -->
+    <button class="rail-encore" id="rail-encore" style="display:none;">
+      <span>✦</span> Encore
+    </button>
+  </div>
+
+  <!-- ── Highlight popup (entry — auto mode default) ─────────────────── -->
+  <div id="highlight-popup" class="hidden">
+    <div class="card">
+      <div class="bolt">⚡</div>
+      <div class="copy">
+        <div class="eyebrow">Highlight detected</div>
+        <div class="head">Try this play yourself</div>
+        <div class="sub">Encore 30s game</div>
+      </div>
+      <button class="play" id="hl-play">Play ▶</button>
+      <button class="dismiss" id="hl-dismiss" aria-label="dismiss">✕</button>
     </div>
   </div>
 
-  <div id="event-ribbons">
-    <span class="ribbon"><span class="emoji">🌹</span>19/22</span>
-    <span class="ribbon timer"><span class="emoji">⏱</span>01:37:57</span>
-  </div>
+  <!-- ── Chat overlay ────────────────────────────────────────────────── -->
+  <div id="chat"></div>
 
-  <div id="live-badge"><span class="pulse"></span>LIVE</div>
-
-  <!-- V2G observer status (Vision debug — small) -->
-  <div id="status-bar">
-    <div id="status-dot" class="idle"></div>
-    <div id="status-text">Click to start LIVE</div>
-    <div id="cost">$0.000</div>
-    <button id="trigger-btn">FORCE</button>
-  </div>
-
-  <!-- ── RIGHT SIDE ACTION BAR (⚡ ENCORE at top) ──────────────── -->
-  <nav id="side-actions">
-    <button class="side-btn" data-action="share">
-      <span class="ico">↗</span><span class="count" data-val="32">32</span>
-    </button>
-    <button class="side-btn" data-action="gift">
-      <span class="ico gift">🎁</span><span class="count" data-val="480">480</span>
-    </button>
-    <button class="side-btn" data-action="comment">
-      <span class="ico">💬</span><span class="count" data-val="148">148</span>
-    </button>
-    <button class="side-btn" data-action="heart">
-      <span class="ico">♥</span><span class="count" data-val="2100">2.1K</span>
-    </button>
-    <button class="side-btn" id="encore-entry">
-      <span class="ico">⚡</span><span class="label">ENCORE</span>
-    </button>
-  </nav>
-
-  <!-- ── BOTTOM CHROME · chat scroll + Type input ──────────────── -->
-  <div id="chat-area"></div>
-
+  <!-- ── Bottom bar (Type… + emoji + Encore + gift + share) ──────────── -->
   <div id="bottom-bar">
-    <input id="chat-input" type="text" placeholder="Type..." />
-    <button class="small-btn" data-action="smile">😊</button>
-    <button class="small-btn" data-action="person">👥</button>
-    <button class="small-btn" data-action="gift">🎁<span class="badge">12</span></button>
-    <button class="small-btn" data-action="share">↗</button>
+    <input id="chat-input" class="input" placeholder="Type…" />
+    <button class="icon-btn" data-action="smile">☺</button>
+    <button class="icon-btn" id="audience-btn" data-action="audience">🤝</button>
+    <button class="encore-btn" id="encore-btn" style="display:none;">
+      <span class="star">✦</span> Encore
+    </button>
+    <button class="icon-btn" data-action="gift">🎁</button>
+    <button class="icon-btn" data-action="share">↗<span class="badge">12</span></button>
   </div>
 
-  <!-- ── BOTTOM SHEET · AI 试玩 panel · 4-state FSM ─────────────── -->
-  <div id="sheet" data-state="closed">
-    <div id="sheet-handle"></div>
+  <!-- ── Floating ack pills layer ────────────────────────────────────── -->
+  <div id="ack-layer"></div>
+
+  <!-- ── Encore bottom sheet (mounted but hidden until open) ─────────── -->
+  <div id="sheet-backdrop" class="hidden"></div>
+  <div id="sheet" class="hidden" data-phase="loading">
     <div id="sheet-header">
-      <span class="label">⚡ ENCORE</span>
-      <span class="pill" id="sheet-pill">—</span>
-      <span class="timer" id="sheet-timer"></span>
-    </div>
-    <button id="sheet-close" aria-label="Close">✕</button>
-
-    <iframe id="game-frame" allow="autoplay"></iframe>
-
-    <!-- LOADING overlay -->
-    <div id="sheet-loading" class="hidden">
-      <div class="robot">🤖</div>
-      <div class="headline">AI is crafting your game…</div>
-      <div class="subline">…</div>
-      <div class="spinner"></div>
-    </div>
-
-    <!-- FEEDBACK overlay (shown when sheet[data-state="feedback"]) -->
-    <div id="feedback-card">
-      <div class="q">How was it?</div>
-      <div class="stats" id="fb-stats">—</div>
-      <div class="row">
-        <button class="fb-btn" data-fb="fun"><span class="emoji">🔥</span>Fun</button>
-        <button class="fb-btn" data-fb="hard"><span class="emoji">😅</span>Too hard</button>
-        <button class="fb-btn" data-fb="remix"><span class="emoji">🎲</span>Remix</button>
+      <div class="drag-handle"></div>
+      <div class="brand">
+        <div class="badge">✦</div>
+        <div class="text">
+          <div class="name">Encore</div>
+          <div class="sub">AI · forked from TK Sói</div>
+        </div>
+      </div>
+      <div class="right">
+        <div class="host-pip">
+          <div class="avatar">🧑</div>
+          <span class="label">Host live</span>
+        </div>
+        <button class="close" id="sheet-close">✕</button>
       </div>
     </div>
-    <div id="feedback-toast"></div>
+
+    <div id="sheet-body">
+
+      <!-- PHASE: LOADING -->
+      <div class="phase" id="phase-loading">
+        <div class="thumb">
+          <svg viewBox="0 0 220 140" width="220" height="140" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M0,80 Q60,70 110,80 T220,72 L220,140 L0,140Z" fill="#4f5532"/>
+            <path d="M0,100 Q60,90 110,100 T220,92 L220,140 L0,140Z" fill="#3d4628"/>
+            <circle cx="110" cy="76" r="14" fill="#e8e3d6"/>
+            <rect x="100" y="86" width="20" height="32" fill="#e8e3d6"/>
+            <ellipse cx="110" cy="118" rx="14" ry="3" fill="#ff9d3a" opacity=".7"/>
+          </svg>
+          <div class="scanline"></div>
+          <div class="bracket tl"></div>
+          <div class="bracket tr"></div>
+          <div class="bracket bl"></div>
+          <div class="bracket br"></div>
+          <div class="tag"><span class="dot">●</span> Highlight · 0:12</div>
+        </div>
+        <div class="particles" id="loading-particles"></div>
+        <div class="status-block">
+          <div class="eyebrow">AI Encore · Generating</div>
+          <div class="status-line" id="loading-status">Capturing highlight…</div>
+          <div class="progress"><div class="bar" id="loading-bar"></div></div>
+          <div class="meta">
+            <span>encore.ai</span>
+            <span id="loading-pct">0%</span>
+          </div>
+        </div>
+        <div class="footer-stub">&gt; encore.fork(highlight_0x9a31).build()</div>
+      </div>
+
+      <!-- PHASE: GAME (filled by mini-games.js) -->
+      <div class="phase" id="phase-game"></div>
+
+      <!-- PHASE: RESULT -->
+      <div class="phase" id="phase-result">
+        <div class="label-top" id="result-label">Encore complete</div>
+        <div class="headline" id="result-headline">Nice run!</div>
+        <div class="score-chip">
+          <div class="col you">
+            <div class="key">YOUR SCORE</div>
+            <div class="val"><span id="result-score">0</span><span class="of">/<span id="result-max">0</span></span></div>
+          </div>
+          <div class="divider"></div>
+          <div class="col host">
+            <div class="key">HOST</div>
+            <div class="val">TK Sói</div>
+            <div class="sub"><span id="host-score">0</span>/<span id="host-max">0</span></div>
+          </div>
+        </div>
+        <div class="pills">
+          <button class="ext-pill" id="rank-pill">
+            <span class="ico">🏆</span> Encore Rank
+            <span class="num">#<span id="rank-num">234</span></span>
+            <span class="qual">· in this LIVE</span>
+            <span class="chev">›</span>
+          </button>
+          <button class="ext-pill" id="share-pill">
+            <span>↗</span> Share clip
+          </button>
+        </div>
+        <div class="gift-remix">
+          <div class="ico">🎁</div>
+          <div class="body">
+            <div class="head">Send as Gift Remix</div>
+            <div class="sub">Send TK Sói your run + a Rose · 5 coins</div>
+          </div>
+          <button class="send">Send</button>
+        </div>
+        <div class="feedback-block">
+          <div class="label">How was it?</div>
+          <div class="row">
+            <button class="fb-btn" data-fb="fun"><span class="emoji">🔥</span><span>Fun</span></button>
+            <button class="fb-btn" data-fb="hard"><span class="emoji">😵</span><span>Too hard</span></button>
+            <button class="fb-btn" data-fb="remix"><span class="emoji">🎲</span><span>Remix</span></button>
+          </div>
+          <button class="play-again" id="play-again">Play again</button>
+        </div>
+      </div>
+
+      <!-- PHASE: RANKING -->
+      <div class="phase" id="phase-ranking">
+        <div class="sub-header">
+          <button class="back" id="ranking-back" aria-label="back">‹</button>
+          <div class="titles">
+            <div class="h">Encore Ranking</div>
+            <div class="s" id="ranking-sub">Aim · from TK Sói's highlight</div>
+          </div>
+          <div class="badge">Live · 472 plays</div>
+        </div>
+        <div class="tabs">
+          <div class="seg">
+            <button class="active" data-tab="live">In this LIVE</button>
+            <button data-tab="global">Global</button>
+          </div>
+        </div>
+        <div class="list" id="ranking-list"></div>
+        <div class="footer-cta">
+          <button id="ranking-play-again">Play again to climb ↑</button>
+        </div>
+      </div>
+
+      <!-- Feedback ack overlay -->
+      <div id="fb-ack" class="hidden">
+        <div class="ring-stack">
+          <div class="ring1"></div>
+          <div class="ring2"></div>
+          <div class="core" id="fb-ack-emoji">🔥</div>
+        </div>
+        <div class="thanks">Thanks for the feedback!</div>
+        <div class="sub" id="fb-ack-sub">Tuning your next Encore</div>
+      </div>
+
+    </div>
   </div>
 
-  <!-- ── AUTOPLAY SHIM ──────────────────────────────────────────── -->
+  <!-- ── Autoplay shim (initial tap to enter LIVE) ────────────────────── -->
   <div id="autoplay-shim">
     <div class="play">▶</div>
     <div class="lbl">TAP TO ENTER LIVE</div>
     <div class="sub">browser autoplay policy</div>
   </div>
+
 </div>
 
-<script src="js/observer-client.js"></script>
-<script src="js/live-chrome.js"></script>
-<script src="js/ai-panel-fsm.js"></script>
-<script src="js/feedback.js"></script>
-
+<!-- Cache-bust query string ensures JS reloads when the bundle is iterated.
+     Bump the value when editing any of these modules. -->
+<script src="js/observer-client.js?v=4"></script>
+<script src="js/mini-games.js?v=4"></script>
+<script src="js/encore-sheet.js?v=4"></script>
+<script src="js/live-room.js?v=4"></script>
 <script>
 (() => {
-  // Default config used when user clicks ⚡ ENCORE manually.
-  // Cycles through the 4 templates so demo coverage is easy.
-  const DEFAULT_CONFIGS = [
-    { template: 'fps',  theme: 'desert', scenario: { enemy_count: 3, hp_start: 60, weapon: 'rifle', description: '1v3 retake' } },
-    { template: 'moba', theme: 'grass',  scenario: { enemy_count: 3, hp_start: 80, description: 'dragon pit fight' } },
-    { template: 'br',   theme: 'forest', scenario: { enemy_count: 4, hp_start: 60, weapon: 'sniper', description: 'final circle' } },
-    { template: 'td',   theme: 'grass',  scenario: { wave_count: 3, enemy_per_wave: 8, tower_budget: 100, description: 'tower defense wave' } },
-  ];
-  let configCursor = 0;
-  // Latest cached config from observer (used when ⚡ ENCORE clicked, if available)
-  let cachedDetection = null;
-  function nextDefaultConfig() {
-    if (cachedDetection) {
-      const c = cachedDetection; cachedDetection = null;
-      return c;
-    }
-    const c = DEFAULT_CONFIGS[configCursor % DEFAULT_CONFIGS.length];
-    configCursor++;
-    return { highlight: true, confidence: 1.0, ...c, _meta: { tokens_in: 0, tokens_out: 0 } };
-  }
-
+  // ── Wire all modules together ──────────────────────────────────────
   const dom = {
-    video:     document.getElementById('live-video'),
-    dot:       document.getElementById('status-dot'),
-    statusEl:  document.getElementById('status-text'),
-    costEl:    document.getElementById('cost'),
-    sheet:     document.getElementById('sheet'),
-    frame:     document.getElementById('game-frame'),
-    pill:      document.getElementById('sheet-pill'),
-    timerEl:   document.getElementById('sheet-timer'),
-    loadingEl: document.getElementById('sheet-loading'),
+    video:      document.getElementById('live-video'),
+    shim:       document.getElementById('autoplay-shim'),
+    hl:         document.getElementById('highlight-popup'),
+    hlPlay:     document.getElementById('hl-play'),
+    hlDismiss:  document.getElementById('hl-dismiss'),
+    chat:       document.getElementById('chat'),
+    encoreBtn:  document.getElementById('encore-btn'),
+    railEncore: document.getElementById('rail-encore'),
+    audienceBtn:document.getElementById('audience-btn'),
+    followBtn:  document.getElementById('follow-btn'),
+    closeBtn:   document.getElementById('close-btn'),
+    chatInput:  document.getElementById('chat-input'),
+    iconBtns:   document.querySelectorAll('#bottom-bar .icon-btn'),
+    ackLayer:   document.getElementById('ack-layer'),
+    sheet:      document.getElementById('sheet'),
+    sheetBackdrop: document.getElementById('sheet-backdrop'),
     sheetClose: document.getElementById('sheet-close'),
-    shim:      document.getElementById('autoplay-shim'),
-    forceBtn:  document.getElementById('trigger-btn'),
-    encoreBtn: document.getElementById('encore-entry'),
-    followBtn: document.getElementById('follow-btn'),
-    closeBtn:  document.getElementById('close-btn'),
-    chatArea:  document.getElementById('chat-area'),
-    chatInput: document.getElementById('chat-input'),
-    sideButtons: document.querySelectorAll('#side-actions .side-btn'),
-    fbCard:    document.getElementById('feedback-card'),
-    fbToast:   document.getElementById('feedback-toast'),
-    fbButtons: document.querySelectorAll('#feedback-card .fb-btn'),
-    fbStats:   document.getElementById('fb-stats'),
   };
 
-  function setStatus(stateClass, text) {
-    dom.dot.className = '';
-    dom.dot.classList.add(stateClass || 'idle');
-    dom.statusEl.textContent = text;
-  }
-  function setCost(s) { dom.costEl.textContent = s; }
+  // Game cycling — Aim → Rhythm → Dodge → Aim → …
+  // (matches design's Tweaks `game` picker; auto-rotates in production)
+  const GAMES = ['aim', 'rhythm', 'dodge'];
+  let gameCursor = 0;
+  const pickGame = () => {
+    const g = GAMES[gameCursor % GAMES.length];
+    gameCursor++;
+    return g;
+  };
 
-  // ── Wire AiPanel ───────────────────────────────────────────────────
-  AiPanel.init({
-    sheet:     dom.sheet,
-    frame:     dom.frame,
-    pill:      dom.pill,
-    timerEl:   dom.timerEl,
-    loadingEl: dom.loadingEl,
-    closeBtn:  dom.sheetClose,
-    onActive:  () => ObserverClient.pause(),
-    onIdle:    () => {
-      setStatus('idle', 'panel closed · resuming sampling…');
-      setTimeout(() => ObserverClient.resume(), 500);
-    },
-    onEnd: (stats) => {
-      Feedback.show(stats);
-    },
+  // Initialize sheet first (so live-room can call into it)
+  EncoreSheet.init({
+    sheet: dom.sheet,
+    backdrop: dom.sheetBackdrop,
+    closeBtn: dom.sheetClose,
+    pickGame,
+    onAck: (label) => LiveRoom.pushAck(label),
   });
 
-  Feedback.init({
-    card:    dom.fbCard,
-    toast:   dom.fbToast,
-    buttons: dom.fbButtons,
-    statsEl: dom.fbStats,
-    onChosen: (kind /* , stats */) => {
-      AiPanel.feedbackChosen();
-    },
+  // Initialize live-room chrome
+  LiveRoom.init({
+    video:       dom.video,
+    shim:        dom.shim,
+    hlPopup:     dom.hl,
+    hlPlay:      dom.hlPlay,
+    hlDismiss:   dom.hlDismiss,
+    chatArea:    dom.chat,
+    encoreBtn:   dom.encoreBtn,
+    railEncore:  dom.railEncore,
+    audienceBtn: dom.audienceBtn,
+    followBtn:   dom.followBtn,
+    closeBtn:    dom.closeBtn,
+    chatInput:   dom.chatInput,
+    iconBtns:    dom.iconBtns,
+    ackLayer:    dom.ackLayer,
+    onEncoreOpen: () => EncoreSheet.open(),
   });
 
-  // ── Wire LiveChrome ────────────────────────────────────────────────
-  LiveChrome.init({
-    video: dom.video,
-    shim: dom.shim,
-    forceBtn: dom.forceBtn,
-    encoreBtn: dom.encoreBtn,
-    followBtn: dom.followBtn,
-    closeBtn: dom.closeBtn,
-    chatArea: dom.chatArea,
-    chatInput: dom.chatInput,
-    sideButtons: dom.sideButtons,
-    onStatus: setStatus,
-    onStart: () => {
-      // Observer still samples in the background so we can pre-pick a
-      // template when the user eventually clicks ⚡ ENCORE — but we no
-      // longer auto-pop the panel (sub-doc decision).
-      ObserverClient.start({
-        video: dom.video,
-        onStatus: setStatus,
-        onCost: setCost,
-        onHighlight: (config) => {
-          // CACHE only — never auto-open. The user clicks ⚡ ENCORE.
-          cachedDetection = config;
-          LiveChrome.pushChat({ kind: 'host', uname: 'host', body: '⚡ encore ready — tap to play' });
-        },
-      });
-    },
-    onEncoreClick: () => {
-      if (AiPanel.isActive()) return;
-      AiPanel.launch(nextDefaultConfig());
-      setStatus('detected', '⚡ ENCORE launched (manual)');
-    },
-    onForceHighlight: () => {
-      AiPanel.launch(nextDefaultConfig());
-      setStatus('detected', '🎯 FORCED HIGHLIGHT (manual)');
-    },
-  });
+  // Observer (background V2G sampling — pre-fetches highlight detection
+  // but does NOT auto-open. The user opens via highlight popup / Encore btn)
+  // Currently dormant unless explicitly resumed by future code.
 })();
 </script>
+
 </body>
 </html>
