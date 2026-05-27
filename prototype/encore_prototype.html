@@ -3005,15 +3005,19 @@
       stats.innerHTML = `${current.name}<br>Time ${elapsed}s · Kills ${state.kills||0}${extra}`;
       o.classList.add('on');
       // V2G: tell the host page we're done so it can collapse the sheet.
+      // Schema v1.1: include `template` so the LIVE shell can route
+      // remix/replay to the right Games.x. Discovered dynamically so any
+      // future template (td, etc.) lands without code changes here.
       if (isEmbedded && window.parent !== window) {
         try {
-          const templateKey = ['fps','moba','br'].find(k => Games[k] === current);
+          const templateKey = Object.keys(Games).find(k => Games[k] === current);
           window.parent.postMessage({
             type: 'encore_done',
             stats: {
               won, template: templateKey,
               kills: state.kills || 0,
               time: parseFloat(elapsed),
+              duration: parseFloat(elapsed),  // v1.1 — duplicates `time` under spec name
             },
           }, '*');
         } catch (_) { /* parent gone, ignore */ }

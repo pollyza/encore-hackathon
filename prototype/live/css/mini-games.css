@@ -1,0 +1,299 @@
+/* =========================================================================
+   mini-games.css — Aim / Rhythm / Dodge
+   Ported from design_handoff_encore (mini-games.jsx)
+   ========================================================================= */
+
+/* Shared game HUD chip */
+.game-hud {
+  position: absolute;
+  top: 8px; left: 10px; right: 10px;
+  display: flex; justify-content: space-between; align-items: center;
+  z-index: 4;
+  pointer-events: none;
+  font-family: 'Space Grotesk', 'Inter', sans-serif;
+}
+.game-hud .label-chip {
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: var(--pill-radius);
+  padding: 4px 10px;
+  font-size: 11px; font-weight: 700;
+  display: flex; align-items: center; gap: 6px;
+  color: #fff;
+}
+.game-hud .label-chip .dot { color: var(--accent-2); font-size: 13px; }
+.game-hud .score-chip {
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: var(--pill-radius);
+  padding: 4px 12px;
+  font-size: 13px; font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+.game-hud .score-chip .of { opacity: .55; }
+
+/* Countdown overlay */
+.countdown {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 5;
+  pointer-events: none;
+}
+.countdown .digit {
+  font-size: 72px; font-weight: 900;
+  color: var(--accent-2);
+  text-shadow:
+    0 0 24px color-mix(in srgb, var(--accent-2) 67%, transparent),
+    0 0 60px color-mix(in srgb, var(--accent) 53%, transparent);
+  font-family: 'Space Grotesk', 'Inter', sans-serif;
+  animation: encorePop .6s ease-out;
+}
+
+/* =========================================================================
+   AIM
+   ========================================================================= */
+
+#game-aim {
+  position: absolute; inset: 0;
+  cursor: crosshair;
+  background: radial-gradient(circle at 50% 60%, #2c3a26 0%, #1a1f15 70%);
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+#game-aim .grid {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  opacity: .25;
+}
+#game-aim .target {
+  position: absolute;
+  transform: translate(-50%,-50%);
+  width: 56px; height: 56px;
+  animation: encorePop .25s ease-out;
+}
+#game-aim .target .ring {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  animation: ringPing 1s ease-out infinite;
+}
+#game-aim .target .core {
+  position: absolute; inset: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent) 30%, color-mix(in srgb, var(--accent) 27%, transparent) 70%);
+  box-shadow: 0 0 24px var(--accent);
+}
+#game-aim .target .cross-h {
+  position: absolute; inset: 50% 0;
+  border-top: 1px solid rgba(255,255,255,.6);
+}
+#game-aim .target .cross-v {
+  position: absolute; inset: 0 50%;
+  border-left: 1px solid rgba(255,255,255,.6);
+}
+#game-aim .hit-marker {
+  position: absolute;
+  color: var(--accent-2);
+  font-weight: 800; font-size: 18px;
+  transform: translate(-50%,-50%);
+  animation: encoreFloatUp .8s ease-out forwards;
+  pointer-events: none;
+  text-shadow: 0 0 12px var(--accent-2);
+}
+#game-aim .crosshair {
+  position: absolute;
+  transform: translate(-50%,-50%);
+  pointer-events: none;
+  width: 30px; height: 30px;
+  transition: left .08s, top .08s;
+}
+#game-aim .crosshair .ring {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--accent-2) 53%, transparent);
+}
+#game-aim .crosshair .ch { position: absolute; inset: 50% 0; border-top: 1px solid color-mix(in srgb, var(--accent-2) 53%, transparent); }
+#game-aim .crosshair .cv { position: absolute; inset: 0 50%; border-left: 1px solid color-mix(in srgb, var(--accent-2) 53%, transparent); }
+#game-aim .hint {
+  position: absolute;
+  bottom: 20px; left: 0; right: 0;
+  text-align: center;
+  color: rgba(255,255,255,.7);
+  font-size: 12px; font-weight: 500;
+}
+
+/* =========================================================================
+   RHYTHM
+   ========================================================================= */
+
+#game-rhythm {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, #14101c 0%, #221735 100%);
+  overflow: hidden;
+}
+#game-rhythm .lanes {
+  position: absolute;
+  inset: 44px 16px 90px;
+  display: flex; gap: 6px;
+}
+#game-rhythm .lane {
+  flex: 1; position: relative;
+  background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.06));
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.06);
+  overflow: hidden;
+}
+#game-rhythm .note {
+  position: absolute;
+  left: 4px; right: 4px;
+  transform: translateY(-100%);
+  height: 28px;
+  border-radius: 6px;
+}
+#game-rhythm .note.alt-a {
+  background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 67%, transparent));
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 53%, transparent);
+}
+#game-rhythm .note.alt-b {
+  background: linear-gradient(180deg, var(--accent-2), color-mix(in srgb, var(--accent-2) 67%, transparent));
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent-2) 53%, transparent);
+}
+#game-rhythm .note.missed {
+  background: rgba(255,255,255,.08);
+  box-shadow: none;
+  opacity: .4;
+}
+#game-rhythm .judge {
+  position: absolute;
+  left: 0; right: 0; bottom: 50px;
+  text-align: center;
+  font-size: 12px; font-weight: 800;
+  animation: encoreFloatUp .7s ease-out forwards;
+  pointer-events: none;
+  font-family: 'Space Grotesk', sans-serif;
+}
+#game-rhythm .judge.perfect { color: var(--accent-2); }
+#game-rhythm .judge.good    { color: #fff; }
+#game-rhythm .judge.miss    { color: #888; }
+
+#game-rhythm .hit-line {
+  position: absolute;
+  bottom: 90px; left: 16px; right: 16px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent-2), transparent);
+  box-shadow: 0 0 8px var(--accent-2);
+}
+#game-rhythm .pads {
+  position: absolute;
+  bottom: 16px; left: 16px; right: 16px;
+  display: flex; gap: 6px;
+  height: 64px;
+}
+#game-rhythm .pad {
+  flex: 1;
+  border-radius: 10px;
+  color: #fff;
+  font-weight: 800; font-size: 16px;
+  font-family: 'Space Grotesk', sans-serif;
+  display: flex; align-items: center; justify-content: center;
+}
+#game-rhythm .pad.alt-a {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 13%, transparent), color-mix(in srgb, var(--accent) 7%, transparent));
+  border: 1.5px solid color-mix(in srgb, var(--accent) 53%, transparent);
+}
+#game-rhythm .pad.alt-b {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-2) 13%, transparent), color-mix(in srgb, var(--accent-2) 7%, transparent));
+  border: 1.5px solid color-mix(in srgb, var(--accent-2) 53%, transparent);
+}
+#game-rhythm .pad:active { transform: scale(.95); }
+
+#game-rhythm .hint {
+  position: absolute;
+  top: 100px; left: 0; right: 0;
+  text-align: center;
+  color: rgba(255,255,255,.65);
+  font-size: 12px; font-weight: 500;
+}
+
+/* =========================================================================
+   DODGE
+   ========================================================================= */
+
+#game-dodge {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, #2a3a26 0%, #1a2618 100%);
+  overflow: hidden;
+  touch-action: pan-y;
+}
+#game-dodge .hp {
+  position: absolute;
+  top: 38px; left: 10px;
+  display: flex; gap: 4px;
+  z-index: 4;
+}
+#game-dodge .hp .heart {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.15);
+  transition: background .2s;
+}
+#game-dodge .hp .heart.on {
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent);
+}
+#game-dodge .lanes {
+  position: absolute;
+  inset: 70px 24px 84px;
+  display: flex;
+}
+#game-dodge .lane {
+  flex: 1; position: relative;
+  border-right: 1px dashed rgba(255,255,255,.18);
+}
+#game-dodge .lane:first-child {
+  border-left: 1px dashed rgba(255,255,255,.18);
+}
+#game-dodge .obstacle, #game-dodge .pickup {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 44px; height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  color: #fff;
+}
+#game-dodge .obstacle {
+  border-radius: 8px;
+  background: linear-gradient(135deg, #8a2a2a, #4a1414);
+  border: 2px solid #b04040;
+  box-shadow: 0 4px 10px rgba(0,0,0,.4);
+}
+#game-dodge .pickup {
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-2), color-mix(in srgb, var(--accent-2) 40%, transparent));
+  border: 2px solid var(--accent-2);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--accent-2) 67%, transparent);
+}
+#game-dodge .player {
+  position: absolute;
+  bottom: -10px;
+  transform: translateX(-50%);
+  width: 44px; height: 60px;
+  transition: left .12s cubic-bezier(.2,.9,.3,1.2);
+}
+#game-dodge .lr {
+  position: absolute;
+  bottom: 16px; left: 16px; right: 16px;
+  display: flex; gap: 10px;
+}
+#game-dodge .lr button {
+  flex: 1; height: 52px;
+  border-radius: 12px;
+  border: 1.5px solid color-mix(in srgb, var(--accent-2) 40%, transparent);
+  background: color-mix(in srgb, var(--accent-2) 13%, transparent);
+  color: #fff;
+  font-size: 22px; font-weight: 800;
+}
+#game-dodge .lr button:active { transform: scale(.95); }

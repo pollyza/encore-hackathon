@@ -1,0 +1,736 @@
+/* =========================================================================
+   Encore LIVE — Design tokens + global chrome
+   Ported from design_handoff_encore (Native tone)
+   ========================================================================= */
+
+:root {
+  /* Native TikTok tone — recommended default per design README */
+  --accent:   #FE2C55;
+  --accent-2: #25F4EE;
+  --surface:  #1c1c1e;
+  --surface-2:#2a2a2c;
+  --text:     #fff;
+  --text-2:   rgba(255,255,255,.62);
+  --text-3:   rgba(255,255,255,.42);
+
+  --sheet-radius: 24px;
+  --pill-radius: 999px;
+  --card-radius: 14px;
+}
+
+/* =========================================================================
+   Global reset + body
+   ========================================================================= */
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  margin: 0;
+  background: #08080b;
+  color: var(--text);
+  font-family: 'Inter', -apple-system, system-ui, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+body {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(900px 600px at 20% 10%, rgba(254,44,85,.08), transparent 70%),
+    radial-gradient(900px 600px at 80% 90%, rgba(37,244,238,.06), transparent 70%),
+    #08080b;
+}
+
+button { font-family: inherit; cursor: pointer; }
+button:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+
+/* =========================================================================
+   Phone-frame host (iPhone 14 — 390×844 logical)
+   ========================================================================= */
+
+/* The host keeps its internal layout coordinates at 390x844 (every
+   absolute position in the chrome is sized for that canvas). When the
+   viewport is too small to fit the phone, JS sets `--scale` on :root
+   and the wrapper collapses to the visible (scaled) size so flex
+   centering places it correctly.
+   See the bottom of streamer.html for the scale calculation. */
+
+:root { --scale: 1; }
+
+#host-frame {
+  position: relative;
+  width:  calc(390px * var(--scale));
+  height: calc(844px * var(--scale));
+  overflow: visible; /* allow the phone bezel shadow to extend past */
+}
+
+#host {
+  position: absolute;
+  inset: 0;
+  width: 390px;
+  height: 844px;
+  background: #000;
+  overflow: hidden;
+  border-radius: 44px;
+  box-shadow:
+    0 0 0 6px #1a1a1a,
+    0 0 0 8px #2a2a2c,
+    0 30px 80px rgba(0,0,0,.6);
+  transform: scale(var(--scale));
+  transform-origin: top left;
+}
+
+/* Edge-to-edge on actual phones — narrow AND short (mobile portrait). */
+@media (max-width: 410px) and (max-height: 870px) {
+  :root { --scale: 1; }
+  #host-frame {
+    width: 100vw;
+    height: 100dvh;
+  }
+  #host {
+    width: 100vw;
+    height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
+    transform: none;
+  }
+}
+
+/* iOS status bar (390-wide phones) */
+#status-bar-ios {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 26px 0;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  z-index: 10;
+  pointer-events: none;
+}
+#status-bar-ios .right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+/* =========================================================================
+   Stream background — stylised "video" feed
+   ========================================================================= */
+
+#stream-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: linear-gradient(180deg, #2a3a26 0%, #3d4628 35%, #4f5532 60%, #5a4a2e 100%);
+}
+#stream-bg video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: .55;
+  filter: saturate(1.05) brightness(.82);
+}
+#stream-bg .atmosphere {
+  position: absolute; top: 0; left: 0; right: 0; height: 40%;
+  background: radial-gradient(ellipse at 60% 0%, rgba(255,220,160,.25), transparent 60%);
+  pointer-events: none;
+}
+#stream-bg .character {
+  position: absolute;
+  left: 50%; top: 54%;
+  transform: translate(-50%,-50%);
+  width: 56px; height: 88px;
+  animation: encoreFloat 2.6s ease-in-out infinite;
+}
+#stream-bg.highlight::after {
+  content: '';
+  position: absolute; inset: 0;
+  box-shadow: inset 0 0 80px rgba(255,180,60,.45);
+  pointer-events: none;
+  animation: encorePulse 1.4s ease-in-out infinite;
+}
+
+/* Mini-map (top-left HUD on game stream) */
+.stream-minimap {
+  position: absolute; top: 12px; left: 10px;
+  width: 78px; height: 78px;
+  border-radius: 6px; overflow: hidden;
+  background: linear-gradient(135deg, #2c3922, #1f2a16);
+  border: 1px solid rgba(255,255,255,.15);
+  box-shadow: 0 2px 8px rgba(0,0,0,.3);
+}
+.stream-minimap .label {
+  position: absolute; top: 2px; left: 4px;
+  font-size: 7px; color: #fff; font-weight: 600;
+  opacity: .8; letter-spacing: .05em;
+}
+
+/* Compass strip */
+.stream-compass {
+  position: absolute; top: 22px; left: 50%;
+  transform: translateX(-50%);
+  display: flex; gap: 14px;
+  color: #fff; font-size: 9px; font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0,0,0,.6);
+  opacity: .85;
+  pointer-events: none;
+}
+.stream-compass span { opacity: .6; }
+.stream-compass span.active { opacity: 1; }
+
+/* Weapon HUD top-right */
+.stream-weapon {
+  position: absolute; top: 100px; right: 10px;
+  width: 92px; height: 60px;
+  background: rgba(0,0,0,.45);
+  border-radius: 4px;
+  padding: 6px 8px;
+  border: 1px solid rgba(255,255,255,.1);
+  color: #fff;
+}
+.stream-weapon .ammo { font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stream-weapon .ammo .of { opacity: .55; font-size: 8px; }
+.stream-weapon .reload { color: rgba(255,255,255,.55); font-size: 7px; }
+.stream-weapon .row { display: flex; gap: 4px; margin-top: 4px; }
+.stream-weapon .row > div {
+  flex: 1; height: 16px;
+  background: rgba(255,255,255,.1);
+  border-radius: 2px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 7px; opacity: .6;
+}
+
+/* Bottom controls (joystick + fire + hp) */
+.stream-joystick {
+  position: absolute; bottom: 70px; left: 18px;
+  width: 70px; height: 70px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.25);
+  pointer-events: none;
+}
+.stream-joystick::after {
+  content: '';
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%,-50%);
+  width: 28px; height: 28px;
+  border-radius: 50%; background: rgba(255,255,255,.2);
+}
+.stream-fire {
+  position: absolute; bottom: 90px; right: 18px;
+  width: 60px; height: 60px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.18);
+  border: 2px solid rgba(255,255,255,.3);
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(255,255,255,.7); font-size: 22px;
+  pointer-events: none;
+}
+.stream-hp {
+  position: absolute; bottom: 50px; left: 50%;
+  transform: translateX(-50%);
+  width: 180px; height: 8px;
+  border-radius: 4px;
+  background: rgba(0,0,0,.4);
+  border: 1px solid rgba(255,255,255,.2);
+  padding: 1px;
+}
+.stream-hp > div {
+  width: 78%; height: 100%; border-radius: 3px;
+  background: linear-gradient(90deg, #6dd47a, #3aaf48);
+}
+
+/* =========================================================================
+   Top bar — host pill + viewer pill
+   ========================================================================= */
+
+#top-bar {
+  position: absolute;
+  top: 56px; left: 12px; right: 12px;
+  display: flex; justify-content: space-between; align-items: center;
+  z-index: 5;
+}
+.host-pill {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(0,0,0,.4);
+  border-radius: var(--pill-radius);
+  padding: 4px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.host-pill .avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: linear-gradient(135deg, #4a3a30, #2a1c14);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+}
+.host-pill .meta { padding-right: 4px; }
+.host-pill .meta .name { font-size: 12px; font-weight: 700; line-height: 1.1; }
+.host-pill .meta .hearts {
+  font-size: 10px; color: rgba(255,255,255,.75);
+  display: flex; align-items: center; gap: 2px;
+}
+.host-pill .meta .hearts .hi { color: var(--accent); }
+.host-pill .follow {
+  background: var(--accent);
+  color: #fff;
+  border: 0;
+  padding: 6px 12px;
+  border-radius: var(--pill-radius);
+  font-size: 12px;
+  font-weight: 700;
+  margin-left: 4px;
+}
+.host-pill .follow.following {
+  background: rgba(255,255,255,.18);
+  color: #fff;
+}
+
+.top-right { display: flex; align-items: center; gap: 8px; }
+.viewer-pill {
+  display: flex; align-items: center;
+  background: rgba(0,0,0,.5);
+  border-radius: var(--pill-radius);
+  padding: 4px 10px 4px 4px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.viewer-pill .stack { display: flex; }
+.viewer-pill .stack > div {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid #000;
+}
+.viewer-pill .stack > div:first-child { background: #3a5a2a; }
+.viewer-pill .stack > div:last-child {
+  background: #c8a884;
+  margin-left: -8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 8px; font-weight: 700; color: #000;
+}
+.viewer-pill .count { font-size: 12px; font-weight: 600; margin-left: 6px; }
+.top-right .close {
+  background: transparent; border: 0;
+  color: #fff; font-size: 22px; padding: 0; line-height: 1;
+}
+
+/* =========================================================================
+   Activity rail
+   ========================================================================= */
+
+#activity-rail {
+  position: absolute;
+  top: 102px; left: 12px; right: 12px;
+  display: flex; gap: 6px; align-items: center;
+  z-index: 5;
+}
+.rail-chip {
+  display: flex; align-items: center; gap: 5px;
+  background: rgba(0,0,0,.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 8px;
+  padding: 5px 9px;
+  font-size: 11px; font-weight: 600;
+}
+.rail-chip .emoji { font-size: 13px; }
+
+.rail-gift {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  gap: 6px;
+  background: linear-gradient(90deg, #4b3a8c, #6a4ab8);
+  border-radius: 8px;
+  padding: 5px 8px;
+}
+.rail-gift .emoji { font-size: 13px; }
+.rail-gift .num { font-size: 11px; font-weight: 700; }
+.rail-gift .num .of { opacity: .6; }
+
+.rail-timer {
+  display: flex; align-items: center; gap: 4px;
+  background: rgba(0,0,0,.45);
+  border-radius: 8px;
+  padding: 5px 8px;
+  font-size: 10px; font-weight: 600;
+}
+
+.rail-encore {
+  display: flex; align-items: center; gap: 4px;
+  background: linear-gradient(120deg, var(--accent), color-mix(in srgb, var(--accent) 80%, transparent));
+  border: 0; color: #fff;
+  border-radius: 8px;
+  padding: 5px 9px;
+  font-weight: 700;
+  font-size: 11px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 50%, transparent), 0 4px 14px color-mix(in srgb, var(--accent) 35%, transparent);
+  animation: encorePulse 2s ease-in-out infinite;
+}
+
+/* =========================================================================
+   Highlight popup
+   ========================================================================= */
+
+#highlight-popup {
+  position: absolute;
+  left: 14px; right: 14px; top: 144px;
+  z-index: 8;
+  animation: encorePop .45s cubic-bezier(.2,.9,.3,1.2) both;
+}
+#highlight-popup.hidden { display: none; }
+#highlight-popup .card {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border-radius: 18px;
+  padding: 12px 14px;
+  box-shadow:
+    0 12px 30px color-mix(in srgb, var(--accent) 40%, transparent),
+    0 0 0 1px rgba(255,255,255,.15) inset;
+  display: flex; align-items: center; gap: 12px;
+}
+#highlight-popup .card::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(255,255,255,.35), transparent 30%),
+    radial-gradient(circle at 80% 60%, rgba(255,255,255,.2), transparent 35%);
+  pointer-events: none;
+}
+#highlight-popup .bolt {
+  position: relative;
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  background: rgba(255,255,255,.2);
+  border: 1px solid rgba(255,255,255,.4);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  font-size: 22px;
+}
+#highlight-popup .bolt::after {
+  content: '';
+  position: absolute; inset: -4px;
+  border-radius: 14px;
+  border: 1.5px solid rgba(255,255,255,.6);
+  animation: ringPing 1.6s ease-out infinite;
+}
+#highlight-popup .copy { flex: 1; position: relative; color: #fff; }
+#highlight-popup .copy .eyebrow {
+  font-size: 10px; font-weight: 600; opacity: .85;
+  letter-spacing: .08em; text-transform: uppercase;
+}
+#highlight-popup .copy .head { font-size: 14px; font-weight: 800; line-height: 1.15; }
+#highlight-popup .copy .sub { font-size: 11px; opacity: .85; }
+#highlight-popup .play {
+  background: #fff; color: var(--accent);
+  border: 0; font-weight: 800; font-size: 13px;
+  padding: 8px 14px; border-radius: var(--pill-radius);
+  position: relative;
+}
+#highlight-popup .dismiss {
+  position: absolute; top: 6px; right: 6px;
+  background: rgba(0,0,0,.25);
+  color: #fff; border: 0;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  font-size: 10px; line-height: 1;
+}
+
+/* =========================================================================
+   Chat area
+   ========================================================================= */
+
+#chat {
+  position: absolute;
+  left: 12px; right: 80px; bottom: 90px;
+  z-index: 4;
+  max-height: 240px;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 30%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 30%);
+  pointer-events: none;
+}
+.chat-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+  animation: chatIn .35s ease-out both;
+}
+.chat-row .avatar {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; color: #fff;
+}
+.chat-row .bubble {
+  background: rgba(0,0,0,.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 14px;
+  padding: 5px 10px;
+  max-width: 260px;
+}
+.chat-row .name {
+  font-size: 11px;
+  color: rgba(255,255,255,.7);
+  font-weight: 500;
+  display: flex; gap: 6px; align-items: center;
+}
+.chat-row .name .host-tag {
+  background: rgba(255,255,255,.18);
+  font-size: 8px; padding: 1px 4px; border-radius: 3px; font-weight: 700;
+}
+.chat-row .text {
+  font-size: 13px; color: #fff; font-weight: 500; line-height: 1.25;
+}
+.chat-row.joined .text {
+  font-size: 11.5px; color: rgba(255,255,255,.55); font-style: italic; font-weight: 500;
+}
+
+/* System card variant */
+.chat-system {
+  animation: encoreFadeIn .4s ease both;
+  background: linear-gradient(120deg, color-mix(in srgb, var(--accent) 13%, transparent), color-mix(in srgb, var(--accent-2) 10%, transparent));
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  border-radius: 14px;
+  padding: 10px;
+  margin-bottom: 8px;
+  display: flex; gap: 10px; align-items: center;
+  pointer-events: auto;
+}
+.chat-system .ico {
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+.chat-system .body { flex: 1; min-width: 0; }
+.chat-system .eyebrow {
+  font-size: 10px; font-weight: 700;
+  color: var(--accent-2);
+  letter-spacing: .08em; text-transform: uppercase;
+}
+.chat-system .head { font-size: 12px; font-weight: 600; color: #fff; }
+.chat-system .play {
+  background: var(--accent); color: #fff;
+  border: 0; font-size: 11px; font-weight: 700;
+  padding: 6px 12px; border-radius: var(--pill-radius);
+}
+
+/* =========================================================================
+   Bottom bar
+   ========================================================================= */
+
+#bottom-bar {
+  position: absolute;
+  bottom: 34px; left: 0; right: 0;
+  padding: 8px 12px 6px;
+  display: flex; align-items: center; gap: 8px;
+  z-index: 5;
+}
+#bottom-bar .input {
+  flex: 1; height: 36px;
+  border-radius: var(--pill-radius);
+  background: rgba(255,255,255,.15);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex; align-items: center;
+  padding: 0 14px;
+  font-size: 13px;
+  color: rgba(255,255,255,.7);
+  border: 0;
+  outline: none;
+}
+#bottom-bar .input::placeholder { color: rgba(255,255,255,.55); }
+#bottom-bar .icon-btn {
+  position: relative;
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.18);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  border: 0;
+  color: #fff;
+}
+#bottom-bar .icon-btn .badge {
+  position: absolute; top: -2px; right: -2px;
+  background: var(--accent); color: #fff;
+  font-size: 9px; font-weight: 700;
+  padding: 0 4px; border-radius: 8px; min-width: 12px;
+  text-align: center; border: 1px solid #000;
+}
+#bottom-bar .encore-btn {
+  position: relative;
+  height: 36px; padding: 0 12px;
+  border-radius: var(--pill-radius);
+  border: 0;
+  background: linear-gradient(120deg, var(--accent), var(--accent-2));
+  color: #fff; font-weight: 800; font-size: 12px;
+  display: flex; align-items: center; gap: 5px;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent),
+    0 6px 18px color-mix(in srgb, var(--accent) 33%, transparent);
+}
+#bottom-bar .encore-btn::after {
+  content: '';
+  position: absolute; inset: -1px;
+  border-radius: var(--pill-radius);
+  pointer-events: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
+  animation: encorePulse 2.2s ease-in-out infinite;
+}
+#bottom-bar .encore-btn .star { font-size: 14px; line-height: 1; }
+
+/* =========================================================================
+   Floating ack pills
+   ========================================================================= */
+
+#ack-layer {
+  position: absolute;
+  left: 50%; bottom: 100px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 1000;
+  width: 0; height: 0;
+}
+.ack-pill {
+  position: absolute;
+  left: 50%;
+  background: linear-gradient(120deg, var(--accent), var(--accent-2));
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 8px 14px;
+  border-radius: var(--pill-radius);
+  white-space: nowrap;
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--accent) 33%, transparent);
+  animation: encoreFloatUp 1.4s ease-out forwards;
+}
+
+/* =========================================================================
+   Floating +1 (for decorative icon taps)
+   ========================================================================= */
+
+.plus-one {
+  position: absolute;
+  pointer-events: none;
+  color: var(--accent-2);
+  font-weight: 800;
+  font-size: 14px;
+  text-shadow: 0 0 8px color-mix(in srgb, var(--accent-2) 60%, transparent);
+  animation: plusOneFloat 1s ease-out forwards;
+  z-index: 100;
+}
+
+/* =========================================================================
+   Autoplay shim — initial tap-to-enter
+   ========================================================================= */
+
+#autoplay-shim {
+  position: absolute;
+  inset: 0;
+  z-index: 999;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: rgba(0,0,0,.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #fff;
+  cursor: pointer;
+}
+#autoplay-shim.hidden { display: none; }
+#autoplay-shim .play {
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 30px;
+  box-shadow: 0 0 0 4px rgba(255,255,255,.1), 0 14px 40px color-mix(in srgb, var(--accent) 40%, transparent);
+  animation: encorePulse 2s ease-in-out infinite;
+}
+#autoplay-shim .lbl {
+  margin-top: 18px;
+  font-size: 17px; font-weight: 800;
+  letter-spacing: .04em;
+  font-family: 'Space Grotesk', sans-serif;
+}
+#autoplay-shim .sub {
+  margin-top: 4px;
+  font-size: 11px;
+  color: rgba(255,255,255,.55);
+}
+
+/* =========================================================================
+   Animations (shared across files)
+   ========================================================================= */
+
+@keyframes encoreSpin   { to { transform: rotate(360deg); } }
+@keyframes encorePulse  {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.08); opacity: .85; }
+}
+@keyframes encoreFloat  {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+@keyframes encoreScan   {
+  0%   { transform: translateY(-100%); }
+  100% { transform: translateY(200%); }
+}
+@keyframes encoreFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes encoreSlideUp   { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes encoreSlideDown { from { transform: none; } to { transform: translateY(100%); } }
+@keyframes encorePop {
+  0%   { transform: scale(.6); opacity: 0; }
+  70%  { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes encoreFloatUp {
+  0%   { transform: translate(-50%, 0) scale(.8); opacity: 0; }
+  20%  { transform: translate(-50%, -10px) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -140px) scale(.7); opacity: 0; }
+}
+@keyframes plusOneFloat {
+  0%   { transform: translateY(0) scale(.8); opacity: 0; }
+  20%  { transform: translateY(-10px) scale(1); opacity: 1; }
+  100% { transform: translateY(-60px) scale(.7); opacity: 0; }
+}
+@keyframes encoreShimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+@keyframes chatIn        {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes ringPing  {
+  0%   { transform: scale(.6); opacity: .9; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+@keyframes ringPing2 {
+  0%   { transform: scale(.6); opacity: .7; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+@keyframes scoreCount {
+  from { transform: translateY(8px); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+
+/* prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
