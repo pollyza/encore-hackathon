@@ -268,8 +268,18 @@
   margin: 18px auto 0;
   padding: 14px 24px;
   border-radius: 18px;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 20%, transparent), color-mix(in srgb, var(--accent-2) 10%, transparent));
-  border: 1px solid color-mix(in srgb, var(--accent) 33%, transparent);
+  /* Bumped alpha from 20%/10% to 35%/22% and border 33% → 60% so the
+     chip is actually visible against the dark sheet background. The
+     gradient text-fill on the score number was getting lost without
+     a more confident surface behind it. */
+  background:
+    linear-gradient(135deg,
+      color-mix(in srgb, var(--accent) 35%, transparent),
+      color-mix(in srgb, var(--accent-2) 22%, transparent));
+  border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent-2) 12%, transparent) inset,
+    0 12px 32px color-mix(in srgb, var(--accent) 25%, transparent);
   display: flex; align-items: center; gap: 16px;
   width: fit-content;
   animation: encorePop .45s cubic-bezier(.2,.9,.3,1.2) .1s both;

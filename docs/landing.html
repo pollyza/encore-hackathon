@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Encore · AI Hackathon · TikTok LIVE V2G</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800;900&family=Space+Grotesk:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --accent:   #FE2C55;
+    --accent-2: #25F4EE;
+    --text:     #fff;
+    --text-2:   rgba(255,255,255,.62);
+    --text-3:   rgba(255,255,255,.42);
+    --surface:  #16131f;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    min-height: 100dvh;
+    background:
+      radial-gradient(900px 600px at 20% 10%, rgba(254,44,85,.12), transparent 70%),
+      radial-gradient(900px 600px at 80% 90%, rgba(37,244,238,.08), transparent 70%),
+      #08080b;
+    color: var(--text);
+    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+  }
+  .wordmark {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 900;
+    font-size: clamp(48px, 8vw, 96px);
+    letter-spacing: -.04em;
+    line-height: 1;
+    background: linear-gradient(120deg, var(--accent-2), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 12px;
+  }
+  .tagline {
+    font-size: clamp(13px, 1.6vw, 16px);
+    color: var(--text-2);
+    margin-bottom: 6px;
+    text-align: center;
+  }
+  .subtag {
+    font-size: 11px;
+    color: var(--text-3);
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    margin-bottom: 48px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    width: 100%;
+    max-width: 980px;
+  }
+  .card {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 18px;
+    padding: 24px;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: transform .2s ease, border-color .2s ease, background .2s ease;
+  }
+  .card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(255,255,255,.18);
+    background: linear-gradient(135deg, rgba(254,44,85,.08), rgba(37,244,238,.04));
+  }
+  .card.primary {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 18%, transparent), color-mix(in srgb, var(--accent-2) 12%, transparent));
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    box-shadow: 0 10px 40px color-mix(in srgb, var(--accent) 20%, transparent);
+  }
+  .card .eyebrow {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--accent-2);
+  }
+  .card.primary .eyebrow { color: #fff; opacity: .9; }
+  .card .title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -.02em;
+    margin-top: 4px;
+  }
+  .card .desc {
+    font-size: 13px;
+    color: var(--text-2);
+    line-height: 1.4;
+  }
+  .card .arrow {
+    margin-top: auto;
+    padding-top: 12px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent-2);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .card.primary .arrow { color: #fff; }
+  footer {
+    margin-top: 56px;
+    color: var(--text-3);
+    font-size: 11px;
+    letter-spacing: .04em;
+  }
+  footer a { color: var(--text-2); text-decoration: none; }
+  footer a:hover { color: var(--text); }
+
+  /* ── QR card ────────────────────────────────────────────────── */
+  .qr-block {
+    width: 100%;
+    max-width: 980px;
+    margin-top: 32px;
+    padding: 28px 32px;
+    border-radius: 22px;
+    background: linear-gradient(135deg, rgba(254,44,85,.08), rgba(37,244,238,.06));
+    border: 1px solid rgba(255,255,255,.1);
+    display: flex;
+    align-items: center;
+    gap: 32px;
+  }
+  .qr-block .qr-frame {
+    flex-shrink: 0;
+    width: 180px;
+    height: 180px;
+    padding: 12px;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow:
+      0 0 0 1px rgba(254,44,85,.4),
+      0 12px 40px rgba(254,44,85,.18);
+  }
+  .qr-block .qr-frame img,
+  .qr-block .qr-frame svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .qr-block .copy { flex: 1; min-width: 0; }
+  .qr-block .eyebrow {
+    font-size: 10px; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase;
+    color: var(--accent-2);
+    margin-bottom: 6px;
+  }
+  .qr-block .title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -.02em;
+    margin-bottom: 6px;
+  }
+  .qr-block .desc {
+    font-size: 13px;
+    color: var(--text-2);
+    line-height: 1.5;
+    max-width: 540px;
+  }
+  .qr-block .url {
+    margin-top: 14px;
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.1);
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-size: 11px;
+    color: var(--text-2);
+    word-break: break-all;
+  }
+  @media (max-width: 640px) {
+    .qr-block {
+      flex-direction: column;
+      text-align: center;
+      gap: 18px;
+      padding: 24px 18px;
+    }
+    .qr-block .qr-frame { width: 160px; height: 160px; }
+    .qr-block .url { font-size: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wordmark">Encore</div>
+<div class="tagline">LIVE-native Video-to-Game engine for TikTok</div>
+<div class="subtag">AI Hackathon · Polly · Mario · Zihui · Lingyi</div>
+
+<div class="grid">
+  <a class="card primary" href="/prototype/live/streamer.html">
+    <span class="eyebrow">⚡ Audience demo (start here)</span>
+    <div class="title">TikTok LIVE · Encore sheet</div>
+    <div class="desc">High-fidelity LIVE room with Highlight popup → AI-generation loading → Mario's 3 game templates (FPS / MOBA / BR) randomly selected → Result + Ranking + Feedback.</div>
+    <div class="arrow">Open demo →</div>
+  </a>
+
+  <a class="card" href="/prototype/encore_prototype.html">
+    <span class="eyebrow">🎮 Standalone game</span>
+    <div class="title">Mario's 3 templates · Cover Strike / Dragon Pit / Final Circle</div>
+    <div class="desc">Play the bare gameplay templates outside the LIVE shell. Splash screen + theme picker.</div>
+    <div class="arrow">Play standalone →</div>
+  </a>
+
+  <a class="card" href="/docs/encore_slides.html">
+    <span class="eyebrow">🎤 Pitch deck</span>
+    <div class="title">13-slide hackathon pitch</div>
+    <div class="desc">Vision · Phase-1 architecture · 4-tier gift economy · 7-day sprint · M11+ roadmap.</div>
+    <div class="arrow">View slides →</div>
+  </a>
+</div>
+
+<!-- Scan-to-play QR — for live judges on stage -->
+<div class="qr-block">
+  <div class="qr-frame">
+    <img src="/qr-encore.svg" alt="Scan to open the Encore LIVE demo on your phone" loading="lazy">
+  </div>
+  <div class="copy">
+    <div class="eyebrow">📱 Try it on your phone</div>
+    <div class="title">Scan to play the LIVE demo</div>
+    <div class="desc">
+      Point your phone camera at the QR code → the TikTok LIVE simulation opens
+      directly on your device. Tap to enter LIVE → ⚡ try the play yourself →
+      experience the full Highlight → AI generation → Game → Result → Ranking
+      flow with one of Mario's 3 real game templates.
+    </div>
+    <div class="url">encore-deploy.vercel.app/prototype/live/streamer.html</div>
+  </div>
+</div>
+
+<footer>
+  Hackathon scope: <a href="https://www.feishu.cn/wiki/Jx9Qw0mMhiXcLiknnWbc5Jrgnk3">design wiki</a>
+  · <a href="https://github.com/pollyza/encore-hackathon">source on GitHub</a>
+</footer>
+
+</body>
+</html>

@@ -360,9 +360,21 @@
     gap.textContent = '···';
     list.appendChild(gap);
 
-    list.appendChild(makeRow({ rank: youRank, name: 'You', score: youScore }, true, youMax));
+    const youRow = makeRow({ rank: youRank, name: 'You', score: youScore }, true, youMax);
+    list.appendChild(youRow);
     list.appendChild(makeRow({ rank: youRank + 1, name: 'duy.le',   score: Math.max(0, youScore - 1) }, false, youMax));
     list.appendChild(makeRow({ rank: youRank + 2, name: 'soimoon',  score: Math.max(0, youScore - 1) }, false, youMax));
+
+    // Auto-scroll so the "You" row is visible — most important row in
+    // the leaderboard for the audience. Without this it's below the
+    // fold behind the sticky Play-again CTA.
+    requestAnimationFrame(() => {
+      const listRect = list.getBoundingClientRect();
+      const rowRect = youRow.getBoundingClientRect();
+      // Place the You row about 1/3 from the top of the visible list
+      const target = (rowRect.top + list.scrollTop) - (listRect.top + listRect.height * 0.33);
+      list.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
+    });
   }
 
   function makeRow(r, you, youMax) {
