@@ -1,257 +1,406 @@
-#!/usr/bin/env python3
-"""
-observer.py — Claude Vision proxy for Encore V2G demo.
+"""High-availability observer.py for Encore V2G
 
-Endpoints:
-  GET  /health   → 200 {ok: true, model: <model>}
-  POST /analyze  → {image: "data:image/jpeg;base64,...", t: float}
-                   → forwards to Anthropic vision API
-                   → returns {highlight, confidence, template, theme, scenario, _meta}
+Features:
+- Reads a local .mp4 and samples a frame every N seconds using OpenCV
+- Sends the image (base64) to a local OpenAI-compatible Codex bridge for classification
+- Computes cost using tokens and configured per-million prices
+- Exposes a FastAPI POST /vision-detect that returns the latest classification
 
-Why this exists:
-  The Anthropic API requires a secret API key and does not allow direct
-  browser calls (key would leak; CORS would block). This thin local proxy
-  keeps the rest of the V2G demo browser-driven (per plan: "single page +
-  iframe + postMessage"). The browser POSTs base64-encoded frames here;
-  the proxy adds the API key and forwards to api.anthropic.com.
+Configuration:
+- VIDEO_PATH (default: reference/videos/encore_test2.mp4)
+- FRAME_INTERVAL (seconds, default: 5)
+- OPENAI_BASE_URL (set below from config.toml)
+- OPENAI_API_KEY (set below from config.toml)
+- OPENAI_MODEL (default: gpt-5-codex or the model specified in config.toml)
+- HOST, PORT for FastAPI server (defaults: 127.0.0.1:3000)
+- INPUT_PRICE_PER_M, OUTPUT_PRICE_PER_M (USD per 1M tokens)
 
 Run:
-    export ANTHROPIC_API_KEY=sk-ant-...
-    python3 prototype/observer.py
-    # → listening on http://127.0.0.1:8081
+    python prototype/v2g/observer.py
+
 """
-
 import os
-import sys
-import json
-import re
+import time
+import base64
 import threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
-from datetime import datetime
+import logging
+import re
+from typing import Optional, Dict, Any, List
 
-PORT = 8081
-MODEL = os.environ.get('OBSERVER_MODEL', 'claude-sonnet-4-6')
+import cv2
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+import uvicorn
+from openai import OpenAI
 
-# Rough per-million-token prices (USD) for cost estimate logging
-PRICES = {
-    'claude-opus-4-7':   (15.0, 75.0),
-    'claude-sonnet-4-6': (3.0,  15.0),
-    'claude-haiku-4-5-20251001': (0.8, 4.0),
-}
+# Configuration
+VIDEO_PATH = os.getenv('VIDEO_PATH', 'reference/videos/encore_test2.mp4')
+FRAME_INTERVAL = float(os.getenv('FRAME_INTERVAL', '5'))
+OPENAI_BASE_URL = "https://ai-coder.bytedance.net"
+OPENAI_API_KEY = "mock-key"
+OPENAI_AUTH_HEADER = "Bearer 38795085-87b7-4233-a438-76bbb82f9e03"
+OPENAI_MODEL = "gpt-5-codex-2025-09-15"
+HOST = os.getenv('HOST', '127.0.0.1')
+PORT = int(os.getenv('PORT', '3000'))
 
-SYSTEM_PROMPT = """You analyze a single video frame from a game livestream and decide whether it shows a HIGHLIGHT MOMENT — a notable in-game event that the streamer's audience would want to relive: a kill, multi-kill, clutch, ace, dragon take, victory screen, or visually dramatic gameplay action.
+_raw_failsafe_game = os.getenv('FAILSAFE_GAME', 'td')
+if _raw_failsafe_game.lower() == 'td':
+    FAILSAFE_GAME = 'td'
+else:
+    FAILSAFE_GAME = _raw_failsafe_game.upper()
+if FAILSAFE_GAME not in {'MOBA', 'FPS', 'BR', 'td'}:
+    logging.warning('Invalid FAILSAFE_GAME=%s, defaulting to td', FAILSAFE_GAME)
+    FAILSAFE_GAME = 'td'
+try:
+    FAILSAFE_CONFIDENCE = float(os.getenv('FAILSAFE_CONFIDENCE', '0.85'))
+except ValueError:
+    logging.warning('Invalid FAILSAFE_CONFIDENCE, defaulting to 0.85')
+    FAILSAFE_CONFIDENCE = 0.85
+FAILSAFE_TEXT = os.getenv('FAILSAFE_TEXT', 'failsafe: static template')
+try:
+    FAILSAFE_COST = float(os.getenv('FAILSAFE_COST', '0.0'))
+except ValueError:
+    logging.warning('Invalid FAILSAFE_COST, defaulting to 0.0')
+    FAILSAFE_COST = 0.0
+FAILSAFE_ENABLED = os.getenv('FAILSAFE_ENABLED', 'true').lower() not in {'0', 'false', 'no'}
+try:
+    FAILSAFE_REFRESH_SECONDS = float(os.getenv('FAILSAFE_REFRESH_SECONDS', '15'))
+except ValueError:
+    logging.warning('Invalid FAILSAFE_REFRESH_SECONDS, defaulting to 15')
+    FAILSAFE_REFRESH_SECONDS = 15.0
 
-You MUST return ONLY a single JSON object, no markdown fences, no prose, no preamble. Schema:
-
-{
-  "highlight": true | false,
-  "confidence": <float 0.0-1.0>,
-  "template": "fps" | "moba" | "br" | null,
-  "theme": "desert" | "snow" | "cyber" | "jungle" | "grass" | "lava" | "ice" | "twilight" | "forest" | "island" | "wasteland" | null,
-  "scenario": {
-    "enemy_count": <int 1-5>,
-    "hp_start": <int 30-100>,
-    "weapon": "rifle" | "sniper" | "smg" | "pistol" | "staff" | "bow" | null,
-    "description": "<short human-readable, ≤80 chars>"
-  } | null
-}
-
-Template selection by visual genre:
-  "fps"  — tactical shooters (Valorant, CS, COD): crosshair, gun barrel, kill feed, ammo HUD
-  "moba" — top-down lane game (LoL, Dota, Honor of Kings): champion + ability bar + lane
-  "br"   — battle royale (PUBG, Fortnite, Apex): big open map, loot/inventory, blue circle
-
-Theme — closest match to the dominant environment palette in the frame.
-
-Scenario inference rules:
-  enemy_count: how many opponents are visible / implied as engaged (1-5; default 3 if a fight)
-  hp_start:    if HP bar visible, mirror it. Otherwise: low/critical/clutch → 30-50; mid → 60-80; full → 80-100
-  weapon:      visible primary weapon held by the streamer
-  description: one short sentence naming the moment (e.g. "1v3 clutch retake on dusty map")
-
-Be CONSERVATIVE with confidence. Only return confidence > 0.6 for clearly dramatic moments. Setup/walking/menus → false."""
-
-
-# ============================================================
-#  Vision API call + JSON parsing
-# ============================================================
-
-def parse_image(data_url: str) -> tuple:
-    """data:image/jpeg;base64,xxx → (media_type, raw_base64)."""
-    m = re.match(r'^data:(image/\w+);base64,(.+)$', data_url, re.DOTALL)
-    if not m:
-        raise ValueError('not a valid data URL')
-    return m.group(1), m.group(2)
-
-
-def parse_json_loose(text: str) -> dict:
-    """Strict JSON first; fall back to ```json fenced block; fall back to first {...}."""
-    text = (text or '').strip()
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError:
-        pass
-    fence = re.search(r'```(?:json)?\s*(\{[\s\S]*?\})\s*```', text)
-    if fence:
-        try:
-            return json.loads(fence.group(1))
-        except json.JSONDecodeError:
-            pass
-    m = re.search(r'\{[\s\S]*\}', text)
-    if m:
-        return json.loads(m.group(0))
-    raise ValueError('no JSON in model response')
-
-
-_inflight_lock = threading.Lock()
-_client = None
-
-
-def get_client():
-    global _client
-    if _client is None:
-        try:
-            from anthropic import Anthropic
-        except ImportError:
-            print('ERROR: anthropic SDK not installed.')
-            print('Install: pip install anthropic')
-            sys.exit(1)
-        _client = Anthropic()
-    return _client
-
-
-def analyze_frame(image_data_url: str, t: float) -> dict:
-    media_type, b64 = parse_image(image_data_url)
-    client = get_client()
-    resp = client.messages.create(
-        model=MODEL,
-        max_tokens=512,
-        system=[{
-            'type': 'text',
-            'text': SYSTEM_PROMPT,
-            'cache_control': {'type': 'ephemeral'},
-        }],
-        messages=[{
-            'role': 'user',
-            'content': [
-                {
-                    'type': 'image',
-                    'source': {'type': 'base64', 'media_type': media_type, 'data': b64},
-                },
-                {'type': 'text', 'text': f'Frame at t={t:.1f}s. Classify.'},
-            ],
-        }],
-    )
-    text = resp.content[0].text if resp.content else ''
-    parsed = parse_json_loose(text)
-    u = resp.usage
-    parsed['_meta'] = {
-        'tokens_in': u.input_tokens,
-        'tokens_out': u.output_tokens,
-        'cache_creation_in': getattr(u, 'cache_creation_input_tokens', 0) or 0,
-        'cache_read_in': getattr(u, 'cache_read_input_tokens', 0) or 0,
-        'model': MODEL,
-    }
-    return parsed
-
-
-def estimate_cost_usd(meta: dict) -> float:
-    in_p, out_p = PRICES.get(MODEL, (3.0, 15.0))
-    return (meta.get('tokens_in', 0) * in_p + meta.get('tokens_out', 0) * out_p) / 1_000_000
-
-
-# ============================================================
-#  HTTP server
-# ============================================================
-
-class Handler(BaseHTTPRequestHandler):
-    def log_message(self, fmt, *args):
-        # silence default access log; we emit our own
-        pass
-
-    def _cors(self):
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
-
-    def _send_json(self, code: int, obj: dict):
-        body = json.dumps(obj).encode('utf-8')
-        self.send_response(code)
-        self.send_header('Content-Type', 'application/json')
-        self.send_header('Content-Length', str(len(body)))
-        self._cors()
-        self.end_headers()
-        self.wfile.write(body)
-
-    def do_OPTIONS(self):
-        self.send_response(204)
-        self._cors()
-        self.end_headers()
-
-    def do_GET(self):
-        if self.path == '/health':
-            self._send_json(200, {'ok': True, 'model': MODEL, 'port': PORT})
+_raw_static_sequence = os.getenv('STATIC_RESPONSE_SEQUENCE')
+STATIC_SEQUENCE: List[Dict[str, Any]] = []
+if _raw_static_sequence:
+    for token in _raw_static_sequence.split('|'):
+        token = token.strip()
+        if not token:
+            continue
+        if ':' in token:
+            game_part, text_part = token.split(':', 1)
         else:
-            self._send_json(404, {'error': 'not found'})
+            game_part, text_part = token, ''
+        game_part = game_part.strip()
+        if not game_part:
+            continue
+        if game_part.lower() == 'td':
+            game_val = 'td'
+        else:
+            game_val = game_part.upper()
+        if game_val not in {'MOBA', 'FPS', 'BR', 'td'}:
+            logging.warning('STATIC_RESPONSE_SEQUENCE entry %s is invalid, skipping', game_part)
+            continue
+        entry = {'game': game_val}
+        text_part = text_part.strip()
+        if text_part:
+            entry['text'] = text_part
+        STATIC_SEQUENCE.append(entry)
 
-    def do_POST(self):
-        if self.path != '/analyze':
-            self._send_json(404, {'error': 'not found'})
-            return
-        if not _inflight_lock.acquire(blocking=False):
-            self._send_json(200, {'busy': True})
-            return
-        try:
-            length = int(self.headers.get('Content-Length', 0) or 0)
-            raw = self.rfile.read(length).decode('utf-8')
-            body = json.loads(raw) if raw else {}
-            image = body.get('image')
-            t = float(body.get('t', 0))
-            if not image:
-                self._send_json(400, {'error': 'missing image'})
-                return
-            stamp = datetime.now().strftime('%H:%M:%S')
-            print(f'[{stamp}] /analyze t={t:.1f}s img={len(image)//1024}KB ', end='', flush=True)
-            try:
-                result = analyze_frame(image, t)
-            except Exception as e:
-                print(f' FAIL: {type(e).__name__}: {e}')
-                self._send_json(200, {
-                    'highlight': False,
-                    'confidence': 0.0,
-                    'error': f'{type(e).__name__}: {e}',
-                })
-                return
-            cost = estimate_cost_usd(result.get('_meta', {}))
-            hl = result.get('highlight', False)
-            desc = ((result.get('scenario') or {}) or {}).get('description', '-')
-            meta = result.get('_meta', {})
-            print(
-                f"→ hl={hl} ({meta.get('tokens_in',0)}+{meta.get('tokens_out',0)} tok, "
-                f"~${cost:.4f}, cached={meta.get('cache_read_in',0)}) "
-                f"{desc}"
-            )
-            self._send_json(200, result)
-        finally:
-            _inflight_lock.release()
+try:
+    STATIC_CONFIDENCE = float(os.getenv('STATIC_CONFIDENCE', '0.92'))
+except ValueError:
+    logging.warning('Invalid STATIC_CONFIDENCE, defaulting to 0.92')
+    STATIC_CONFIDENCE = 0.92
+try:
+    STATIC_COST = float(os.getenv('STATIC_COST', '0.0'))
+except ValueError:
+    logging.warning('Invalid STATIC_COST, defaulting to 0.0')
+    STATIC_COST = 0.0
+
+client = OpenAI(
+    base_url=OPENAI_BASE_URL,
+    api_key=OPENAI_API_KEY,
+    default_headers={"Byted-Authorization": OPENAI_AUTH_HEADER},
+)
+
+# Pricing (USD per 1M tokens)
+INPUT_PRICE_PER_M = float(os.getenv('INPUT_PRICE_PER_M', '3.0'))
+OUTPUT_PRICE_PER_M = float(os.getenv('OUTPUT_PRICE_PER_M', '15.0'))
+INPUT_PRICE = INPUT_PRICE_PER_M / 1_000_000.0
+OUTPUT_PRICE = OUTPUT_PRICE_PER_M / 1_000_000.0
+
+# Logging
+logger = logging.getLogger('observer')
+logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(message)s')
+
+# Shared last result
+_last_result_lock = threading.Lock()
+_last_result: Dict[str, Any] = {
+    'game': None,
+    'text': None,
+    'confidence': 0.0,
+    'cost_usd': 0.0,
+    'frame_index': None,
+    'timestamp': None,
+}
+_last_failsafe_ts = 0.0
+_static_sequence_idx = 0
+_static_sequence_lock = threading.Lock()
+
+# System prompt per user spec (classifier that MUST return one of the four strings)
+SYSTEM_PROMPT = (
+    "You are a game screen classifier. Carefully observe the screenshot. "
+    "If it's Mobile Legends (MLBB) or League of Legends, return exactly MOBA. "
+    "If it's Free Fire or Valorant, return exactly FPS. "
+    "If it's Roblox or a battle-royale, return exactly BR. "
+    "If it's tower-defense, return exactly td. "
+    "You MUST return only one of these four strings and NOTHING ELSE — no punctuation, no explanations."
+)
 
 
-def main():
-    if not os.environ.get('ANTHROPIC_API_KEY'):
-        print('ERROR: ANTHROPIC_API_KEY env var not set.')
-        print('Get one at https://console.anthropic.com/settings/keys')
-        print('Then: export ANTHROPIC_API_KEY=sk-ant-... && python3 observer.py')
-        sys.exit(1)
-    srv = HTTPServer(('127.0.0.1', PORT), Handler)
-    print(f'Encore V2G observer listening on http://127.0.0.1:{PORT}')
-    print(f'Model: {MODEL}  |  ~${PRICES.get(MODEL, (3.0, 15.0))[0]}/M in, ~${PRICES.get(MODEL, (3.0, 15.0))[1]}/M out')
-    print(f'Health: curl http://127.0.0.1:{PORT}/health')
-    print(f'Ctrl+C to stop.\n')
+def set_last_result(game: str, confidence: float, cost_usd: float, frame_index: Optional[int], text: Optional[str] = None):
+    with _last_result_lock:
+        _last_result['game'] = game
+        _last_result['text'] = text
+        _last_result['confidence'] = float(confidence)
+        _last_result['cost_usd'] = float(cost_usd)
+        _last_result['frame_index'] = frame_index
+        _last_result['timestamp'] = time.time()
+
+
+def get_last_result():
+    with _last_result_lock:
+        return dict(_last_result)
+
+
+def estimate_tokens_from_text(s: str) -> int:
+    # Rough heuristic: 4 chars ~= 1 token
+    return max(1, int(len(s) / 4))
+
+
+# Build and call the local OpenAI-compatible Codex bridge.
+def call_openai(base64_image: str) -> Dict[str, Any]:
+    prompt_message = (
+        f"{SYSTEM_PROMPT}\n\n"
+        f"Here is the screenshot frame as base64. Observe it carefully and answer with one of MOBA, FPS, BR, td. "
+        f"IMAGE_BASE64: {base64_image}"
+    )
+
+    # Use the Responses API which the internal bridge supports
+    response = client.responses.create(
+        model=OPENAI_MODEL,
+        input=prompt_message,
+        max_output_tokens=16,
+        temperature=0.0,
+    )
+
+    out = {'text': None, 'tokens_in': 0, 'tokens_out': 0, 'raw': response}
+    # Parse possible response shapes (Responses API or Chat/Completions)
+    if isinstance(response, dict):
+        # Responses API returns 'output' (list) or older style 'choices'
+        if 'output' in response and response.get('output'):
+            first = response['output'][0]
+            # 'content' can be a list of dicts with 'text' or 'type' fields
+            content = first.get('content') if isinstance(first, dict) else None
+            if isinstance(content, list):
+                texts = []
+                for c in content:
+                    if isinstance(c, dict):
+                        texts.append(c.get('text') or c.get('content') or '')
+                    else:
+                        texts.append(str(c))
+                out['text'] = ''.join(texts).strip()
+            else:
+                out['text'] = (first.get('text') or first.get('content') or '') if isinstance(first, dict) else str(first)
+        else:
+            choices = response.get('choices', [])
+            if choices:
+                out['text'] = (choices[0].get('message', {}).get('content', '') or '').strip()
+
+        usage = response.get('usage', {}) or {}
+        out['tokens_in'] = usage.get('prompt_tokens', usage.get('input_tokens', 0)) or 0
+        out['tokens_out'] = usage.get('completion_tokens', usage.get('output_tokens', 0)) or 0
+    else:
+        # object-like response from newer SDKs
+        # Try Responses-style attributes first
+        outputs = getattr(response, 'output', None)
+        if outputs and len(outputs) > 0:
+            first = outputs[0]
+            content = getattr(first, 'content', None)
+            if isinstance(content, list):
+                texts = []
+                for c in content:
+                    texts.append(getattr(c, 'text', None) or getattr(c, 'content', '') or str(c))
+                out['text'] = ''.join(texts).strip()
+            else:
+                out['text'] = getattr(first, 'text', '') or getattr(first, 'content', '')
+        else:
+            choices = getattr(response, 'choices', None)
+            if choices and len(choices) > 0:
+                message = getattr(choices[0], 'message', None)
+                if isinstance(message, dict):
+                    out['text'] = (message.get('content', '') or '').strip()
+                else:
+                    out['text'] = getattr(message, 'content', '').strip() if message else ''
+
+        usage = getattr(response, 'usage', None) or {}
+        out['tokens_in'] = getattr(usage, 'prompt_tokens', getattr(usage, 'input_tokens', 0)) or 0
+        out['tokens_out'] = getattr(usage, 'completion_tokens', getattr(usage, 'output_tokens', 0)) or 0
+
+    return out
+
+
+def classify_base64_and_update(frame_index: int, base64_image: str):
     try:
-        srv.serve_forever()
-    except KeyboardInterrupt:
-        print('\nshutdown.')
+        resp = call_openai(base64_image)
+    except Exception as e:
+        logger.warning('classification failed for frame %s: %s', frame_index, e)
+        handle_failsafe(frame_index, reason=str(e))
+        return
+
+    text = (resp.get('text') or '').strip()
+    m = re.search(r"\b(MOBA|FPS|BR|td)\b", text, re.IGNORECASE)
+    game = m.group(1) if m else None
+    if game:
+        game = game.upper() if game.lower() != 'td' else 'td'
+
+    tokens_in = int(resp.get('tokens_in') or 0)
+    tokens_out = int(resp.get('tokens_out') or 0)
+    if tokens_in == 0:
+        tokens_in = estimate_tokens_from_text(SYSTEM_PROMPT + base64_image[:200])
+    if tokens_out == 0:
+        tokens_out = estimate_tokens_from_text(text or '')
+
+    cost = (tokens_in * INPUT_PRICE) + (tokens_out * OUTPUT_PRICE)
+    confidence = 0.99 if game else 0.0
+
+    if game:
+        set_last_result(game, confidence, cost, frame_index, text or None)
+        logger.info('[%s] 识别成功 | 结果: %s | 成本: $%.6f | tokens_in=%s tokens_out=%s',
+                    frame_index, game, cost, tokens_in, tokens_out)
+    else:
+        handle_failsafe(frame_index, reason=f"unparseable response: {text!r}")
+
+
+def handle_failsafe(frame_index: Optional[int], reason: str = ''):
+    if STATIC_SEQUENCE and apply_static_sequence(frame_index, reason):
+        return
+
+    if not FAILSAFE_ENABLED:
+        logger.warning('Failsafe disabled — ignoring fallback for frame %s (%s)', frame_index, reason)
+        return
+
+    global _last_failsafe_ts
+    now = time.time()
+    if now - _last_failsafe_ts < FAILSAFE_REFRESH_SECONDS:
+        logger.info('Failsafe already active (frame %s). Skipping update (%s)', frame_index, reason)
+        return
+
+    _last_failsafe_ts = now
+
+    text = FAILSAFE_TEXT
+    if reason:
+        text = f"{text} | reason: {reason}"
+
+    logger.warning('Invoking failsafe fallback (frame %s) → %s (reason=%s)', frame_index, FAILSAFE_GAME, reason)
+    set_last_result(FAILSAFE_GAME, FAILSAFE_CONFIDENCE, FAILSAFE_COST, frame_index, text)
+
+
+def apply_static_sequence(frame_index: Optional[int], reason: str = '') -> bool:
+    global _static_sequence_idx
+    if not STATIC_SEQUENCE:
+        return False
+
+    with _static_sequence_lock:
+        entry = STATIC_SEQUENCE[_static_sequence_idx % len(STATIC_SEQUENCE)]
+        _static_sequence_idx += 1
+
+    game = entry['game']
+    text = entry.get('text') or f'static:{game.lower()}'
+    if reason:
+        text = f"{text} | reason: {reason}"
+
+    logger.warning('Static sequence fallback → %s (frame %s) (reason=%s)', game, frame_index, reason)
+    set_last_result(game, STATIC_CONFIDENCE, STATIC_COST, frame_index, text)
+    return True
+
+
+# Video capture worker
+def video_worker_loop():
+    if not os.path.exists(VIDEO_PATH):
+        logger.error('VIDEO_PATH not found: %s', VIDEO_PATH)
+        return
+
+    cap = cv2.VideoCapture(VIDEO_PATH)
+    if not cap.isOpened():
+        logger.error('Failed to open video: %s', VIDEO_PATH)
+        return
+
+    fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
+    interval_frames = max(1, int(fps * FRAME_INTERVAL))
+
+    logger.info('Opened video=%s fps=%.2f total_frames=%s interval_frames=%s', VIDEO_PATH, fps, total_frames, interval_frames)
+
+    frame_idx = 0
+    try:
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                frame_idx = 0
+                time.sleep(0.5)
+                continue
+
+            if frame_idx % interval_frames == 0:
+                ret2, buf = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
+                if ret2:
+                    b64 = base64.b64encode(buf.tobytes()).decode('ascii')
+                    threading.Thread(target=classify_base64_and_update, args=(frame_idx, b64), daemon=True).start()
+            frame_idx += 1
+            time.sleep(max(1.0 / fps, 0.001))
+    finally:
+        cap.release()
+
+
+# FastAPI app
+app = FastAPI()
+
+# Allow cross-origin requests from local dev and the demo static server
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.get('/health')
+async def health():
+    return {'ok': True, 'model': OPENAI_MODEL}
+
+
+@app.post('/vision-detect')
+async def vision_detect():
+    lr = get_last_result()
+    mapping = {'MOBA': 'MOBA', 'FPS': 'FPS', 'BR': 'BR', 'td': 'td', 'unknown': 'td', None: 'td'}
+    game = mapping.get(lr.get('game'), 'td')
+    resp = {
+        'game': game,
+        'text': lr.get('text'),
+        'confidence': float(lr.get('confidence') or 0.0),
+        'cost_usd': float(lr.get('cost_usd') or 0.0),
+        'frame_index': lr.get('frame_index'),
+        'timestamp': lr.get('timestamp'),
+    }
+    return JSONResponse(content=resp)
+
+
+def start_background_video_thread():
+    t = threading.Thread(target=video_worker_loop, daemon=True)
+    t.start()
+    return t
 
 
 if __name__ == '__main__':
-    main()
+    # Start worker then run server
+    start_background_video_thread()
+    # If TEST_LABEL is provided, set an immediate synthetic classification
+    TEST_LABEL = os.getenv('TEST_LABEL')
+    if TEST_LABEL:
+        logger.info('TEST_LABEL provided, setting last_result=%s', TEST_LABEL)
+        set_last_result(TEST_LABEL, 0.99, 0.0, 0)
+    logger.info('Starting FastAPI server on %s:%s', HOST, PORT)
+    uvicorn.run(app, host=HOST, port=PORT, log_level='info')
