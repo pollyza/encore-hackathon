@@ -927,6 +927,35 @@
   let state = null;
   let gameOver = false, gameWon = false, started = false;
 
+  // ============================================================
+  //  EXPOSE ENGINE GLOBALS — so external game modules
+  //  (prototype/games/*.js) can register Games.X using the engine
+  //  helpers. Mutable bindings (state, W, H, pendingConfig, current)
+  //  use getters so external code sees the live value, not a stale
+  //  snapshot from boot time. Const helpers are assigned directly.
+  // ============================================================
+  window.Games = Games;
+  window.ctx = ctx;
+  window.canvas = canvas;
+  window.Iso = Iso;
+  window.SFX = SFX;
+  window.keys = keys;
+  window.skillHeld = skillHeld;
+  window.modeBadge = modeBadge;
+  window.scoreEl = scoreEl;
+  window.bakeGround = bakeGround;
+  window.spawnParticles = spawnParticles;
+  window.showBanner = showBanner;
+  // pickTheme / finishGame / pickTheme are defined later but are function
+  // declarations (hoisted) or referenced lazily by modules — expose now.
+  window.pickTheme = pickTheme;
+  window.finishGame = finishGame;
+  Object.defineProperty(window, 'W', { get: () => W, configurable: true });
+  Object.defineProperty(window, 'H', { get: () => H, configurable: true });
+  Object.defineProperty(window, 'state', { get: () => state, set: v => { state = v; }, configurable: true });
+  Object.defineProperty(window, 'pendingConfig', { get: () => pendingConfig, set: v => { pendingConfig = v; }, configurable: true });
+  Object.defineProperty(window, 'current', { get: () => current, set: v => { current = v; }, configurable: true });
+
   function trySkillPress(k) {
     if (!started || gameOver || !current) return;
     if (current.castPress) current.castPress(k);
@@ -3138,5 +3167,8 @@
   requestAnimationFrame(tick);
 })();
 </script>
+<!-- External game modules — register on window.Games after main IIFE exposes engine globals. -->
+<script src="games/roblox.js"></script>
+<script src="games/gta.js"></script>
 </body>
 </html>
