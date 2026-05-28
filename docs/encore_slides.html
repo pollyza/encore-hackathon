@@ -1281,20 +1281,21 @@ h2.section-title .red { color: var(--c-red); }
 <section class="slide">
     <div class="slide-content">
         <div class="eyebrow reveal" style="--delay:0.05s">01 · THE PROBLEM</div>
-        <h2 class="section-title reveal" style="--delay:0.15s">游戏 LIVE 的观众,<br><span class="accent">是被动消费的。</span></h2>
+        <h2 class="section-title reveal" style="--delay:0.15s">观众互动 SKU 栈,<br><span class="accent">缺少"并行 agency"层。</span></h2>
         <p class="lead reveal" style="--delay:0.3s">
-            主播打出 ace、抢龙、决赛圈最后一击 —— 观众只能看,然后刷条弹幕。
-            高光发生的那 5 秒,观众的注意力是峰值的,但<strong>他们没有任何动作可以"参与"。</strong>
-            礼物是单向,弹幕是文字。<strong>观众的高光时刻情绪没被接住,转化为关注和回访的概率被白白浪费。</strong>
+            TikTok LIVE 现有观众侧 SKU 全栈 —— 礼物、弹幕、关注、礼物互动 mini-game、Polls ——
+            <strong>没有一个让观众"自己做点什么"</strong>。
+            礼物是单向,弹幕是文字,关注是 0/1,礼物互动 mini-game 是借主播的手玩(代价是<strong>蚕食 gaming LIVE 本身</strong>:主播变 MC,不再 play)。
+            观众的"我也想动手"被整个 SKU 栈堵在外面。
         </p>
         <div class="problem-grid">
             <div class="stat reveal" style="--delay:0.5s">
-                <div class="num">~3.5s</div>
-                <div class="lbl">高光发生时观众平均互动延迟<br>(刷弹幕 → 提交)</div>
+                <div class="num">0 / 5</div>
+                <div class="lbl">现有观众侧 SKU 里<br>提供"自主操作 + 不干预主播"档位的数量</div>
             </div>
             <div class="stat good reveal" style="--delay:0.65s">
                 <div class="num">30s</div>
-                <div class="lbl">Encore 给观众的"参与窗口" ——<br>直接玩一局基于高光的 mini game</div>
+                <div class="lbl">Encore 的"并行 agency"窗口 ——<br>观众自己玩,主播继续打 ranked</div>
             </div>
         </div>
     </div>
@@ -1356,7 +1357,7 @@ h2.section-title .red { color: var(--c-red); }
                 <div class="loop-stage">STAGE 03</div>
                 <div class="ico">🎬</div>
                 <div class="label">BROADCAST</div>
-                <div class="desc">AI 剪 15s 录像回流直播间。主播实时锐评 Top 3 录像。</div>
+                <div class="desc">Top 3 winner 自动产出"主播 15s + viewer 15s" split-screen 短视频,发布到 viewer profile + @tag 主播,带 #Encore tag 回流 feed。</div>
             </div>
         </div>
         <div class="loop-cn reveal" style="--delay:1s">看 · 玩 · 播</div>
@@ -1451,30 +1452,25 @@ h2.section-title .red { color: var(--c-red); }
 <section class="slide">
     <div class="slide-content">
         <div class="eyebrow reveal" style="--delay:0.05s">06 · GIFT ECONOMY</div>
-        <h2 class="section-title reveal" style="--delay:0.15s">4 层礼物分层,<span class="accent">不送礼也能玩。</span></h2>
+        <h2 class="section-title reveal" style="--delay:0.15s">付费功能 + 主播 gift-gate,<span class="accent">玩本身永远免费。</span></h2>
         <div class="gift-grid">
             <div class="gift reveal" style="--delay:0.3s">
                 <div class="name">ENHANCE</div>
                 <div class="what">改造你的<br>下一局</div>
-                <div class="ex">"火焰子弹"皮肤 · "双倍 HP" 开局 · "额外一条命"…… 个人增益。</div>
+                <div class="ex">"火焰子弹"皮肤 · "双倍 HP" 开局 · "额外一条命"…… 个人增益。MVP 主推。</div>
             </div>
             <div class="gift reveal" style="--delay:0.42s">
                 <div class="name">SPOTLIGHT</div>
-                <div class="what">高分录像<br>加曝光</div>
-                <div class="ex">让你的录像更可能进入主播 Top 3 锐评池。社交向。</div>
+                <div class="what">生成你的<br>clip</div>
+                <div class="ex">未进 Top 3 但想发自己的 split-screen 短视频?$0.5 解锁付费生成。心智具体。</div>
             </div>
             <div class="gift reveal" style="--delay:0.54s">
-                <div class="name">SPONSOR</div>
-                <div class="what">下一局主播<br>强化</div>
-                <div class="ex">给主播下次 LIVE 高光的 Encore 加强化 / 主题。礼物流向主播。</div>
-            </div>
-            <div class="gift reveal" style="--delay:0.66s">
-                <div class="name">LOOT</div>
-                <div class="what">概率宝箱<br>皮肤</div>
-                <div class="ex">开箱拿稀有装备外观,送回个人收藏。常驻收益。</div>
+                <div class="name">REMIX</div>
+                <div class="what">AI 生成<br>自定义玩法</div>
+                <div class="ex">"slower, shotgun, pink enemies" → LLM 出新参数。Phase 2 (M11+),唯一真生成式 AI 用例。</div>
             </div>
         </div>
-        <div class="gift-iron reveal" style="--delay:0.85s">铁律:禁止"送礼换试玩" · 主播分成 ≥ 普通 LIVE 礼物分成</div>
+        <div class="gift-iron reveal" style="--delay:0.85s">铁律:玩 Encore / 看 winner clip / 被动 collab 永远免费 · 主播可设 gift-gate 让付费功能解锁前送礼 · 主播分成 ≥ 普通 LIVE 礼物分成</div>
     </div>
 </section>
 
@@ -1630,7 +1626,7 @@ h2.section-title .red { color: var(--c-red); }
             </div>
             <div class="dec reveal-left" style="--delay:0.5s">
                 <div class="label">MONETIZATION</div>
-                <div class="text"><strong>4 层礼物经济</strong>(Enhance / Spotlight / Sponsor / Loot)。禁止"送礼换试玩"。</div>
+                <div class="text"><strong>付费功能 + gift-gate</strong>。MVP:Enhance + Spotlight;Phase 2:Remix。<strong>Sponsor / Loot 不做</strong>(违反 non-interference / 监管风险)。</div>
             </div>
             <div class="dec reveal-right" style="--delay:0.55s">
                 <div class="label">TEMPLATE COVERAGE</div>
@@ -1669,7 +1665,7 @@ h2.section-title .red { color: var(--c-red); }
             <div class="rm next reveal-left" style="--delay:0.54s">
                 <div class="when">M10 · NEXT</div>
                 <div class="title">TikTok feed shell + 真分享链路</div>
-                <div class="body">15 秒录像剪回 LIVE / 主播 Top 3 锐评池。需接 TikTok SDK + CDN。</div>
+                <div class="body">Top 3 winner 自动 split-screen 短视频回流 + viewer profile + @tag 主播 + 可选 Duet。需接 TikTok SDK + CDN。</div>
             </div>
             <div class="rm next reveal-left" style="--delay:0.66s">
                 <div class="when">M11 · NEXT</div>
