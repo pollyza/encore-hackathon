@@ -1,7 +1,7 @@
 # Encore — 产品规划 v0.7
 
-> 基于 hackathon prototype (v0.6) 的总结、对外讲清楚、对内对齐的单页产品文档。
-> 配套资源:[Product Brief v0.1 (飞书)](https://bytedance.larkoffice.com/docx/Gu2ed1ZOqobDF9xqY7VmjLYMyQe) · [Demo Dev Plan v0.2 (飞书)](https://bytedance.larkoffice.com/docx/LfbydvhwCopawvx6UthmmOcoyNf) · [GitHub v1](https://github.com/pollyza/encore-hackathon) · [Live demo](https://encore-deploy.vercel.app) (access: `encore-demo`)
+> 基于 hackathon prototype (v0.7 · LIVE 模块高保真重建后) 的总结、对外讲清楚、对内对齐的单页产品文档。
+> 配套资源:[Product Brief v0.1 (飞书)](https://bytedance.larkoffice.com/docx/Gu2ed1ZOqobDF9xqY7VmjLYMyQe) · [Demo Dev Plan v0.2 (飞书)](https://bytedance.larkoffice.com/docx/LfbydvhwCopawvx6UthmmOcoyNf) · [LIVE 交互模块 sub-doc (飞书 wiki)](https://www.feishu.cn/wiki/DqOXwN2hzig5cUkX6zxcCFmGnXd) · [GitHub](https://github.com/pollyza/encore-hackathon) · [Live demo](https://encore-deploy.vercel.app) · [D-module 状态卡](./polly_d_module_status.md)
 > 维护者:Encore PM。本文档与代码进度同步,不是另一份"主线真理"——主线真理仍在飞书。
 
 ---
@@ -109,20 +109,50 @@
 | **新手引导** | 5-tier HOW TO PLAY 卡片,触屏 / 桌面双适配,可关 |
 | **公开 demo** | Vercel + GitHub v1 tag + 13 页演讲 deck |
 
-### 4.2 v0.6.1 多人协作准备 (本次更新)
+### 4.2 v0.6.1 多人协作准备
 
-为 4 人 hackathon 协作做的基础设施:
+为 4 人 hackathon 协作做的基础设施 (已就绪):
 
 - ✅ `prototype/` 目录拆分为 `engine/` `games/` `ui/` `v2g/` `live/` `assets/` 子模块
 - ✅ CSS 抽离到 `prototype/styles.css`
 - ✅ `prototype/games/_interface.md` 接口契约
-- ✅ `prototype/v2g/schema.md` JSON 协议文档
+- ✅ `prototype/v2g/schema.md` JSON 协议文档 (v1.1 — 加 `td` enum + `encore_done.template` + `encore_progress`)
 - ✅ `.github/CODEOWNERS` 模块归属
 - ✅ `CLAUDE.md` 多人协作铁律
 - ✅ `scripts/deploy.sh` 同步新路径
 - ⏳ JS 拆分 (Day 0 morning) — 每个 game 独立成 `games/{fps,moba,br}.js`,引擎拆到 `engine/`
 
-### 4.3 未来扩展(优先级排序)
+### 4.3 v0.7 LIVE 交互模块高保真重建 (本次更新)
+
+Polly 拿到 Claude Design 输出的 React 高保真 handoff (`design_handoff_encore/`) 后,完整移植到 vanilla JS 真实代码库,并把 Mario 的 3 个真模板通过 V2G postMessage 接进 LIVE sheet。
+
+**核心交付**:
+
+- ✅ 完整重写 `prototype/live/` (7 个模块化文件,2900+ 行新代码)
+  - Native TikTok tone (#FE2C55 + #25F4EE) + Inter / Space Grotesk 字体
+  - 4-phase 状态机 (loading → game → result → ranking) + ack overlay
+  - 4-entry mode (highlight popup → bar 渐进 + top chip + chat card feature-flagged)
+  - 高光弹窗入口卡 (gradient ⚡ + ringPing 动效)
+  - Loading state (高光缩略图 + scan line + 24 个粒子 + 状态文案循环 + 进度条 + monospace 脚注)
+  - Result page (gradient score chip + Encore Rank pill + Share clip + Gift Remix dashed card + Fun/Hard/Remix 反馈 + Play again)
+  - Ranking sub-page (segmented tabs + 8 行 leaderboard + medals/VIP/Host tags + You 行高亮 + 自动滚到 You)
+  - Feedback ack overlay (radial glow + 3 同心环 + emoji + thanks 标题 + 950ms 自动关 + 飘字 ack pill)
+  - iPhone 14 phone frame + JS-based fit-scale (桌面/手机/平板自适应)
+- ✅ Mario 真模板集成 (`encore_prototype.html?embedded=1` via iframe + V2G postMessage v1.1)
+  - 每次开 sheet 随机抽 fps / moba / br + 主题 + scenario
+  - `pickConfig` hook 预留给 Zihui 的 observer 接入 (替换随机为真实 Vision 检测)
+- ✅ Landing page (`/`) + 扫码 QR (`/qr-encore.svg`) — 评委现场扫码体验
+- ✅ Vercel production 部署 + domain aliased
+
+**公开 URL**:
+- 🏠 Landing: https://encore-deploy.vercel.app/
+- ⚡ LIVE demo (D-module): https://encore-deploy.vercel.app/prototype/live/streamer.html
+- 🎮 标准游戏 (A-module): https://encore-deploy.vercel.app/prototype/encore_prototype.html
+- 🎤 Pitch deck: https://encore-deploy.vercel.app/docs/encore_slides.html
+
+详见 [`docs/polly_d_module_status.md`](./polly_d_module_status.md) (D-module 当前状态简明卡片,给 Mario/Zihui/Lingyi 跟进用)。
+
+### 4.4 未来扩展(优先级排序)
 
 | 里程碑 | 内容 | 价值 |
 |---|---|---|
@@ -142,7 +172,7 @@
 > V2G JSON schema (`prototype/v2g/schema.md`) 是工具无关的稳定接口 — 它隔离了 streamer / observer 与 game 引擎,所以将来要切 Godot 时不破坏上游。
 > 完整评估见 [/Users/bytedance/.claude/plans/rosy-honking-river.md](file:///Users/bytedance/.claude/plans/rosy-honking-river.md)(本地 plan 文件, 决策依据 + 3 条 verification 步骤)。
 
-### 4.4 礼物变现(M11 设计)
+### 4.5 礼物变现(M11 设计)
 
 - **Enhance**(改造你的下一局): 火焰子弹 / 双倍 HP / 额外一条命 — 个人增益
 - **Spotlight**(为录像加曝光): 让你的录像更可能进 Top 3 锐评池 — 社交向
@@ -176,8 +206,17 @@ encore-hackathon/
 │   │   ├── observer.py           ✓ Vision HTTP 代理
 │   │   ├── schema.md             ✓ JSON config 契约
 │   │   └── README.md
-│   ├── live/                     ─────────────────────────  D · LIVE/UX
-│   │   ├── streamer.html         ✓ LIVE 仿真主页
+│   ├── live/                     ─────────────────────────  D · LIVE/UX (v0.7 重建)
+│   │   ├── streamer.html         ✓ 集成 shell + iPhone frame + fit-scale
+│   │   ├── css/
+│   │   │   ├── live-shell.css    ✓ TikTok chrome + tokens + 11 keyframes
+│   │   │   ├── ai-panel.css      ✓ Sheet shell + 4 phases + ack overlay
+│   │   │   └── mini-games.css    ✓ Aim/Rhythm/Dodge (备用,不加载)
+│   │   ├── js/
+│   │   │   ├── live-room.js      ✓ chrome 编排 + entry-mode 渐进 + chat + ack
+│   │   │   ├── encore-sheet.js   ✓ 4-phase 状态机 + iframe protocol
+│   │   │   ├── mini-games.js     ✓ 3 demo 游戏 (备用,不加载)
+│   │   │   └── observer-client.js  ✓ V2G 客户端 (dormant,等 B 接入)
 │   │   └── README.md
 │   └── assets/                   ─────────────────────────  C · 美术
 │       ├── atlas.png / .json     ✓ 精灵图集 (程序化, 待 AI 替换)
