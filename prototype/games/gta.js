@@ -41,11 +41,13 @@
     throttleDnMul:    0.5,   // joystick full-down = brake (to dodge)
     robSlowMul:       0.4,   // forward slowdown while grabbing cash
 
-    // ── forward drive (joystick Y MOVES the car up/down the screen — the
-    //    real "前后" agency players expect, not just auto-scroll speed) ──
-    liftUpFrac:       0.40,  // joystick full-up lifts the car up to this fraction of H (toward top = drive forward)
-    liftDownFrac:     0.10,  // joystick full-down drops it toward the bottom (ease back)
-    liftLerpPxS:      1300,  // px/s toward target lift (snappy)
+    // ── camera follow (the WORLD scrolls via a steadily-advancing camera; the
+    //    player moves WITHIN the frame by out-driving it with throttle. Keeping
+    //    these DECOUPLED is what stops the whole map "jumping" when you push
+    //    forward — the standard endless-runner camera). ──
+    camNeutralFrac:   0.72,  // player's screen row at cruise (throttle = 1)
+    camTopFrac:       0.46,  // highest row the player drives up to (full throttle)
+    camBackFrac:      0.86,  // lowest row (braking)
 
     // ── lanes ──
     laneCount:        3,
@@ -159,12 +161,12 @@
     const Iso = $Iso(), W = $W(), H = $H(), p = s.player, ws = Iso.WS;
     const PXF = (H * 0.72) / 360;        // forward px per wu
     const PXW = (W * 0.80) / (6 * ws);   // lateral px per wu
-    const PLAYER_SY = H * 0.80;                       // car's neutral (no-input) screen row
-    const anchorSY = PLAYER_SY - (p.screenLift || 0); // shifts toward the top as the player drives forward
+    const CAM_SY = H * TUNING.camNeutralFrac;         // FIXED screen anchor — the world scrolls via camWY, never via the player's row
+    const camWY = (s.camWY != null) ? s.camWY : (p ? p.wy : 0);
     return {
-      ws, PXF, PXW, PLAYER_SY, anchorSY,
+      ws, PXF, PXW, CAM_SY, camWY,
       sx: (wx) => W / 2 + (wx - s.roadCenterX) * PXW,
-      sy: (wy) => anchorSY - (wy - p.wy) * PXF,
+      sy: (wy) => CAM_SY - (wy - camWY) * PXF,        // anchored to the camera, not the player → no "whole map jumps" bug
     };
   }
 
@@ -236,9 +238,9 @@
   function spawnTraffic(s, P) {
     const lane = pickTrafficLane(s);
     const ws = P.ws;
-    const aheadWU = P.PLAYER_SY / P.PXF + ws;          // just above the visible top → full reaction window
+    const aheadWU = P.CAM_SY / P.PXF + ws * 1.5;        // just above the camera view-top → full reaction window
     s.obstacles.push({
-      wx: laneWX(s, lane), wy: s.player.wy + aheadWU, lane,
+      wx: laneWX(s, lane), wy: s.camWY + aheadWU, lane,
       type: 'car', r: ws * 0.40, vy: TUNING.baseSpeedWU * TUNING.trafficClosingMul,
       w: 0.62, color: s.theme.traffic[(s.trafficN++ ) % s.theme.traffic.length], hit: false,
     });
@@ -247,11 +249,11 @@
   function spawnRoadblock(s, P) {
     const ws = P.ws;
     const openLane = [-1, 0, 1][(Math.random() * 3) | 0];   // exactly one lane stays open
-    const aheadWU = P.PLAYER_SY / P.PXF + ws;
+    const aheadWU = P.CAM_SY / P.PXF + ws * 1.5;
     for (const lane of [-1, 0, 1]) {
       if (lane === openLane) continue;
       s.obstacles.push({
-        wx: laneWX(s, lane), wy: s.player.wy + aheadWU, lane,
+        wx: laneWX(s, lane), wy: s.camWY + aheadWU, lane,
         type: 'block', r: ws * 0.46, vy: 0, w: 0.92, color: '#caa23a', hit: false,
       });
     }
@@ -353,7 +355,7 @@
         wx: roadCenterX, wy: 2 * ws, targetX: roadCenterX, playerLane: 0,
         speed: TUNING.baseSpeedWU, hp: TUNING.hp, maxHp: TUNING.hp,
         r: ws * 0.30, boostT: 0, boostsLeft: TUNING.nitroCount, invulnT: 0,
-        _kbCooldown: 0, _lunge: 0, _autoIdle: 0, _lastInputT: -99, screenLift: 0,
+        _kbCooldown: 0, _lunge: 0, _autoIdle: 0, _lastInputT: -99,
         _robbing: false, _robSide: 0, _robberPop: 0,
       };
 
@@ -370,6 +372,7 @@
         latLeft: roadCenterX - halfRoadW, latRight: roadCenterX + halfRoadW,
         routeLengthWU: TUNING.baseSpeedWU * TUNING.durationS * 1.15,   // used only by winMode 'reach'
         elapsed: 0,
+        camWY: player.wy,        // camera starts level with the player → player sits at the neutral row
         player,
         shops: generateShops(shopCount, ws, roadCenterX, startWY),
         obstacles: [], trafficN: 0, trafficAcc: 0, trafficQuiet: 0, roadblockAcc: 0,
@@ -394,7 +397,7 @@
       p._lunge = TUNING.nitroLungePx;             // visible body lunge (gate #4)
       s.skills.q._cd = s.skills.q.cd;
       const P = gProj(s);
-      pushSpark(s, P.sx(p.wx), P.PLAYER_SY + 16, s.theme.neonB, 26);
+      pushSpark(s, P.sx(p.wx), P.sy(p.wy) + 16, s.theme.neonB, 26);
       pushShake(s, 16);
       s._speedLinesT = 1.5;
       const J = $J(); if (J) { J.flash('#bff7ff', 60); }
@@ -414,41 +417,38 @@
       if (s.trafficQuiet > 0) s.trafficQuiet = Math.max(0, s.trafficQuiet - dt);
       Object.values(s.skills).forEach(sk => { if (sk._cd > 0) sk._cd = Math.max(0, sk._cd - dt); });
 
-      // ── input: joystick Y = throttle + drive the car FORWARD/BACK on screen,
-      //    X = steer lanes. Plus swipe + keyboard. The screen-lift is what makes
-      //    "上推 = 车往前开" actually visible (was only auto-scroll speed before). ──
+      // ── input: joystick Y = throttle (this drives the car forward WITHIN the
+      //    frame via fwdSpeed + the camera below), X = steer lanes. A lane only
+      //    flips on a clearly SIDEWAYS push (|x| > |y|) so driving forward no
+      //    longer wobbles the car left/right. ──
       let manualInput = false;
       let throttle = 1.0;
-      let targetLift = 0;                       // px the car rises up the screen (toward top = forward)
-      const Hpx = $H();
       if (typeof window.getMoveVec === 'function') {
-        const mv = window.getMoveVec(), mvy = mv.y || 0;
-        throttle    = mvy < 0 ? (1 + (-mvy) * (TUNING.throttleUpMul - 1)) : (1 - mvy * (1 - TUNING.throttleDnMul));
-        targetLift  = mvy < 0 ? (-mvy) * TUNING.liftUpFrac * Hpx : -(mvy) * TUNING.liftDownFrac * Hpx;
+        const mv = window.getMoveVec(), mvy = mv.y || 0, mvx = mv.x || 0;
+        throttle = mvy < 0 ? (1 + (-mvy) * (TUNING.throttleUpMul - 1)) : (1 - mvy * (1 - TUNING.throttleDnMul));
         if (Math.abs(mvy) > 0.15) manualInput = true;
-        if (mv.x < -0.5 && s._joyLatched !== 'left')  { p.playerLane = Math.max(-1, p.playerLane - 1); s._joyLatched = 'left';  manualInput = true; }
-        else if (mv.x > 0.5 && s._joyLatched !== 'right') { p.playerLane = Math.min(1, p.playerLane + 1); s._joyLatched = 'right'; manualInput = true; }
-        else if (Math.abs(mv.x) < 0.2) s._joyLatched = null;
-        if (Math.abs(mv.x) > 0.2) manualInput = true;
+        const sideways = Math.abs(mvx) > Math.abs(mvy) + 0.1;     // steer only when the push is more sideways than forward
+        if (mvx < -0.5 && sideways && s._joyLatched !== 'left')  { p.playerLane = Math.max(-1, p.playerLane - 1); s._joyLatched = 'left';  manualInput = true; }
+        else if (mvx > 0.5 && sideways && s._joyLatched !== 'right') { p.playerLane = Math.min(1, p.playerLane + 1); s._joyLatched = 'right'; manualInput = true; }
+        else if (Math.abs(mvx) < 0.2) s._joyLatched = null;
+        if (Math.abs(mvx) > 0.2) manualInput = true;
       }
       p._kbCooldown = Math.max(0, p._kbCooldown - dt);
       const K = $keys();
       if (K) {
-        if (K['w'])      { throttle = TUNING.throttleUpMul; targetLift = TUNING.liftUpFrac * Hpx;   manualInput = true; }   // desktop forward
-        else if (K['s']) { throttle = TUNING.throttleDnMul; targetLift = -TUNING.liftDownFrac * Hpx; manualInput = true; }  // desktop back
+        if (K['w'])      { throttle = TUNING.throttleUpMul; manualInput = true; }   // desktop forward
+        else if (K['s']) { throttle = TUNING.throttleDnMul; manualInput = true; }   // desktop back
         if (p._kbCooldown <= 0) {
           if (K['a'] || K['arrowleft'])  { p.playerLane = Math.max(-1, p.playerLane - 1); p._kbCooldown = TUNING.kbLaneCooldownS; manualInput = true; }
           else if (K['d'] || K['arrowright']) { p.playerLane = Math.min(1, p.playerLane + 1); p._kbCooldown = TUNING.kbLaneCooldownS; manualInput = true; }
         }
       }
-      // snap the car's screen lift toward target (this is the visible 前后移动)
-      { const dL = targetLift - p.screenLift; p.screenLift += Math.sign(dL) * Math.min(Math.abs(dL), TUNING.liftLerpPxS * dt); }
-
-      // ── passive autopilot (friendliness): dodge first, then steer to rob.
-      // Engages after 0.6s with no input of ANY kind (joystick/keys via
-      // _lastInputT below, swipe/tap stamp it directly). ──
+      // ── passive autopilot (friendliness): only for a TRULY idle viewer. Was
+      // 0.6s, which grabbed the wheel during an active player's pauses and made
+      // the car "自己左右晃". Now 2.5s so real players never trigger it; a
+      // hands-off viewer still gets auto-play within ~7s (gate covers it). ──
       if (manualInput) p._lastInputT = s.elapsed;
-      if (!s._autoDisable && (s.elapsed - p._lastInputT) > 0.6) {
+      if (!s._autoDisable && (s.elapsed - p._lastInputT) > 2.5) {
         let lane = p.playerLane;
         // 1) flee an imminent obstacle in our lane
         let danger = null, dBest = Infinity;
@@ -487,6 +487,19 @@
       p.wy += fwdSpeed * dt;
       p._robbing = false;
       s._ramp = rf; s._fwdSpeed = fwdSpeed; s._throttle = throttle;   // observability for the QA gate
+
+      // ── camera: advances STEADILY (throttle-independent) so the world scrolls
+      //    smoothly; the player rises/sinks within the frame by out-driving it.
+      //    Camera only catches up when the player tops out (= fast feel, no jump). ──
+      const Hc = $H(), PXFc = (Hc * 0.72) / 360;
+      const worldScroll = TUNING.baseSpeedWU * rf * s.weatherMod.fwd;
+      s.camWY += worldScroll * dt;
+      const leadMax = (TUNING.camNeutralFrac - TUNING.camTopFrac) * Hc / PXFc;   // furthest forward (top of screen)
+      const leadMin = (TUNING.camNeutralFrac - TUNING.camBackFrac) * Hc / PXFc;  // furthest back (negative)
+      const lead = p.wy - s.camWY;
+      if (lead > leadMax) s.camWY = p.wy - leadMax;        // topped out → camera keeps pace (world rushes, smoothly)
+      else if (lead < leadMin) p.wy = s.camWY + leadMin;   // bottomed out → hold player on screen
+      s._lead = p.wy - s.camWY;                            // observability: how far forward the player is driving
 
       // ── shops: lane-gated grab → robber pop + cash + hit-stop + punch ──
       const HOVER_FWD = ws * TUNING.robWindowTiles;
@@ -528,7 +541,7 @@
           p.hp = Math.max(0, p.hp - TUNING.trafficDmg);
           p.invulnT = 0.9; s.robCombo = 0;
           pushShake(s, 14);
-          pushSpark(s, P.sx(o.wx), P.PLAYER_SY, '#ff7744', 16);
+          pushSpark(s, P.sx(o.wx), P.sy(p.wy), '#ff7744', 16);
           const J = $J(); if (J) { J.flash('#ff5533', 90); J.chroma(90); J.hitstop(0.05); }
           const SFX = $SFX(); try { if (SFX.hit) SFX.hit(); } catch (_) {}
           if (window.showBanner) window.showBanner(`撞车! HP ${p.hp}`, '#ff7744', 600);
@@ -578,7 +591,7 @@
         const d = Math.hypot(b.wx - p.wx, b.wy - p.wy); b._minD = Math.min(b._minD, d);
         if (d < p.r + 6 && (p.invulnT || 0) <= 0) {
           b.life = 0; p.hp = Math.max(0, p.hp - TUNING.copBulletDmg); p.invulnT = 0.6; s.robCombo = 0;
-          pushShake(s, 8); pushSpark(s, P.sx(p.wx), P.PLAYER_SY, '#ffd84a', 10);
+          pushShake(s, 8); pushSpark(s, P.sx(p.wx), P.sy(p.wy), '#ffd84a', 10);
           const J = $J(); if (J) { J.flash('#ff7744', 70); J.chroma(80); }
           const SFX = $SFX(); try { if (SFX.hit) SFX.hit(); } catch (_) {}
           if (window.showBanner) window.showBanner(`中枪! HP ${p.hp}`, '#ff7744', 600);
@@ -588,7 +601,7 @@
       for (const b of s.copBullets) {
         if (b.life <= 0 && !b._scored && b._minD < p.r + TUNING.nearMissPx[1] && b._minD > p.r + TUNING.nearMissPx[0]) {
           b._scored = true; s.cash += TUNING.nearMissBonus;
-          const J = $J(); if (J) { J.hitstop(0.07); J.popup('好险! +' + TUNING.nearMissBonus, P.sx(p.wx), P.PLAYER_SY - 30, { color:'#5af5e0', size: 16 }); }
+          const J = $J(); if (J) { J.hitstop(0.07); J.popup('好险! +' + TUNING.nearMissBonus, P.sx(p.wx), P.sy(p.wy) - 30, { color:'#5af5e0', size: 16 }); }
         }
       }
       s.copBullets = s.copBullets.filter(b => b.life > 0);
@@ -720,7 +733,7 @@
       // player car (lunge + nitro flame + robber pop)
       {
         const lift = (p._lunge || 0) + (p.boostT > 0 ? TUNING.boostHoldLiftPx : 0);
-        const sx = g2sx(p.wx), sy = P.anchorSY - lift;        // anchorSY already includes the forward screen-drive
+        const sx = g2sx(p.wx), sy = g2sy(p.wy) - lift;        // player's screen row comes from the camera projection
         if (p.boostT > 0) { ctx.fillStyle = '#37e0ff'; for (let i=0;i<3;i++){ const fw=8-i*2; ctx.globalAlpha=0.8-i*0.2; ctx.fillRect(sx-fw/2, sy+18+i*8, fw, 10); } ctx.globalAlpha=1; }
         const inv = (p.invulnT||0) > 0 && Math.floor(s.elapsed*12)%2===0;
         drawCarTopDown(ctx, sx, sy, laneW*0.66, inv ? '#ffffff' : t.car, t.carGlass);
@@ -736,7 +749,8 @@
 
       drawMiniHUD(ctx, W, H, s, t);
       drawLaneHUD(ctx, W, H, s, t);
-      const liftN = Math.min(1, (p.screenLift||0) / (TUNING.liftUpFrac * H));   // how far the player is driving forward
+      const leadMaxWU = (TUNING.camNeutralFrac - TUNING.camTopFrac) * 360 / 0.72;   // H-independent
+      const liftN = Math.min(1, Math.max(0, (s._lead || 0) / leadMaxWU));            // how far forward the player is driving
       const slInt = Math.max(Math.min(1, s._speedLinesT/0.4), p.boostT>0?0.75:0, liftN*0.7);
       if (slInt > 0.05) drawSpeedLines(ctx, W, H, slInt);
     },
