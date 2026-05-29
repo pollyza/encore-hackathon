@@ -338,6 +338,31 @@
   // active-cop budget grows with the wanted level (★1≈1-2 cars, ★5≈5)
   function copBudget(s) { return Math.max(1, Math.min(TUNING.heatMax, Math.ceil(s.heat * TUNING.copsPerStar))); }
 
+  // ── clean two-tone police siren, synthesised here (the engine's was "难听").
+  //    Fully guarded: ANY audio failure is a silent no-op, never a console error
+  //    and never a regression (worst case = no siren, same as muted). ──
+  let _siren = null, _sirenInit = false;
+  function siren() {
+    if (_sirenInit) return _siren;
+    _sirenInit = true;
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return (_siren = null);
+      const ctx = new AC();
+      const gain = ctx.createGain(); gain.gain.value = 0; gain.connect(ctx.destination);
+      const filt = ctx.createBiquadFilter(); filt.type = 'lowpass'; filt.frequency.value = 1300; filt.connect(gain);
+      const osc = ctx.createOscillator(); osc.type = 'sawtooth'; osc.frequency.value = 700; osc.connect(filt);
+      const lfo = ctx.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 0.9;   // the "wee-woo" sweep
+      const lfoGain = ctx.createGain(); lfoGain.gain.value = 150; lfo.connect(lfoGain); lfoGain.connect(osc.frequency);
+      osc.start(); lfo.start();
+      _siren = { ctx, gain };
+    } catch (_) { _siren = null; }
+    return _siren;
+  }
+  function sirenVol(v) {
+    try { const s2 = siren(); if (!s2) return; if (s2.ctx.state === 'suspended') s2.ctx.resume();
+      s2.gain.gain.setTargetAtTime(Math.max(0, Math.min(0.08, v)), s2.ctx.currentTime, 0.12); } catch (_) {}
+  }
+
   // RAMPAGE combo: every rob / smash / near-miss links the chain and refreshes
   // its window; the chain drives a cash multiplier and a big on-screen RAMPAGE
   // call. Getting hit (cop/traffic) breaks it — that's the risk in the reward.
@@ -727,6 +752,9 @@
       // ── engine sound ──
       if (!s._engineOn) { try { window.startEngine && window.startEngine(); } catch (_) {} s._engineOn = true; }
       try { window.setEngineThrottle && window.setEngineThrottle(boosting ? 1 : 0.45); } catch (_) {}
+      // siren wails only while wanted; louder as the nearest cop closes in
+      { let prox = 0; if (s.heat > 0 && s.cops.length) { let cl = Infinity; for (const c of s.cops) { const d = p.wy - c.wy; if (d > 0 && d < cl) cl = d; } if (cl !== Infinity) prox = Math.max(0, 1 - cl / (8 * ws)); }
+        sirenVol(s.heat > 0.3 ? (0.022 + prox * 0.05) : 0); }
 
       for (const f of s.floaters) f.life -= dt;
       s.floaters = s.floaters.filter(f => f.life > 0);
@@ -750,14 +778,14 @@
     },
 
     _win(s, sub) {
-      s.gtaActive = false;
+      s.gtaActive = false; sirenVol(0);
       try { window.stopSiren && window.stopSiren(); window.stopEngine && window.stopEngine(); } catch (_) {}
       const J = $J(); if (J) { J.confetti($W()); J.hitstop(0.1); }
       const SFX = $SFX(); try { if (SFX.win) SFX.win(); } catch (_) {}
       $finish(true, sub);
     },
     _bust(s) {
-      s.gtaActive = false; pushShake(s, 20);
+      s.gtaActive = false; pushShake(s, 20); sirenVol(0);
       try { window.stopSiren && window.stopSiren(); window.stopEngine && window.stopEngine(); } catch (_) {}
       const SFX = $SFX(); try { if (SFX.lose) SFX.lose(); } catch (_) {}
       $finish(false, 'BUSTED · $' + s.cash);
