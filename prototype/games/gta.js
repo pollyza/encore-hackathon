@@ -85,7 +85,29 @@
     copBulletSpeedWU: 260,
     copCollideDmg:    30,
     copBulletDmg:     12,
-    copInvulnS:       1.5,
+    copInvulnS:       1.2,
+
+    // ── wanted / heat (the GTA risk-reward chase loop) ──
+    heatMax:          5,     // ★ cap
+    heatPerRob:       1.5,   // stars added per heist
+    heatPerCopHit:    0.6,
+    heatPerSmash:     0.4,   // bulldozing a civilian car
+    heatCalmDelayS:   3.0,   // no-crime time before heat starts dropping
+    heatDecayPerS:    0.34,  // stars/sec lost while clean (evade)
+    copRamHeat:       2.0,   // cops start ramming (steer into you) at this ★
+    copRamAccelWU:    150,   // lateral ram acceleration toward player
+    copsPerStar:      1.0,   // max active cops ≈ ceil(heat × this), 1..5
+    copIntervalHeatCut: 0.5, // spawn interval shrinks this fraction at max heat
+    evadeBonusPerStar: 150,  // $ paid out per ★ when you shake the cops
+
+    // ── impact / knockback (make collisions FELT, not flat) ──
+    copHitKnockWU:    230,   // lateral shove velocity on a cop slam
+    copHitStunS:      0.35,  // steering stun after a slam (you fishtail)
+    copHitstopS:      0.13,
+    copHitTraumaBig:  26,
+    smashKnockWU:     300,   // civilian car you bulldoze flies sideways this fast
+    smashHpCost:      6,     // small HP cost to smash through (vs 25 to eat it)
+    bigSlowmoS:       0.16,  // hitstop-as-slowmo on the big beats (rob / bust / evade)
 
     // ── robbery ──
     robWindowTiles:   2.0,   // ± shop forward window (× ws)
@@ -138,19 +160,19 @@
   function expandTheme(themeKey, base) {
     return {
       key:       themeKey,
-      sky:       base.sky,
-      sky2:      base.sky2,
-      road:      base.ground,
-      roadEdge:  tint(base.accent, 0.10),
-      offRoad:   shade(base.ground, 0.42),
-      building:  shade(base.sky2, 0.10),
-      buildingLit: tint(base.sky2, 0.28),
+      sky:       shade(base.sky, 0.25),               // deeper night sky (noir, not candy)
+      sky2:      shade(base.sky2, 0.15),
+      road:      shade(base.ground, 0.34),            // dark asphalt
+      roadEdge:  tint(base.accent, 0.05),
+      offRoad:   shade(base.ground, 0.62),            // deep shadow off-road
+      building:  shade(base.sky2, 0.30),              // grittier dark blocks
+      buildingLit: mix(base.accent, base.sky2, 0.55), // a few lit faces
       shopGlow:  base.accent,
-      car:       '#e8412b',
-      carGlass:  '#9be7ff',
-      traffic:   ['#3f6fd0', '#d8a32e', '#7a4fc0', '#2fa86a', '#c84f7a'],
-      cop:       '#10131c',
-      copGlass:  '#1e6fff',
+      car:       '#c0392b',                           // deeper muscle-car red
+      carGlass:  '#7fd0ff',
+      traffic:   ['#33425e', '#7a6320', '#4a3a64', '#2a5a44', '#6e3848'], // muted civilian cars
+      cop:       '#0c0f18',
+      copGlass:  '#2b7bff',
       neonA:     base.accent,
       neonB:     tint(base.accent, 0.40),
     };
@@ -277,6 +299,39 @@
     s.shakeMag = Math.max(s.shakeMag || 0, mag);
   }
 
+  // ─── wanted / heat: the escalate→evade risk-reward loop ─────
+  function addHeat(s, amt) {
+    const before = Math.ceil(s.heat - 1e-6);
+    s.heat = Math.min(TUNING.heatMax, s.heat + amt);
+    s.heatCalmT = 0;                                 // any crime resets the calm timer
+    const now = Math.ceil(s.heat - 1e-6);
+    s.stars = now;
+    if (now > before) {                              // a new ★ → fanfare + a beat of slow-mo
+      s._heatFlashT = 0.5;
+      pushShake(s, 14);
+      const J = $J(); if (J) { J.hitstop(0.08); J.flash('#ff2b2b', 80); J.popup('★'.repeat(now) + ' WANTED', $W()/2, $H()*0.26, { color:'#ff3b3b', size: 22, dur: 0.9 }); }
+      try { if (window.startSiren) window.startSiren(); } catch (_) {}
+    }
+  }
+  function updateHeat(s, dt) {
+    if (s.heat <= 0) return;
+    s.heatCalmT += dt;
+    if (s.heatCalmT < TUNING.heatCalmDelayS) return;  // still "hot" — cops keep coming
+    const before = Math.ceil(s.heat - 1e-6);
+    s.heat = Math.max(0, s.heat - TUNING.heatDecayPerS * dt);
+    s.stars = Math.ceil(s.heat - 1e-6);
+    if (s.heat <= 0) {                                // SHOOK THE COPS → payoff
+      const bonus = TUNING.evadeBonusPerStar * before;
+      s.cash += bonus; s._evadeT = 1.4;
+      const J = $J(); if (J) { J.confetti($W()); J.hitstop(0.12); J.popup('甩掉警察! +$' + bonus, $W()/2, $H()*0.30, { color:'#5af5e0', size: 22, dur: 1.2 }); }
+      pushShake(s, 10);
+      try { if (window.stopSiren) window.stopSiren(); } catch (_) {}
+      if (window.showBanner) window.showBanner('🏁 WANTED EVADED · +$' + bonus, '#5af5e0', 1200);
+    }
+  }
+  // active-cop budget grows with the wanted level (★1≈1-2 cars, ★5≈5)
+  function copBudget(s) { return Math.max(1, Math.min(TUNING.heatMax, Math.ceil(s.heat * TUNING.copsPerStar))); }
+
   // ─── module ─────────────────────────────────────────────────
   window.Games = window.Games || {};
   window.Games.gta = {
@@ -355,7 +410,7 @@
         wx: roadCenterX, wy: 2 * ws, targetX: roadCenterX, playerLane: 0,
         speed: TUNING.baseSpeedWU, hp: TUNING.hp, maxHp: TUNING.hp,
         r: ws * 0.30, boostT: 0, boostsLeft: TUNING.nitroCount, invulnT: 0,
-        _kbCooldown: 0, _lunge: 0, _autoIdle: 0, _lastInputT: -99,
+        _kbCooldown: 0, _lunge: 0, _autoIdle: 0, _lastInputT: -99, _knock: 0, _stunT: 0,
         _robbing: false, _robSide: 0, _robberPop: 0,
       };
 
@@ -373,6 +428,8 @@
         routeLengthWU: TUNING.baseSpeedWU * TUNING.durationS * 1.15,   // used only by winMode 'reach'
         elapsed: 0,
         camWY: player.wy,        // camera starts level with the player → player sits at the neutral row
+        heat: 0, heatCalmT: 0, stars: 0, smashes: 0,   // wanted level / chaos
+        _heatFlashT: 0, _evadeT: 0,
         player,
         shops: generateShops(shopCount, ws, roadCenterX, startWY),
         obstacles: [], trafficN: 0, trafficAcc: 0, trafficQuiet: 0, roadblockAcc: 0,
@@ -415,6 +472,9 @@
       s.elapsed += dt;
       if (s._speedLinesT > 0) s._speedLinesT = Math.max(0, s._speedLinesT - dt);
       if (s.trafficQuiet > 0) s.trafficQuiet = Math.max(0, s.trafficQuiet - dt);
+      if (s._heatFlashT > 0) s._heatFlashT = Math.max(0, s._heatFlashT - dt);
+      if (s._evadeT > 0) s._evadeT = Math.max(0, s._evadeT - dt);
+      updateHeat(s, dt);                                   // wanted-level decay → evade payoff
       Object.values(s.skills).forEach(sk => { if (sk._cd > 0) sk._cd = Math.max(0, sk._cd - dt); });
 
       // ── input: joystick Y = throttle (this drives the car forward WITHIN the
@@ -468,11 +528,16 @@
         p.playerLane = lane;
       }
 
-      // ── lateral lane snap ──
+      // ── lateral: lane snap + knockback. A cop slam shoves you sideways and
+      //    briefly stuns steering so you fishtail — that's the "撞击有感觉". ──
       p.targetX = laneWX(s, p.playerLane);
+      if (p._stunT > 0) p._stunT = Math.max(0, p._stunT - dt);
+      const snapMul = p._stunT > 0 ? 0.25 : 1;             // steering authority cut while stunned
       const latDelta = p.targetX - p.wx;
-      const latStep = Math.sign(latDelta) * Math.min(Math.abs(latDelta), TUNING.laneSnapWU * s.weatherMod.laneSpeed * dt);
-      p.wx = Math.max(s.latLeft, Math.min(s.latRight, p.wx + latStep));
+      const latStep = Math.sign(latDelta) * Math.min(Math.abs(latDelta), TUNING.laneSnapWU * s.weatherMod.laneSpeed * snapMul * dt);
+      p.wx += latStep;
+      if (p._knock) { p.wx += p._knock * dt; p._knock *= Math.max(0, 1 - 6 * dt); if (Math.abs(p._knock) < 8) p._knock = 0; }
+      p.wx = Math.max(s.latLeft - ws, Math.min(s.latRight + ws, p.wx));   // allow a little off-lane overshoot on a slam
 
       // ── body lunge decay (exp; held ~0.2s so the surge reads) ──
       if (p._lunge > 0) p._lunge = Math.max(0, p._lunge - p._lunge * TUNING.nitroLungeDecay * dt);
@@ -512,12 +577,13 @@
           if (shop.progress >= 1) {
             shop.robbed = true; s.robbedCount += 1; s.kills = s.robbedCount; s.cash += shop.money;
             s.robCombo = (s.robCombo || 0) + 1; p._robberPop = TUNING.robberPopS;
+            addHeat(s, TUNING.heatPerRob);                 // 干坏事 → wanted level climbs
             pushShake(s, TUNING.robTrauma);
             const px = P.sx(shop.wx), py = P.sy(shop.wy);
             for (let i = 0; i < 5; i++) pushSpark(s, px + (Math.random()-0.5)*24, py + (Math.random()-0.5)*24, '#ffd24a', 26);
             s.floaters.push({ wx: shop.wx, wy: shop.wy, text: '💰 +$' + shop.money, color: '#ffd24a', life: 1.3 });
             const J = $J();
-            if (J) { J.hitstop(TUNING.robHitstopS); J.flash('#fff3a0', 70); J.burst(px, py, 'cash', '#ffd24a');
+            if (J) { J.hitstop(TUNING.bigSlowmoS); J.flash('#fff3a0', 80); J.burst(px, py, 'cash', '#ffd24a'); if (J.vignettePulse) J.vignettePulse(0.4);
                      J.popup('抢到 $' + shop.money + (s.robCombo >= 2 ? '  连抢×' + s.robCombo : ''), $W()/2, $H()*0.34, { color:'#ffd24a', size: 22 + Math.min(14, s.robCombo*3), dur: 1.0 }); }
             const SFX = $SFX(); try { if (SFX.cash) SFX.cash(); } catch (_) {}
             if (window.showBanner) window.showBanner(`💰 抢到 $${shop.money}!`, '#ffd24a', 900);
@@ -532,40 +598,61 @@
       s.trafficAcc += dt;
       if (s.trafficQuiet <= 0 && s.trafficAcc >= trafficGap) { s.trafficAcc = 0; spawnTraffic(s, P); }
 
-      // ── obstacles: advance + lane-gated collision + cull ──
+      // ── obstacles: advance + collision. Boosting through a CIVILIAN car
+      // bulldozes it aside (干坏事 power fantasy); otherwise you eat it with a
+      // real knockback (dodge matters). Concrete roadblocks always hurt. ──
+      const boostingNow = p.boostT > 0;
       for (const o of s.obstacles) {
         o.wy += o.vy * dt;
+        if (o.smashed) { o.wx += o.vx * dt; o.spin = (o.spin || 0) + dt * 12; continue; }
         if (o.hit) continue;
         if (o.lane === p.playerLane && Math.abs(o.wy - p.wy) < (p.r + o.r) && (p.invulnT || 0) <= 0) {
-          o.hit = true;
-          p.hp = Math.max(0, p.hp - TUNING.trafficDmg);
-          p.invulnT = 0.9; s.robCombo = 0;
-          pushShake(s, 14);
-          pushSpark(s, P.sx(o.wx), P.sy(p.wy), '#ff7744', 16);
-          const J = $J(); if (J) { J.flash('#ff5533', 90); J.chroma(90); J.hitstop(0.05); }
-          const SFX = $SFX(); try { if (SFX.hit) SFX.hit(); } catch (_) {}
-          if (window.showBanner) window.showBanner(`撞车! HP ${p.hp}`, '#ff7744', 600);
-          if (p.hp <= 0) { return this._bust(s); }
+          const px = P.sx(o.wx), py = P.sy(p.wy);
+          if (o.type === 'car' && boostingNow) {                 // SMASH — bulldoze it aside
+            o.smashed = true; o.vx = (o.wx < p.wx ? -1 : 1) * TUNING.smashKnockWU; o.vy = -TUNING.baseSpeedWU * 0.3;
+            p.hp = Math.max(0, p.hp - TUNING.smashHpCost); s.smashes = (s.smashes || 0) + 1;
+            pushShake(s, 16); addHeat(s, TUNING.heatPerSmash);
+            const J = $J(); if (J) { J.hitstop(0.06); J.flash('#ffffff', 50); J.burst(px, py, 'debris', '#cfd6e0'); }
+            for (let i = 0; i < 8; i++) pushSpark(s, px, py, '#ffd24a', 16);
+            s.robCombo = (s.robCombo || 0) + 1;
+            if (J) J.popup('💥 SMASH' + (s.robCombo >= 2 ? ' ×' + s.robCombo : ''), px, py - 20, { color: '#ffd24a', size: 18 });
+            const SFX = $SFX(); try { if (SFX.hit) SFX.hit(); } catch (_) {}
+          } else {                                               // EAT IT — damage + knockback + slow-mo
+            o.hit = true;
+            p.hp = Math.max(0, p.hp - (o.type === 'block' ? TUNING.trafficDmg + 8 : TUNING.trafficDmg));
+            p.invulnT = 0.9; s.robCombo = 0;
+            p._knock = (o.wx < p.wx ? 1 : -1) * TUNING.copHitKnockWU * 0.7; p._stunT = TUNING.copHitStunS * 0.7;
+            pushShake(s, 20); addHeat(s, TUNING.heatPerSmash);
+            const J = $J(); if (J) { J.hitstop(0.08); J.flash('#ff5533', 100); J.chroma(110); J.burst(px, py, 'debris', '#aab2c0'); }
+            for (let i = 0; i < 6; i++) pushSpark(s, px, py, '#ff7744', 18);
+            const SFX = $SFX(); try { if (SFX.hit) SFX.hit(); } catch (_) {}
+            if (window.showBanner) window.showBanner(`撞车! HP ${p.hp}`, '#ff7744', 600);
+            if (p.hp <= 0) { return this._bust(s); }
+          }
         }
       }
-      s.obstacles = s.obstacles.filter(o => (o.wy - p.wy) > -ws * 3 && !(o.hit && (o.wy - p.wy) < 0));
+      s.obstacles = s.obstacles.filter(o => (o.wy - p.wy) > -ws * 3 && Math.abs(o.wx - s.roadCenterX) < ws * 9 && !(o.hit && (o.wy - p.wy) < 0));
 
-      // ── cop spawning ──
-      const spawnThreshold = s.cops.length === 0 ? TUNING.firstCopDelayS : TUNING.copIntervalS;
-      s.copSpawnAcc += dt * Math.max(0.0001, s.copRate);
-      if (s.copSpawnAcc >= spawnThreshold && s.cops.length < s.copsMaxActive) {
-        s.cops.push(spawnCop(s)); s.copCount += 1; s.copSpawnAcc -= spawnThreshold;
-        if (window.showBanner) window.showBanner(s.copCount === 1 ? '🚨 POLICE!' : `🚨 +1 COP (${s.copCount})`, '#ff3344', 1200);
+      // ── cop spawning: driven by the WANTED level. Clean = they back off;
+      // commit crime → ★ rises → more cruisers, spawning faster. ──
+      const budget = Math.min(copBudget(s), Math.ceil(TUNING.heatMax * Math.max(0.5, s.copRate)));
+      const copInterval = TUNING.copIntervalS * (1 - TUNING.copIntervalHeatCut * (s.heat / TUNING.heatMax));
+      s.copSpawnAcc += dt;
+      if (s.heat > 0.3 && s.copSpawnAcc >= copInterval && s.cops.length < budget) {
+        s.cops.push(spawnCop(s)); s.copCount += 1; s.copSpawnAcc = 0;
+        if (window.showBanner) window.showBanner(s.cops.length === 1 ? '🚨 POLICE!' : '🚨 +1 COP', '#ff3344', 1100);
         pushShake(s, 12);
         try { if (window.startSiren) window.startSiren(); } catch (_) {}
       }
 
-      // ── cop AI: chase + shoot + collide ──
+      // ── cop AI: chase, RAM at high heat, shoot, and SLAM (felt, not flat) ──
       const copSpeedMod = s.weatherMod.fwd;
+      const ramming = s.heat >= TUNING.copRamHeat;
       for (const cop of s.cops) {
         const dxw = p.wx - cop.wx, dyw = p.wy - cop.wy, len = Math.hypot(dxw, dyw) || 1;
         cop.wx += (dxw / len) * cop.speed * copSpeedMod * dt;
         cop.wy += (dyw / len) * cop.speed * copSpeedMod * dt;
+        if (ramming) cop.wx += Math.sign(dxw) * Math.min(Math.abs(dxw), TUNING.copRamAccelWU * dt);   // line up to ram
         cop.sirenPhase += dt * 6;
         cop.fireCd -= dt;
         const behind = p.wy - cop.wy;
@@ -576,11 +663,16 @@
           const SFX = $SFX(); try { if (SFX.shot) SFX.shot(); } catch (_) {}
         }
         if (Math.hypot(p.wx - cop.wx, p.wy - cop.wy) < p.r + cop.r && (p.invulnT || 0) <= 0) {
+          // SLAM: knockback + steering stun + hitstop + debris — a real collision
           p.hp = Math.max(0, p.hp - TUNING.copCollideDmg); p.invulnT = TUNING.copInvulnS; s.robCombo = 0;
-          pushShake(s, TUNING.copHitTrauma);
-          const J = $J(); if (J) { J.flash('#ff3344', 100); J.chroma(110); J.hitstop(0.06); }
+          p._knock = Math.sign(p.wx - cop.wx || 1) * TUNING.copHitKnockWU; p._stunT = TUNING.copHitStunS;
+          cop.wy -= ws * 0.8;                                  // cop recoils back from the impact
+          pushShake(s, TUNING.copHitTraumaBig); addHeat(s, TUNING.heatPerCopHit);
+          const px = P.sx(p.wx), py = P.sy(p.wy);
+          const J = $J(); if (J) { J.hitstop(TUNING.copHitstopS); J.flash('#ff2b2b', 120); J.chroma(150); J.burst(px, py, 'debris', '#9aa3b2'); if (J.vignettePulse) J.vignettePulse(0.7); }
+          for (let i = 0; i < 10; i++) pushSpark(s, px, py, '#ffd24a', 22);
           const SFX = $SFX(); try { if (SFX.hit) SFX.hit(); } catch (_) {}
-          if (window.showBanner) window.showBanner(`撞上警车! HP ${p.hp}`, '#ff3344', 700);
+          if (window.showBanner) window.showBanner(`💥 警车撞击! HP ${p.hp}`, '#ff3344', 700);
           if (p.hp <= 0) { return this._bust(s); }
         }
       }
@@ -715,6 +807,8 @@
           ctx.fillStyle = '#1a1a1a'; ctx.fillRect(sx - bw/2, sy - 10, bw, 20);
           for (let i = -2; i <= 2; i++) { ctx.fillStyle = (i & 1) ? '#f4c430' : '#222'; ctx.fillRect(sx - bw/2 + (i+2)*bw/5, sy - 10, bw/5, 20); }
           ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.strokeRect(sx - bw/2, sy - 10, bw, 20);
+        } else if (o.smashed) {
+          ctx.save(); ctx.translate(sx, sy); ctx.rotate(o.spin || 0); drawCarTopDown(ctx, 0, 0, laneW * o.w, o.color, '#11151f'); ctx.restore();
         } else {
           drawCarTopDown(ctx, sx, sy, laneW * o.w, o.color, '#11151f');
         }
@@ -730,11 +824,18 @@
       }
       for (const b of s.copBullets) { const sx = g2sx(b.wx), sy = g2sy(b.wy); ctx.fillStyle = '#ffe24a'; ctx.fillRect(sx-2, sy-5, 4, 10); }
 
-      // player car (lunge + nitro flame + robber pop)
+      // player car (headlights + nitro flame / brake lights + damage smoke + gangster)
       {
         const lift = (p._lunge || 0) + (p.boostT > 0 ? TUNING.boostHoldLiftPx : 0);
         const sx = g2sx(p.wx), sy = g2sy(p.wy) - lift;        // player's screen row comes from the camera projection
+        // headlight cone — reads as night driving, lights the road ahead
+        const hg = ctx.createLinearGradient(sx, sy - 14, sx, sy - 190);
+        hg.addColorStop(0, 'rgba(255,244,200,0.16)'); hg.addColorStop(1, 'rgba(255,244,200,0)');
+        ctx.fillStyle = hg; ctx.beginPath(); ctx.moveTo(sx - laneW*0.20, sy - 14); ctx.lineTo(sx - laneW*0.66, sy - 190); ctx.lineTo(sx + laneW*0.66, sy - 190); ctx.lineTo(sx + laneW*0.20, sy - 14); ctx.closePath(); ctx.fill();
+        // low-HP smoke (purely visual)
+        if (p.hp < 35) { for (let i=0;i<3;i++){ const k=(s.elapsed*1.8+i*0.33)%1; ctx.globalAlpha=(0.45-0.4*k); ctx.fillStyle='#5a5a64'; ctx.beginPath(); ctx.arc(sx+(i-1)*5, sy+18+k*34, 4+k*7, 0, Math.PI*2); ctx.fill(); } ctx.globalAlpha=1; }
         if (p.boostT > 0) { ctx.fillStyle = '#37e0ff'; for (let i=0;i<3;i++){ const fw=8-i*2; ctx.globalAlpha=0.8-i*0.2; ctx.fillRect(sx-fw/2, sy+18+i*8, fw, 10); } ctx.globalAlpha=1; }
+        else { ctx.fillStyle = 'rgba(255,40,40,0.9)'; ctx.fillRect(sx - laneW*0.30, sy + laneW*0.52, 5, 4); ctx.fillRect(sx + laneW*0.30 - 5, sy + laneW*0.52, 5, 4); } // brake lights
         const inv = (p.invulnT||0) > 0 && Math.floor(s.elapsed*12)%2===0;
         drawCarTopDown(ctx, sx, sy, laneW*0.66, inv ? '#ffffff' : t.car, t.carGlass);
         drawGangster(ctx, sx, sy, laneW, p._robSide, p._robberPop, s.elapsed);   // always-on driver head; leans out w/ gun on rob
@@ -747,7 +848,9 @@
 
       ctx.restore();
 
+      drawNoirOverlay(ctx, W, H, s);        // vignette + wanted-level red tint (noir, not candy)
       drawMiniHUD(ctx, W, H, s, t);
+      drawWantedHUD(ctx, W, H, s);          // ★ wanted level
       drawLaneHUD(ctx, W, H, s, t);
       const leadMaxWU = (TUNING.camNeutralFrac - TUNING.camTopFrac) * 360 / 0.72;   // H-independent
       const liftN = Math.min(1, Math.max(0, (s._lead || 0) / leadMaxWU));            // how far forward the player is driving
@@ -813,6 +916,28 @@
     c.fillStyle = '#caa07a'; c.beginPath(); c.arc(hx, hy, headR, 0, Math.PI*2); c.fill();
     c.fillStyle = '#16171c'; c.beginPath(); c.arc(hx, hy - headR*0.35, headR, Math.PI, Math.PI*2); c.fill();
     c.fillStyle = '#0c0d10'; c.fillRect(hx - headR*0.6, hy - 1, headR*1.2, 2);
+  }
+
+  // Noir vignette + a breathing red tint that intensifies with the wanted level.
+  function drawNoirOverlay(c, W, H, s) {
+    const g = c.createRadialGradient(W/2, H*0.5, Math.min(W,H)*0.34, W/2, H*0.5, Math.max(W,H)*0.74);
+    g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.5)');
+    c.fillStyle = g; c.fillRect(0, 0, W, H);
+    if (s.heat > 0.2) {
+      const inten = Math.min(0.5, 0.08 + 0.07 * s.heat) * (0.7 + 0.3 * Math.sin(s.elapsed * 5));
+      const r = c.createRadialGradient(W/2, H*0.5, Math.min(W,H)*0.4, W/2, H*0.5, Math.max(W,H)*0.74);
+      r.addColorStop(0, 'rgba(200,20,20,0)'); r.addColorStop(1, `rgba(200,20,20,${inten})`);
+      c.fillStyle = r; c.fillRect(0, 0, W, H);
+    }
+  }
+  // ★ wanted level, top-center.
+  function drawWantedHUD(c, W, H, s) {
+    let str = ''; for (let i = 1; i <= TUNING.heatMax; i++) str += (i <= s.stars ? '★' : '☆');
+    c.font = 'bold 17px monospace'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    if (s.stars > 0) { c.shadowColor = '#ff2b2b'; c.shadowBlur = 10; }
+    c.fillStyle = s.stars > 0 ? '#ff3b3b' : 'rgba(255,255,255,0.3)';
+    c.fillText(str, W/2, 86);
+    c.shadowBlur = 0; c.textAlign = 'left'; c.textBaseline = 'alphabetic';
   }
 
   function drawMiniHUD(c, W, H, s, t) {
