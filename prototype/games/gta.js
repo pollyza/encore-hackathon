@@ -310,7 +310,8 @@
       s._heatFlashT = 0.5;
       pushShake(s, 14);
       const J = $J(); if (J) { J.hitstop(0.08); J.flash('#ff2b2b', 80); J.popup('★'.repeat(now) + ' WANTED', $W()/2, $H()*0.26, { color:'#ff3b3b', size: 22, dur: 0.9 }); }
-      try { if (window.startSiren) window.startSiren(); } catch (_) {}
+      // (engine siren muted — its tone read as "难听"; chase tension is carried by
+      //  the proximity heartbeat overlay instead. A cleaner siren can be synthesised later.)
     }
   }
   function updateHeat(s, dt) {
@@ -377,6 +378,10 @@
       const badge = $modeBadge();
       if (badge) badge.textContent = this.badge + ' · ' + themeKey.toUpperCase();
 
+      // Raise the NITRO button out of the very-bottom corner into the comfortable
+      // right-hand thumb zone (research: bottom-corner = system-gesture / hard reach).
+      try { const sk = document.getElementById('skills'); if (sk) sk.style.bottom = 'calc(132px + env(safe-area-inset-bottom, 0px))'; } catch (_) {}
+
       // Iso tile sizing only feeds ws (world step) for the vertical projection +
       // the vestigial bg bake (the vertical renderer draws its own road/scenery).
       const Iso = $Iso();
@@ -430,6 +435,7 @@
         camWY: player.wy,        // camera starts level with the player → player sits at the neutral row
         heat: 0, heatCalmT: 0, stars: 0, smashes: 0,   // wanted level / chaos
         _heatFlashT: 0, _evadeT: 0,
+        _everManual: false, _autoCd: 0, _kbLeftPrev: false, _kbRightPrev: false,
         player,
         shops: generateShops(shopCount, ws, roadCenterX, startWY),
         obstacles: [], trafficN: 0, trafficAcc: 0, trafficQuiet: 0, roadblockAcc: 0,
@@ -493,39 +499,33 @@
         else if (Math.abs(mvx) < 0.2) s._joyLatched = null;
         if (Math.abs(mvx) > 0.2) manualInput = true;
       }
-      p._kbCooldown = Math.max(0, p._kbCooldown - dt);
-      const K = $keys();
-      if (K) {
-        if (K['w'])      { throttle = TUNING.throttleUpMul; manualInput = true; }   // desktop forward
-        else if (K['s']) { throttle = TUNING.throttleDnMul; manualInput = true; }   // desktop back
-        if (p._kbCooldown <= 0) {
-          if (K['a'] || K['arrowleft'])  { p.playerLane = Math.max(-1, p.playerLane - 1); p._kbCooldown = TUNING.kbLaneCooldownS; manualInput = true; }
-          else if (K['d'] || K['arrowright']) { p.playerLane = Math.min(1, p.playerLane + 1); p._kbCooldown = TUNING.kbLaneCooldownS; manualInput = true; }
-        }
-      }
+      // NOTE: keyboard a/d/←/→ and ↑/↓ are ALREADY folded into getMoveVec() by
+      // the engine, so the joystick-x edge-latch above (s._joyLatched) handles
+      // web lane changes too — ONE lane per keypress, stopping at the MIDDLE
+      // lane. A separate keyboard handler here double-fired lane changes
+      // (−1 → +1 in one press), which read as "no middle state" on web.
       // ── passive autopilot (friendliness): only for a TRULY idle viewer. Was
       // 0.6s, which grabbed the wheel during an active player's pauses and made
       // the car "自己左右晃". Now 2.5s so real players never trigger it; a
       // hands-off viewer still gets auto-play within ~7s (gate covers it). ──
-      if (manualInput) p._lastInputT = s.elapsed;
-      if (!s._autoDisable && (s.elapsed - p._lastInputT) > 2.5) {
-        let lane = p.playerLane;
-        // 1) flee an imminent obstacle in our lane
-        let danger = null, dBest = Infinity;
-        for (const o of s.obstacles) {
-          if (o.hit) continue; const dy = o.wy - p.wy;
-          if (dy > 0 && dy < ws * 5 && o.lane === lane && dy < dBest) { dBest = dy; danger = o; }
-        }
+      if (manualInput) { p._lastInputT = s.elapsed; s._everManual = true; }
+      // Autopilot is ONLY for a silent V2G viewer who NEVER touches the screen.
+      // The instant a real player gives any input, it's off for the whole round
+      // (no more "自己左右晃"). When it does run, it moves AT MOST once per
+      // autoCd and just dodges or centers — no per-frame shop-seeking jitter.
+      if (s._autoCd > 0) s._autoCd -= dt;
+      if (!s._autoDisable && !s._everManual && (s.elapsed - p._lastInputT) > 2.0 && s._autoCd <= 0) {
+        let lane = p.playerLane, danger = false;
+        for (const o of s.obstacles) { if (!o.hit && o.lane === lane && (o.wy - p.wy) > 0 && (o.wy - p.wy) < ws * 5) danger = true; }
         if (danger) {
-          const safe = [-1, 0, 1].filter(l => l !== lane && !s.obstacles.some(o => !o.hit && o.lane === l && Math.abs(o.wy - p.wy) < ws * 3));
+          const safe = [-1, 0, 1].filter(l => l !== lane && !s.obstacles.some(o => !o.hit && o.lane === l && Math.abs(o.wy - p.wy) < ws * 3.5));
           if (safe.length) lane = safe.reduce((a, b) => Math.abs(b - lane) < Math.abs(a - lane) ? b : a, safe[0]);
         } else {
-          // 2) line up the next unrobbed shop
-          let shop = null, sBest = Infinity;
-          for (const sh of s.shops) { if (sh.robbed) continue; const dy = sh.wy - p.wy; if (dy < -ws) continue; if (dy < sBest) { sBest = dy; shop = sh; } }
-          if (shop && sBest < ws * 3.5) lane = shop.side; else lane = 0;
+          let shop = null, sB = Infinity;
+          for (const sh of s.shops) { if (sh.robbed) continue; const dy = sh.wy - p.wy; if (dy < -ws) continue; if (dy < sB) { sB = dy; shop = sh; } }
+          lane = (shop && sB < ws * 2.5) ? shop.side : 0;
         }
-        p.playerLane = lane;
+        if (lane !== p.playerLane) { p.playerLane = lane; s._autoCd = 0.9; }   // commit; cooldown kills rapid sway
       }
 
       // ── lateral: lane snap + knockback. A cop slam shoves you sideways and
@@ -642,7 +642,6 @@
         s.cops.push(spawnCop(s)); s.copCount += 1; s.copSpawnAcc = 0;
         if (window.showBanner) window.showBanner(s.cops.length === 1 ? '🚨 POLICE!' : '🚨 +1 COP', '#ff3344', 1100);
         pushShake(s, 12);
-        try { if (window.startSiren) window.startSiren(); } catch (_) {}
       }
 
       // ── cop AI: chase, RAM at high heat, shoot, and SLAM (felt, not flat) ──
@@ -718,13 +717,12 @@
         return this._win(s, `GOT AWAY · ${s.robbedCount}/${s.shops.length} · $${s.cash}`);
       }
 
-      // ── HUD ──
+      // ── HUD ── hide BOTH engine pills: the ⚡×N pill overlapped the canvas
+      // COPS box top-right, so nitro charges now render on the canvas (top-left).
       const scoreEl = $scoreEl();
       if (scoreEl) scoreEl.textContent = `ROBBED ${s.robbedCount}/${s.shops.length} · $${s.cash}`;
-      const pillKit = document.getElementById('pill-kit');
-      if (pillKit) { pillKit.textContent = `⚡ × ${p.boostsLeft}`; pillKit.classList.remove('hidden'); }
-      const pillWpn = document.getElementById('pill-weapon');
-      if (pillWpn) pillWpn.classList.add('hidden');
+      const pillKit = document.getElementById('pill-kit'); if (pillKit) pillKit.classList.add('hidden');
+      const pillWpn = document.getElementById('pill-weapon'); if (pillWpn) pillWpn.classList.add('hidden');
     },
 
     _win(s, sub) {
@@ -947,6 +945,14 @@
     c.fillStyle = '#fff'; c.font = 'bold 12px monospace'; c.textAlign = 'left'; c.textBaseline = 'middle';
     c.fillText(`$${s.cash}`, pad + 6, top + boxH/2);
     c.fillStyle = t.shopGlow; c.fillText(`${s.robbedCount}/${s.shops.length}`, pad + 56, top + boxH/2);
+    // nitro charges (moved off the overlapping DOM pill → canvas, stacked under $)
+    const ny = top + boxH + 5;
+    c.fillStyle = 'rgba(10,13,20,0.72)'; c.fillRect(pad, ny, boxW, 22);
+    c.strokeStyle = '#00f0ff'; c.lineWidth = 1; c.strokeRect(pad, ny, boxW, 22);
+    c.fillStyle = s.player.boostsLeft > 0 ? '#37e0ff' : 'rgba(120,120,130,0.7)';
+    c.font = 'bold 12px monospace'; c.textBaseline = 'middle';
+    c.fillText(`⚡ × ${s.player.boostsLeft}`, pad + 6, ny + 11);
+    c.textBaseline = 'alphabetic';
     const cBoxW = 64;
     c.fillStyle = 'rgba(10,13,20,0.72)'; c.fillRect(W - cBoxW - pad, top, cBoxW, boxH);
     c.strokeStyle = '#ff3344'; c.strokeRect(W - cBoxW - pad, top, cBoxW, boxH);
@@ -970,7 +976,16 @@
     if (s.cops.length > 0) {
       let closest = Infinity; for (const cop of s.cops) { const d = p.wy - cop.wy; if (d > 0 && d < closest) closest = d; }
       const warn = 6 * $Iso().WS;
-      if (closest < warn) { const it = 1 - closest/warn; const v = c.createRadialGradient(W/2,H/2,W*0.3,W/2,H/2,W*0.7); v.addColorStop(0,'rgba(255,50,50,0)'); v.addColorStop(1,`rgba(255,50,50,${0.4*it})`); c.fillStyle = v; c.fillRect(0,0,W,H); }
+      if (closest < warn) {
+        // chase HEARTBEAT — the closer the cop, the harder & faster the red pulse throbs
+        const prox = 1 - closest / warn;                       // 0..1
+        const beat = 0.55 + 0.45 * Math.sin(s.elapsed * (6 + prox * 10));
+        const it = prox * beat;
+        const v = c.createRadialGradient(W/2, H/2, W*0.28, W/2, H/2, W*0.72);
+        v.addColorStop(0, 'rgba(255,40,40,0)'); v.addColorStop(1, `rgba(255,30,30,${0.55*it})`);
+        c.fillStyle = v; c.fillRect(0, 0, W, H);
+        if (prox > 0.6) { c.fillStyle = `rgba(255,60,60,${0.10*beat})`; c.fillRect(0, 0, W, H); }   // full-screen danger throb when point-blank
+      }
     }
   }
 
