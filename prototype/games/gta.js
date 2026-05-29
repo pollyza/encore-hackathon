@@ -115,6 +115,11 @@
     robberPopS:       0.9,   // gangster lean-out (head+gun+flash) visible this long after grab
     shopCountDefault: 4,
 
+    // ── RAMPAGE combo (the arcade "keep the chain alive" addiction hook) ──
+    comboWindowS:     4.0,   // chain expires if no rob/smash/near-miss within this
+    comboCashStep:    0.5,   // each chain link adds this to the cash multiplier
+    comboCashMax:     5.0,   // multiplier cap (×5 at a deep rampage)
+
     // ── feedback ──
     robHitstopS:      0.12,
     robTrauma:        18,    // local shake magnitude on grab
@@ -333,6 +338,22 @@
   // active-cop budget grows with the wanted level (★1≈1-2 cars, ★5≈5)
   function copBudget(s) { return Math.max(1, Math.min(TUNING.heatMax, Math.ceil(s.heat * TUNING.copsPerStar))); }
 
+  // RAMPAGE combo: every rob / smash / near-miss links the chain and refreshes
+  // its window; the chain drives a cash multiplier and a big on-screen RAMPAGE
+  // call. Getting hit (cop/traffic) breaks it — that's the risk in the reward.
+  function comboMul(s) { return Math.min(TUNING.comboCashMax, 1 + (s.robCombo || 0) * TUNING.comboCashStep); }
+  function bumpCombo(s) {
+    s.robCombo = (s.robCombo || 0) + 1;
+    s.comboT = TUNING.comboWindowS;
+    s.comboBest = Math.max(s.comboBest || 0, s.robCombo);
+    const c = s.robCombo;
+    if (c === 3 || c === 5 || c === 8 || c === 12) {           // milestone fanfare
+      s._comboFlashT = 0.6;
+      const J = $J(); if (J) { J.hitstop(0.05); J.flash(c >= 8 ? '#ff3bd6' : '#ffd24a', 60);
+        J.popup((c >= 12 ? '🔥 UNREAL' : c >= 8 ? '🔥 INSANE' : c >= 5 ? '🔥 RAMPAGE' : '连击') + ' ×' + c, $W()/2, $H()*0.40, { color: c >= 8 ? '#ff3bd6' : '#ffd24a', size: 26, dur: 0.9 }); }
+    }
+  }
+
   // ─── module ─────────────────────────────────────────────────
   window.Games = window.Games || {};
   window.Games.gta = {
@@ -434,7 +455,7 @@
         elapsed: 0,
         camWY: player.wy,        // camera starts level with the player → player sits at the neutral row
         heat: 0, heatCalmT: 0, stars: 0, smashes: 0,   // wanted level / chaos
-        _heatFlashT: 0, _evadeT: 0,
+        _heatFlashT: 0, _evadeT: 0, robCombo: 0, comboT: 0, comboBest: 0, _comboFlashT: 0,
         _everManual: false, _autoCd: 0, _kbLeftPrev: false, _kbRightPrev: false,
         player,
         shops: generateShops(shopCount, ws, roadCenterX, startWY),
@@ -480,6 +501,8 @@
       if (s.trafficQuiet > 0) s.trafficQuiet = Math.max(0, s.trafficQuiet - dt);
       if (s._heatFlashT > 0) s._heatFlashT = Math.max(0, s._heatFlashT - dt);
       if (s._evadeT > 0) s._evadeT = Math.max(0, s._evadeT - dt);
+      if (s._comboFlashT > 0) s._comboFlashT = Math.max(0, s._comboFlashT - dt);
+      if (s.comboT > 0) { s.comboT -= dt; if (s.comboT <= 0) s.robCombo = 0; }   // RAMPAGE chain expires if you stop chaining
       updateHeat(s, dt);                                   // wanted-level decay → evade payoff
       Object.values(s.skills).forEach(sk => { if (sk._cd > 0) sk._cd = Math.max(0, sk._cd - dt); });
 
@@ -575,18 +598,19 @@
           p._robbing = true; p._robSide = shop.side;
           shop.progress = Math.min(1, shop.progress + dt / TUNING.robTimeS);
           if (shop.progress >= 1) {
-            shop.robbed = true; s.robbedCount += 1; s.kills = s.robbedCount; s.cash += shop.money;
-            s.robCombo = (s.robCombo || 0) + 1; p._robberPop = TUNING.robberPopS;
+            shop.robbed = true; s.robbedCount += 1; s.kills = s.robbedCount;
+            bumpCombo(s); p._robberPop = TUNING.robberPopS;                 // chain the rampage
+            const mul = comboMul(s), gain = Math.round(shop.money * mul); s.cash += gain;   // chain → bigger payout
             addHeat(s, TUNING.heatPerRob);                 // 干坏事 → wanted level climbs
             pushShake(s, TUNING.robTrauma);
             const px = P.sx(shop.wx), py = P.sy(shop.wy);
             for (let i = 0; i < 5; i++) pushSpark(s, px + (Math.random()-0.5)*24, py + (Math.random()-0.5)*24, '#ffd24a', 26);
-            s.floaters.push({ wx: shop.wx, wy: shop.wy, text: '💰 +$' + shop.money, color: '#ffd24a', life: 1.3 });
+            s.floaters.push({ wx: shop.wx, wy: shop.wy, text: '💰 +$' + gain, color: '#ffd24a', life: 1.3 });
             const J = $J();
             if (J) { J.hitstop(TUNING.bigSlowmoS); J.flash('#fff3a0', 80); J.burst(px, py, 'cash', '#ffd24a'); if (J.vignettePulse) J.vignettePulse(0.4);
-                     J.popup('抢到 $' + shop.money + (s.robCombo >= 2 ? '  连抢×' + s.robCombo : ''), $W()/2, $H()*0.34, { color:'#ffd24a', size: 22 + Math.min(14, s.robCombo*3), dur: 1.0 }); }
+                     J.popup('抢到 $' + gain + (s.robCombo >= 2 ? '  ×' + mul.toFixed(1) : ''), $W()/2, $H()*0.34, { color:'#ffd24a', size: 22 + Math.min(14, s.robCombo*3), dur: 1.0 }); }
             const SFX = $SFX(); try { if (SFX.cash) SFX.cash(); } catch (_) {}
-            if (window.showBanner) window.showBanner(`💰 抢到 $${shop.money}!`, '#ffd24a', 900);
+            if (window.showBanner) window.showBanner(`💰 +$${gain}` + (s.robCombo >= 2 ? ` 连击×${mul.toFixed(1)}` : ''), '#ffd24a', 900);
           }
         } else if (shop.progress > 0) shop.progress = Math.max(0, shop.progress - dt * 0.6);
       }
@@ -614,7 +638,7 @@
             pushShake(s, 16); addHeat(s, TUNING.heatPerSmash);
             const J = $J(); if (J) { J.hitstop(0.06); J.flash('#ffffff', 50); J.burst(px, py, 'debris', '#cfd6e0'); }
             for (let i = 0; i < 8; i++) pushSpark(s, px, py, '#ffd24a', 16);
-            s.robCombo = (s.robCombo || 0) + 1;
+            bumpCombo(s);
             if (J) J.popup('💥 SMASH' + (s.robCombo >= 2 ? ' ×' + s.robCombo : ''), px, py - 20, { color: '#ffd24a', size: 18 });
             const SFX = $SFX(); try { if (SFX.hit) SFX.hit(); } catch (_) {}
           } else {                                               // EAT IT — damage + knockback + slow-mo
@@ -691,8 +715,8 @@
       }
       for (const b of s.copBullets) {
         if (b.life <= 0 && !b._scored && b._minD < p.r + TUNING.nearMissPx[1] && b._minD > p.r + TUNING.nearMissPx[0]) {
-          b._scored = true; s.cash += TUNING.nearMissBonus;
-          const J = $J(); if (J) { J.hitstop(0.07); J.popup('好险! +' + TUNING.nearMissBonus, P.sx(p.wx), P.sy(p.wy) - 30, { color:'#5af5e0', size: 16 }); }
+          b._scored = true; bumpCombo(s); const nm = Math.round(TUNING.nearMissBonus * comboMul(s)); s.cash += nm;
+          const J = $J(); if (J) { J.hitstop(0.07); J.popup('好险! +' + nm, P.sx(p.wx), P.sy(p.wy) - 30, { color:'#5af5e0', size: 16 }); }
         }
       }
       s.copBullets = s.copBullets.filter(b => b.life > 0);
@@ -849,6 +873,7 @@
       drawNoirOverlay(ctx, W, H, s);        // vignette + wanted-level red tint (noir, not candy)
       drawMiniHUD(ctx, W, H, s, t);
       drawWantedHUD(ctx, W, H, s);          // ★ wanted level
+      drawRampageHUD(ctx, W, H, s);         // 连击 ×N rampage chain + cash multiplier
       drawLaneHUD(ctx, W, H, s, t);
       const leadMaxWU = (TUNING.camNeutralFrac - TUNING.camTopFrac) * 360 / 0.72;   // H-independent
       const liftN = Math.min(1, Math.max(0, (s._lead || 0) / leadMaxWU));            // how far forward the player is driving
@@ -936,6 +961,22 @@
     c.fillStyle = s.stars > 0 ? '#ff3b3b' : 'rgba(255,255,255,0.3)';
     c.fillText(str, W/2, 86);
     c.shadowBlur = 0; c.textAlign = 'left'; c.textBaseline = 'alphabetic';
+  }
+  // RAMPAGE chain: 连击 ×N + live cash multiplier + a draining "keep it alive" bar.
+  function drawRampageHUD(c, W, H, s) {
+    const n = s.robCombo || 0; if (n < 2) return;
+    const mul = Math.min(TUNING.comboCashMax, 1 + n * TUNING.comboCashStep);
+    const pop = s._comboFlashT > 0 ? 1.18 : 1;
+    const col = n >= 8 ? '#ff3bd6' : n >= 5 ? '#ff8a3b' : '#ffd24a';
+    c.save(); c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.font = `bold ${Math.round((15 + Math.min(11, n)) * pop)}px monospace`;
+    c.shadowColor = col; c.shadowBlur = 8; c.fillStyle = col;
+    c.fillText(`连击 ×${n}   现金×${mul.toFixed(1)}`, W/2, 112);
+    c.shadowBlur = 0;
+    const frac = Math.max(0, Math.min(1, s.comboT / TUNING.comboWindowS)), bw = 124, bx = W/2 - bw/2, by = 124;
+    c.fillStyle = 'rgba(0,0,0,0.5)'; c.fillRect(bx, by, bw, 4);
+    c.fillStyle = col; c.fillRect(bx, by, bw * frac, 4);
+    c.restore(); c.textAlign = 'left'; c.textBaseline = 'alphabetic';
   }
 
   function drawMiniHUD(c, W, H, s, t) {
