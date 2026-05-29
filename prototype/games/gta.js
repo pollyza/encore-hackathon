@@ -947,7 +947,7 @@
     g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.5)');
     c.fillStyle = g; c.fillRect(0, 0, W, H);
     if (s.heat > 0.2) {
-      const inten = Math.min(0.5, 0.08 + 0.07 * s.heat) * (0.7 + 0.3 * Math.sin(s.elapsed * 5));
+      const inten = Math.min(0.30, 0.05 + 0.045 * s.heat) * (0.7 + 0.3 * Math.sin(s.elapsed * 5));
       const r = c.createRadialGradient(W/2, H*0.5, Math.min(W,H)*0.4, W/2, H*0.5, Math.max(W,H)*0.74);
       r.addColorStop(0, 'rgba(200,20,20,0)'); r.addColorStop(1, `rgba(200,20,20,${inten})`);
       c.fillStyle = r; c.fillRect(0, 0, W, H);
@@ -1022,10 +1022,11 @@
         const prox = 1 - closest / warn;                       // 0..1
         const beat = 0.55 + 0.45 * Math.sin(s.elapsed * (6 + prox * 10));
         const it = prox * beat;
-        const v = c.createRadialGradient(W/2, H/2, W*0.28, W/2, H/2, W*0.72);
-        v.addColorStop(0, 'rgba(255,40,40,0)'); v.addColorStop(1, `rgba(255,30,30,${0.55*it})`);
+        // edge-only pulse (radial, transparent center) so the road/car stay
+        // readable — never a full-screen red wash, even at ★5 + point-blank.
+        const v = c.createRadialGradient(W/2, H/2, W*0.42, W/2, H/2, W*0.74);
+        v.addColorStop(0, 'rgba(255,40,40,0)'); v.addColorStop(1, `rgba(255,30,30,${0.34*it})`);
         c.fillStyle = v; c.fillRect(0, 0, W, H);
-        if (prox > 0.6) { c.fillStyle = `rgba(255,60,60,${0.10*beat})`; c.fillRect(0, 0, W, H); }   // full-screen danger throb when point-blank
       }
     }
   }
