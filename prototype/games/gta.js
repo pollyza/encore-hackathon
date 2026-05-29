@@ -34,12 +34,18 @@
   // wu = world unit. Screen scroll px/s ≈ wu/s × PXF (PXF≈1.864 on 430×932).
   const TUNING = {
     // ── speed ──
-    baseSpeedWU:      175,   // cruise → ~326px/s at t=0 (old 100 → 186); headroom so weather never feels "grandpa"
+    baseSpeedWU:      195,   // cruise → ~363px/s at t=0 (old 100 → 186); fast enough that 爽感 doesn't read "grandpa"
     rampMul:          1.6,   // end-of-round speed multiplier (linear ramp)
     nitroMul:         1.8,   // nitro forward multiplier (stacks on throttle)
     throttleUpMul:    1.9,   // joystick full-up = accelerate
     throttleDnMul:    0.5,   // joystick full-down = brake (to dodge)
     robSlowMul:       0.4,   // forward slowdown while grabbing cash
+
+    // ── forward drive (joystick Y MOVES the car up/down the screen — the
+    //    real "前后" agency players expect, not just auto-scroll speed) ──
+    liftUpFrac:       0.40,  // joystick full-up lifts the car up to this fraction of H (toward top = drive forward)
+    liftDownFrac:     0.10,  // joystick full-down drops it toward the bottom (ease back)
+    liftLerpPxS:      1300,  // px/s toward target lift (snappy)
 
     // ── lanes ──
     laneCount:        3,
@@ -82,7 +88,7 @@
     // ── robbery ──
     robWindowTiles:   2.0,   // ± shop forward window (× ws)
     robTimeS:         0.3,   // time to complete one grab (snappy)
-    robberPopS:       0.5,   // robber head/arm visible this long after grab
+    robberPopS:       0.9,   // gangster lean-out (head+gun+flash) visible this long after grab
     shopCountDefault: 4,
 
     // ── feedback ──
@@ -153,11 +159,12 @@
     const Iso = $Iso(), W = $W(), H = $H(), p = s.player, ws = Iso.WS;
     const PXF = (H * 0.72) / 360;        // forward px per wu
     const PXW = (W * 0.80) / (6 * ws);   // lateral px per wu
-    const PLAYER_SY = H * 0.80;
+    const PLAYER_SY = H * 0.80;                       // car's neutral (no-input) screen row
+    const anchorSY = PLAYER_SY - (p.screenLift || 0); // shifts toward the top as the player drives forward
     return {
-      ws, PXF, PXW, PLAYER_SY,
+      ws, PXF, PXW, PLAYER_SY, anchorSY,
       sx: (wx) => W / 2 + (wx - s.roadCenterX) * PXW,
-      sy: (wy) => PLAYER_SY - (wy - p.wy) * PXF,
+      sy: (wy) => anchorSY - (wy - p.wy) * PXF,
     };
   }
 
@@ -346,7 +353,7 @@
         wx: roadCenterX, wy: 2 * ws, targetX: roadCenterX, playerLane: 0,
         speed: TUNING.baseSpeedWU, hp: TUNING.hp, maxHp: TUNING.hp,
         r: ws * 0.30, boostT: 0, boostsLeft: TUNING.nitroCount, invulnT: 0,
-        _kbCooldown: 0, _lunge: 0, _autoIdle: 0, _lastInputT: -99,
+        _kbCooldown: 0, _lunge: 0, _autoIdle: 0, _lastInputT: -99, screenLift: 0,
         _robbing: false, _robSide: 0, _robberPop: 0,
       };
 
@@ -407,13 +414,17 @@
       if (s.trafficQuiet > 0) s.trafficQuiet = Math.max(0, s.trafficQuiet - dt);
       Object.values(s.skills).forEach(sk => { if (sk._cd > 0) sk._cd = Math.max(0, sk._cd - dt); });
 
-      // ── input: joystick (Y throttle, X steer) + swipe + keyboard ──
+      // ── input: joystick Y = throttle + drive the car FORWARD/BACK on screen,
+      //    X = steer lanes. Plus swipe + keyboard. The screen-lift is what makes
+      //    "上推 = 车往前开" actually visible (was only auto-scroll speed before). ──
       let manualInput = false;
       let throttle = 1.0;
+      let targetLift = 0;                       // px the car rises up the screen (toward top = forward)
+      const Hpx = $H();
       if (typeof window.getMoveVec === 'function') {
         const mv = window.getMoveVec(), mvy = mv.y || 0;
-        throttle = mvy < 0 ? (1 + (-mvy) * (TUNING.throttleUpMul - 1))
-                           : (1 - mvy * (1 - TUNING.throttleDnMul));
+        throttle    = mvy < 0 ? (1 + (-mvy) * (TUNING.throttleUpMul - 1)) : (1 - mvy * (1 - TUNING.throttleDnMul));
+        targetLift  = mvy < 0 ? (-mvy) * TUNING.liftUpFrac * Hpx : -(mvy) * TUNING.liftDownFrac * Hpx;
         if (Math.abs(mvy) > 0.15) manualInput = true;
         if (mv.x < -0.5 && s._joyLatched !== 'left')  { p.playerLane = Math.max(-1, p.playerLane - 1); s._joyLatched = 'left';  manualInput = true; }
         else if (mv.x > 0.5 && s._joyLatched !== 'right') { p.playerLane = Math.min(1, p.playerLane + 1); s._joyLatched = 'right'; manualInput = true; }
@@ -422,10 +433,16 @@
       }
       p._kbCooldown = Math.max(0, p._kbCooldown - dt);
       const K = $keys();
-      if (K && p._kbCooldown <= 0) {
-        if (K['a'] || K['arrowleft'])  { p.playerLane = Math.max(-1, p.playerLane - 1); p._kbCooldown = TUNING.kbLaneCooldownS; manualInput = true; }
-        else if (K['d'] || K['arrowright']) { p.playerLane = Math.min(1, p.playerLane + 1); p._kbCooldown = TUNING.kbLaneCooldownS; manualInput = true; }
+      if (K) {
+        if (K['w'])      { throttle = TUNING.throttleUpMul; targetLift = TUNING.liftUpFrac * Hpx;   manualInput = true; }   // desktop forward
+        else if (K['s']) { throttle = TUNING.throttleDnMul; targetLift = -TUNING.liftDownFrac * Hpx; manualInput = true; }  // desktop back
+        if (p._kbCooldown <= 0) {
+          if (K['a'] || K['arrowleft'])  { p.playerLane = Math.max(-1, p.playerLane - 1); p._kbCooldown = TUNING.kbLaneCooldownS; manualInput = true; }
+          else if (K['d'] || K['arrowright']) { p.playerLane = Math.min(1, p.playerLane + 1); p._kbCooldown = TUNING.kbLaneCooldownS; manualInput = true; }
+        }
       }
+      // snap the car's screen lift toward target (this is the visible 前后移动)
+      { const dL = targetLift - p.screenLift; p.screenLift += Math.sign(dL) * Math.min(Math.abs(dL), TUNING.liftLerpPxS * dt); }
 
       // ── passive autopilot (friendliness): dodge first, then steer to rob.
       // Engages after 0.6s with no input of ANY kind (joystick/keys via
@@ -703,11 +720,11 @@
       // player car (lunge + nitro flame + robber pop)
       {
         const lift = (p._lunge || 0) + (p.boostT > 0 ? TUNING.boostHoldLiftPx : 0);
-        const sx = g2sx(p.wx), sy = P.PLAYER_SY - lift;
+        const sx = g2sx(p.wx), sy = P.anchorSY - lift;        // anchorSY already includes the forward screen-drive
         if (p.boostT > 0) { ctx.fillStyle = '#37e0ff'; for (let i=0;i<3;i++){ const fw=8-i*2; ctx.globalAlpha=0.8-i*0.2; ctx.fillRect(sx-fw/2, sy+18+i*8, fw, 10); } ctx.globalAlpha=1; }
         const inv = (p.invulnT||0) > 0 && Math.floor(s.elapsed*12)%2===0;
         drawCarTopDown(ctx, sx, sy, laneW*0.66, inv ? '#ffffff' : t.car, t.carGlass);
-        if (p._robberPop > 0) drawRobber(ctx, sx, sy, laneW, p._robSide, p._robberPop);
+        drawGangster(ctx, sx, sy, laneW, p._robSide, p._robberPop, s.elapsed);   // always-on driver head; leans out w/ gun on rob
       }
 
       // sparks + floaters
@@ -719,7 +736,9 @@
 
       drawMiniHUD(ctx, W, H, s, t);
       drawLaneHUD(ctx, W, H, s, t);
-      if (s._speedLinesT > 0 || p.boostT > 0) drawSpeedLines(ctx, W, H, Math.max(Math.min(1, s._speedLinesT/0.4), p.boostT>0?0.7:0));
+      const liftN = Math.min(1, (p.screenLift||0) / (TUNING.liftUpFrac * H));   // how far the player is driving forward
+      const slInt = Math.max(Math.min(1, s._speedLinesT/0.4), p.boostT>0?0.75:0, liftN*0.7);
+      if (slInt > 0.05) drawSpeedLines(ctx, W, H, slInt);
     },
 
     refit() { const s = $state(); if (!s || !s._fit) return; s._fit(); s.bg = $bakeGround(s.tiles, s.blocks, s.mapW, s.mapH); },
@@ -748,19 +767,38 @@
     }
   }
 
-  // Robber leaning out toward the shop to grab cash.
-  function drawRobber(c, carSx, carSy, laneW, side, popT) {
-    const reach = Math.min(1, (0.5 - popT) * 2 + 0.5);   // arm extends then holds
-    const dir = side >= 0 ? 1 : -1;
-    const hx = carSx + dir * laneW * 0.26, hy = carSy - 4;
-    // arm
-    c.strokeStyle = '#2a2a2a'; c.lineWidth = 4;
-    c.beginPath(); c.moveTo(carSx, carSy - 2); c.lineTo(hx + dir * 10 * reach, hy); c.stroke();
-    // hand grabbing cash
-    c.fillStyle = '#ffd24a'; c.fillRect(hx + dir*10*reach - 3, hy - 3, 6, 6);
-    // head (ski mask + eyes)
-    c.fillStyle = '#1b1b1f'; c.beginPath(); c.arc(carSx + dir*4, carSy - 10, 6, 0, Math.PI*2); c.fill();
-    c.fillStyle = '#fff'; c.fillRect(carSx + dir*4 - 3, carSy - 12, 2, 2); c.fillRect(carSx + dir*4 + 1, carSy - 12, 2, 2);
+  // The player IS a gangster: a head is ALWAYS visible at the wheel, and on a
+  // heist (popT>0) he leans OUT toward the shop with a pistol + muzzle flash +
+  // cash — the "人头露出来 / 人跟枪合一" drive-by the user asked for.
+  function drawGangster(c, carSx, carSy, laneW, side, popT, elapsed) {
+    const dir = (side >= 0) ? 1 : -1;
+    const robbing = popT > 0;
+    const lean = robbing ? Math.min(1, popT * 1.6) : 0;          // how far he leans out
+    const headR = robbing ? 8 : 5.5;
+    const hx = carSx + dir * laneW * 0.30 * lean;                // head slides toward the shop side
+    const hy = carSy - 6 - 4 * lean;
+    if (robbing) {
+      // torso leaning out of the window
+      c.fillStyle = '#23252e';
+      c.beginPath(); c.moveTo(carSx, carSy + 2); c.lineTo(hx, hy + 2); c.lineTo(hx + dir*7, hy + 12); c.lineTo(carSx + dir*4, carSy + 8); c.closePath(); c.fill();
+      // outstretched arm + pistol aimed at the shop
+      const gx = hx + dir * 16, gy = hy + 1;
+      c.strokeStyle = '#2a2a2a'; c.lineWidth = 4; c.lineCap = 'round';
+      c.beginPath(); c.moveTo(hx, hy + 2); c.lineTo(gx, gy); c.stroke(); c.lineCap = 'butt';
+      c.fillStyle = '#15161b'; c.fillRect(Math.min(gx, gx+dir*10), gy - 3, 10, 5); c.fillRect(gx + dir*2, gy + 1, 3, 5);   // pistol slide + grip
+      // muzzle flash (flickers during the first chunk of the pop)
+      if (popT > 0.55 && (Math.floor(elapsed * 30) % 2 === 0)) {
+        const mx = gx + dir * 11;
+        c.fillStyle = '#fff3a0'; c.beginPath(); c.moveTo(mx, gy); c.lineTo(mx + dir*10, gy - 5); c.lineTo(mx + dir*6, gy); c.lineTo(mx + dir*10, gy + 5); c.closePath(); c.fill();
+        c.fillStyle = '#ffd24a'; c.beginPath(); c.arc(mx, gy, 3, 0, Math.PI*2); c.fill();
+      }
+      // cash bills bursting from the shop side
+      for (let i=0;i<3;i++){ const bx=gx+dir*(8+i*5), by=gy-6-i*4+Math.sin(elapsed*12+i)*2; c.fillStyle='#7ad17a'; c.fillRect(bx-3,by-2,6,4); c.fillStyle='#2e7d32'; c.fillRect(bx-1,by-1,2,2); }
+    }
+    // head (skin + dark cap + mask slit), drawn last so it sits clearly on top
+    c.fillStyle = '#caa07a'; c.beginPath(); c.arc(hx, hy, headR, 0, Math.PI*2); c.fill();
+    c.fillStyle = '#16171c'; c.beginPath(); c.arc(hx, hy - headR*0.35, headR, Math.PI, Math.PI*2); c.fill();
+    c.fillStyle = '#0c0d10'; c.fillRect(hx - headR*0.6, hy - 1, headR*1.2, 2);
   }
 
   function drawMiniHUD(c, W, H, s, t) {
