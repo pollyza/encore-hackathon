@@ -87,6 +87,13 @@
     copBulletDmg:     12,
     copInvulnS:       1.2,
 
+    // ── combat: shoot back & WASTE cop cars (干掉警车 = the GTA power high) ──
+    copHp:            3,     // bullets to destroy a cruiser
+    playerFireRateS:  0.28,  // auto drive-by fire cadence when a cop is behind
+    playerBulletSpeedWU: 560,
+    copKillReward:    260,   // $ per cruiser wasted (× the rampage multiplier)
+    copFireBackRangeWU: 380, // auto-fire at cops within this far behind
+
     // ── wanted / heat (the GTA risk-reward chase loop) ──
     heatMax:          5,     // ★ cap
     heatPerRob:       1.5,   // stars added per heist
@@ -161,25 +168,30 @@
   const shade = (b, t) => mix(b, '#000000', t);
   const tint  = (b, t) => mix(b, '#ffffff', t);
 
-  // ─── theme palette (from engine pickTheme('gta')) ───────────
+  // ─── theme palette — LOS SANTOS SUNSET BOULEVARD (GTA-5 LA look). Fixed warm
+  //     palette regardless of force_theme: the user couldn't read the old themes
+  //     and wanted instant "this is GTA/LA" recognition. Palms + stucco + sunset. ──
   function expandTheme(themeKey, base) {
     return {
       key:       themeKey,
-      sky:       shade(base.sky, 0.25),               // deeper night sky (noir, not candy)
-      sky2:      shade(base.sky2, 0.15),
-      road:      shade(base.ground, 0.34),            // dark asphalt
-      roadEdge:  tint(base.accent, 0.05),
-      offRoad:   shade(base.ground, 0.62),            // deep shadow off-road
-      building:  shade(base.sky2, 0.30),              // grittier dark blocks
-      buildingLit: mix(base.accent, base.sky2, 0.55), // a few lit faces
-      shopGlow:  base.accent,
-      car:       '#c0392b',                           // deeper muscle-car red
-      carGlass:  '#7fd0ff',
-      traffic:   ['#33425e', '#7a6320', '#4a3a64', '#2a5a44', '#6e3848'], // muted civilian cars
-      cop:       '#0c0f18',
+      sky:       '#ff8a4c',     // warm sunset top
+      sky2:      '#ffd79a',     // hazy gold horizon
+      sun:       '#fff0c0',
+      road:      '#37332e',     // warm asphalt
+      roadEdge:  '#f0c84a',
+      offRoad:   '#a98a5e',     // dusty tan LA ground
+      building:  '#caa46a',     // stucco beige
+      buildingLit: '#e6c98c',
+      palmTrunk: '#7a5a34',
+      palmLeaf:  '#2e7d3a',
+      shopGlow:  '#ff3b6b',
+      car:       '#c0392b',     // muscle-car red
+      carGlass:  '#bfe6ff',
+      traffic:   ['#3f6fd0', '#d8a32e', '#e8e8e8', '#2fa86a', '#b03030'],   // believable LA street cars
+      cop:       '#12161c',
       copGlass:  '#2b7bff',
-      neonA:     base.accent,
-      neonB:     tint(base.accent, 0.40),
+      neonA:     '#ff3b6b',
+      neonB:     '#ffd24a',
     };
   }
 
@@ -251,7 +263,7 @@
       wx: laneWX(s, lane), wy: s.player.wy - (TUNING.copSpawnBehindWU + Math.random() * 60),
       lane, r: $Iso().WS * 0.42,
       speed: TUNING.copSpeedMinWU + Math.random() * (TUNING.copSpeedMaxWU - TUNING.copSpeedMinWU),
-      sirenPhase: Math.random() * Math.PI * 2, fireCd: 1.2,
+      sirenPhase: Math.random() * Math.PI * 2, fireCd: 1.2, hp: TUNING.copHp,
     };
   }
 
@@ -485,7 +497,7 @@
         player,
         shops: generateShops(shopCount, ws, roadCenterX, startWY),
         obstacles: [], trafficN: 0, trafficAcc: 0, trafficQuiet: 0, roadblockAcc: 0,
-        cops: [], copBullets: [], copSpawnAcc: 0, copCount: 0, copsMaxActive: TUNING.copMaxActive,
+        cops: [], copBullets: [], playerBullets: [], copSpawnAcc: 0, copCount: 0, copsMaxActive: TUNING.copMaxActive,
         floaters: [], sparks: [], _engineOn: false, _speedLinesT: 0,
         shakeT: 0, shakeMag: 0, robCombo: 0,
         kills: 0, cash: 0, robbedCount: 0, bots: [],
@@ -552,29 +564,10 @@
       // web lane changes too — ONE lane per keypress, stopping at the MIDDLE
       // lane. A separate keyboard handler here double-fired lane changes
       // (−1 → +1 in one press), which read as "no middle state" on web.
-      // ── passive autopilot (friendliness): only for a TRULY idle viewer. Was
-      // 0.6s, which grabbed the wheel during an active player's pauses and made
-      // the car "自己左右晃". Now 2.5s so real players never trigger it; a
-      // hands-off viewer still gets auto-play within ~7s (gate covers it). ──
+      // ── NO autopilot. The user repeatedly rejected the car steering itself.
+      // With no input the car simply drives straight in its current lane — what
+      // you do is what happens, nothing auto-dodges or auto-robs. ──
       if (manualInput) { p._lastInputT = s.elapsed; s._everManual = true; }
-      // Autopilot is ONLY for a silent V2G viewer who NEVER touches the screen.
-      // The instant a real player gives any input, it's off for the whole round
-      // (no more "自己左右晃"). When it does run, it moves AT MOST once per
-      // autoCd and just dodges or centers — no per-frame shop-seeking jitter.
-      if (s._autoCd > 0) s._autoCd -= dt;
-      if (!s._autoDisable && !s._everManual && (s.elapsed - p._lastInputT) > 2.0 && s._autoCd <= 0) {
-        let lane = p.playerLane, danger = false;
-        for (const o of s.obstacles) { if (!o.hit && o.lane === lane && (o.wy - p.wy) > 0 && (o.wy - p.wy) < ws * 5) danger = true; }
-        if (danger) {
-          const safe = [-1, 0, 1].filter(l => l !== lane && !s.obstacles.some(o => !o.hit && o.lane === l && Math.abs(o.wy - p.wy) < ws * 3.5));
-          if (safe.length) lane = safe.reduce((a, b) => Math.abs(b - lane) < Math.abs(a - lane) ? b : a, safe[0]);
-        } else {
-          let shop = null, sB = Infinity;
-          for (const sh of s.shops) { if (sh.robbed) continue; const dy = sh.wy - p.wy; if (dy < -ws) continue; if (dy < sB) { sB = dy; shop = sh; } }
-          lane = (shop && sB < ws * 2.5) ? shop.side : 0;
-        }
-        if (lane !== p.playerLane) { p.playerLane = lane; s._autoCd = 0.9; }   // commit; cooldown kills rapid sway
-      }
 
       // ── lateral: lane snap + knockback. A cop slam shoves you sideways and
       //    briefly stuns steering so you fishtail — that's the "撞击有感觉". ──
@@ -725,6 +718,41 @@
         }
       }
 
+      // ── PLAYER DRIVE-BY: auto-fire back at the nearest cop behind. Destroy a
+      //    cruiser → explosion + rampage chain + big cash. The GTA power high. ──
+      p._fireCd = Math.max(0, (p._fireCd || 0) - dt);
+      if (p._muzzleT > 0) p._muzzleT -= dt;
+      { let tgt = null, tB = Infinity;
+        for (const cop of s.cops) { const d = p.wy - cop.wy; if (d >= -30 && d < TUNING.copFireBackRangeWU && d < tB) { tB = d; tgt = cop; } }
+        if (tgt && p._fireCd <= 0 && !s._noPlayerFire) {
+          p._fireCd = TUNING.playerFireRateS; p._muzzleT = 0.07; p._gunSide = (tgt.wx < p.wx ? -1 : 1);
+          const ang = Math.atan2(tgt.wy - p.wy, tgt.wx - p.wx);
+          s.playerBullets.push({ wx: p.wx, wy: p.wy, vx: Math.cos(ang)*TUNING.playerBulletSpeedWU, vy: Math.sin(ang)*TUNING.playerBulletSpeedWU, life: 1.1 });
+          const SFX = $SFX(); try { if (SFX.shot) SFX.shot(); } catch (_) {}
+        }
+      }
+      for (const b of s.playerBullets) {
+        b.wx += b.vx * dt; b.wy += b.vy * dt; b.life -= dt;
+        for (const cop of s.cops) {
+          if (cop._dead) continue;
+          if (Math.hypot(b.wx - cop.wx, b.wy - cop.wy) < cop.r + 7) {
+            b.life = 0; cop.hp = (cop.hp != null ? cop.hp : TUNING.copHp) - 1; cop._hitFlash = 0.12;
+            const px = P.sx(cop.wx), py = P.sy(cop.wy);
+            for (let i = 0; i < 5; i++) pushSpark(s, px, py, '#ffd24a', 14);
+            if (cop.hp <= 0) {                                  // WASTED COP — explode
+              cop._dead = true; bumpCombo(s);
+              const gain = Math.round(TUNING.copKillReward * comboMul(s)); s.cash += gain;
+              pushShake(s, 24);
+              const J = $J(); if (J) { J.hitstop(0.12); J.flash('#ffd24a', 90); if (J.addTrauma) J.addTrauma(0.6); J.burst(px, py, 'debris', '#ff7a3b'); J.burst(px, py, 'cash', '#ffd24a'); J.popup('💥 干掉警车 +$' + gain, px, py - 26, { color:'#ffd24a', size: 20 }); }
+              for (let i = 0; i < 16; i++) pushSpark(s, px, py, i % 2 ? '#ff7a3b' : '#ffd24a', 30);
+              if (window.showBanner) window.showBanner('💥 WASTED COP +$' + gain, '#ffd24a', 900);
+            }
+            break;
+          }
+        }
+      }
+      s.playerBullets = s.playerBullets.filter(b => b.life > 0 && Math.abs(p.wy - b.wy) < 900);
+
       // ── cop bullets: travel, hit (dodge by lane), near-miss bonus ──
       for (const b of s.copBullets) {
         b.wx += b.vx * dt; b.wy += b.vy * dt; b.life -= dt;
@@ -746,7 +774,7 @@
       }
       s.copBullets = s.copBullets.filter(b => b.life > 0);
       if (p.invulnT > 0) p.invulnT -= dt;
-      s.cops = s.cops.filter(cop => (p.wy - cop.wy) < 800);
+      s.cops = s.cops.filter(cop => !cop._dead && (p.wy - cop.wy) < 800);
       if (s.cops.length === 0) { try { window.stopSiren && window.stopSiren(); } catch (_) {} }
 
       // ── engine sound ──
@@ -800,16 +828,19 @@
       let oX = 0, oY = 0;
       if (s.shakeT > 0 && s.shakeMag > 0) { oX = (Math.random()-0.5)*s.shakeMag; oY = (Math.random()-0.5)*s.shakeMag; }
 
-      // sky
+      // LA sunset sky: warm gradient + a low glowing sun + a hazy skyline strip
       const grad = ctx.createLinearGradient(0, 0, 0, H);
-      grad.addColorStop(0, t.sky); grad.addColorStop(1, t.sky2);
+      grad.addColorStop(0, t.sky); grad.addColorStop(0.45, t.sky2); grad.addColorStop(1, mix(t.sky2, t.offRoad, 0.5));
       ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
-      if (s.themeKey === 'rain') drawRain(ctx, W, H, s.elapsed);
-      else if (s.themeKey === 'snownight') drawSnow(ctx, W, H, s.elapsed);
-      else {
-        const neon = ctx.createRadialGradient(W*0.5, H*0.32, 20, W*0.5, H*0.32, W*0.7);
-        neon.addColorStop(0, t.neonA + '33'); neon.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = neon; ctx.fillRect(0, 0, W, H*0.55);
+      {
+        const sunY = H * 0.30;
+        const sg = ctx.createRadialGradient(W*0.5, sunY, 6, W*0.5, sunY, W*0.45);
+        sg.addColorStop(0, t.sun); sg.addColorStop(0.18, '#ffd98a'); sg.addColorStop(1, 'rgba(255,180,90,0)');
+        ctx.fillStyle = sg; ctx.fillRect(0, 0, W, H*0.62);
+        ctx.fillStyle = '#fff3cf'; ctx.beginPath(); ctx.arc(W*0.5, sunY, 26, 0, Math.PI*2); ctx.fill();
+        // distant hazy skyline silhouette near the horizon
+        ctx.fillStyle = 'rgba(120,90,80,0.35)';
+        for (let i = 0; i < 14; i++) { const bx = (i/14)*W, bw = W/14, bh = 14 + ((i*97)%26); ctx.fillRect(bx, H*0.40 - bh, bw - 2, bh); }
       }
 
       ctx.save(); ctx.translate(oX, oY);
@@ -868,11 +899,17 @@
       for (const cop of s.cops) {
         const sy = g2sy(cop.wy); if (sy < -80 || sy > H + 80) continue;
         const sx = g2sx(cop.wx);
-        drawCarTopDown(ctx, sx, sy, laneW * 0.62, t.cop, t.copGlass);
+        if (cop._hitFlash > 0) { cop._hitFlash -= 0.016; }                  // white flash when shot
+        drawCarTopDown(ctx, sx, sy, laneW * 0.62, cop._hitFlash > 0 ? '#ffffff' : t.cop, t.copGlass);
         const fl = Math.sin(s.elapsed * 16 + cop.sirenPhase) > 0;
         ctx.fillStyle = fl ? '#ff2b2b' : '#2b6bff'; ctx.fillRect(sx - 8, sy - 4, 16, 4);
+        if (cop.hp != null && cop.hp < TUNING.copHp) {                       // damage HP pips
+          for (let i = 0; i < TUNING.copHp; i++) { ctx.fillStyle = i < cop.hp ? '#5af55a' : 'rgba(0,0,0,0.4)'; ctx.fillRect(sx - 9 + i*7, sy + laneW*0.5, 5, 3); }
+        }
       }
       for (const b of s.copBullets) { const sx = g2sx(b.wx), sy = g2sy(b.wy); ctx.fillStyle = '#ffe24a'; ctx.fillRect(sx-2, sy-5, 4, 10); }
+      // player drive-by tracers (going backward toward cops)
+      for (const b of s.playerBullets) { const sx = g2sx(b.wx), sy = g2sy(b.wy); ctx.fillStyle = '#bff7ff'; ctx.fillRect(sx-2, sy-5, 4, 11); ctx.fillStyle='#fff'; ctx.fillRect(sx-1, sy-2, 2, 4); }
 
       // player car (headlights + nitro flame / brake lights + damage smoke + gangster)
       {
@@ -889,6 +926,10 @@
         const inv = (p.invulnT||0) > 0 && Math.floor(s.elapsed*12)%2===0;
         drawCarTopDown(ctx, sx, sy, laneW*0.66, inv ? '#ffffff' : t.car, t.carGlass);
         drawGangster(ctx, sx, sy, laneW, p._robSide, p._robberPop, s.elapsed);   // always-on driver head; leans out w/ gun on rob
+        // drive-by muzzle flash (firing backward at the cops behind)
+        if (p._muzzleT > 0) { const gs = p._gunSide || 1, mx = sx + gs*laneW*0.34, my = sy + laneW*0.42;
+          ctx.fillStyle = '#fff3a0'; ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(mx + gs*4, my + 12); ctx.lineTo(mx - gs*4, my + 9); ctx.closePath(); ctx.fill();
+          ctx.fillStyle = '#ffd24a'; ctx.beginPath(); ctx.arc(mx, my, 3, 0, Math.PI*2); ctx.fill(); }
       }
 
       // sparks + floaters
@@ -913,24 +954,43 @@
   };
 
   // ─── draw helpers ───────────────────────────────────────────
-  // Scrolling roadside buildings — the "scenery rushing at you" speed cue.
+  // Los Santos boulevard: PALM TREES + stucco buildings + billboards scrolling
+  // past — the "instantly reads as GTA/LA" scenery (replaced unreadable blocks).
   function drawRoadsideScenery(c, W, H, s, P, roadHalf) {
-    const t = s.theme, ws = P.ws, period = ws * 2.2;
-    const scroll = ((s.player.wy * P.PXF) % (period * P.PXF));
-    for (const sideSign of [-1, 1]) {
-      const edgeX = W/2 + sideSign * (roadHalf + 6);
+    const t = s.theme, ws = P.ws, period = ws * 1.8, slot = 46;
+    const scrollPx = ((s.player.wy * P.PXF) % (period * P.PXF));
+    const billCols = ['#e23b6d', '#3bb0e2', '#f0c020', '#7a4fd0', '#ff6a3b'];
+    for (const side of [-1, 1]) {
+      const edge = W/2 + side * (roadHalf + 6);
       for (let k = -1; k < H / (period * P.PXF) + 2; k++) {
-        const y = k * period * P.PXF + scroll;
-        const seed = ((k * 2654435761) >>> 0) % 1000 / 1000;
-        const bw = (28 + seed * 26);
-        const bh = (40 + ((seed * 7919) % 90));
-        const x = sideSign < 0 ? edgeX - bw : edgeX;
-        c.fillStyle = seed > 0.7 ? t.buildingLit : t.building;
-        c.fillRect(x, y - bh, bw, bh);
-        c.fillStyle = 'rgba(0,0,0,0.25)'; c.fillRect(x, y - bh, bw, 3);
-        // a couple of lit windows
-        c.fillStyle = seed > 0.5 ? 'rgba(255,220,120,0.6)' : 'rgba(140,200,255,0.45)';
-        c.fillRect(x + 5, y - bh + 8, 5, 6); c.fillRect(x + bw - 12, y - bh + 18, 5, 6);
+        const y = k * period * P.PXF + scrollPx;
+        const seed = (((k * 73856093) ^ (side < 0 ? 19349663 : 83492791)) >>> 0) % 1000 / 1000;
+        const x = side < 0 ? edge - slot : edge;        // slot's outer edge
+        const cx = x + slot / 2;
+        if (seed < 0.40) {
+          // PALM TREE — slim trunk + frond crown (the LA signature)
+          const th = 78 + ((seed * 9301) % 46);
+          c.strokeStyle = t.palmTrunk; c.lineWidth = 5; c.lineCap = 'round';
+          c.beginPath(); c.moveTo(cx, y); c.quadraticCurveTo(cx - side * 5, y - th * 0.6, cx - side * 8, y - th); c.stroke(); c.lineCap = 'butt';
+          const tx = cx - side * 8, ty = y - th;
+          c.strokeStyle = t.palmLeaf; c.lineWidth = 3.5;
+          for (let a = 0; a < 7; a++) { const ang = -Math.PI/2 + (a - 3) * 0.5; c.beginPath(); c.moveTo(tx, ty); c.quadraticCurveTo(tx + Math.cos(ang) * 11, ty + Math.sin(ang) * 11, tx + Math.cos(ang) * 20, ty + Math.sin(ang) * 14 + 4); c.stroke(); }
+          c.fillStyle = t.palmLeaf; c.beginPath(); c.arc(tx, ty, 4, 0, Math.PI * 2); c.fill();
+        } else if (seed < 0.82) {
+          // STUCCO BUILDING + rooftop billboard
+          const bw = slot - 6, bh = 56 + ((seed * 7919) % 78);
+          c.fillStyle = seed > 0.6 ? t.buildingLit : t.building; c.fillRect(x + 3, y - bh, bw, bh);
+          c.fillStyle = 'rgba(0,0,0,0.16)'; c.fillRect(x + 3, y - bh, bw, 4);
+          c.fillStyle = 'rgba(70,55,38,0.45)';
+          for (let r = 0; r < (bh / 17 | 0); r++) for (let cc = 0; cc < 3; cc++) c.fillRect(x + 7 + cc * 11, y - bh + 9 + r * 17, 6, 9);
+          if (seed > 0.58) { c.fillStyle = '#15151a'; c.fillRect(x + 5, y - bh - 15, bw - 10, 12); c.fillStyle = billCols[(seed * 5 | 0) % billCols.length]; c.fillRect(x + 7, y - bh - 13, bw - 14, 8); }
+        } else {
+          // standalone BILLBOARD on posts (Vinewood-style)
+          const bw = slot + 4, bh = 24;
+          c.strokeStyle = '#5a5450'; c.lineWidth = 3; c.beginPath(); c.moveTo(x + 10, y); c.lineTo(x + 10, y - 40); c.moveTo(x + bw - 12, y); c.lineTo(x + bw - 12, y - 40); c.stroke();
+          c.fillStyle = '#15151a'; c.fillRect(x, y - 40 - bh, bw, bh);
+          c.fillStyle = billCols[(seed * 5 | 0) % billCols.length]; c.fillRect(x + 3, y - 40 - bh + 3, bw - 6, bh - 6);
+        }
       }
     }
   }
