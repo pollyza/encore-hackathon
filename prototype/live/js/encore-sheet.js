@@ -333,18 +333,176 @@
     showResult(result);
   }
 
+  // v0.8 split-screen second-distribution mock: derive UI state from rank.
+  // Top-3 winner → clip preview + caption + auto-publish countdown
+  // Non-winner   → Spotlight "Make my clip" pay card
+  //
+  // For demo determinism: rank is computed from won + score (top-3 if won and
+  // score is high). In real impl, rank comes from server after leaderboard
+  // settles. The mock just needs to convincingly demo both states.
+  function rankFromResult({ won, score, max }) {
+    if (!won) return { rank: 1872, medal: '😅', isWinner: false };
+    // Demo heuristic: if score is at least 75% of max → #2; full → #1; else #3
+    const ratio = max > 0 ? score / max : 0;
+    if (ratio >= 1)    return { rank: 1, medal: '🥇', isWinner: true };
+    if (ratio >= 0.75) return { rank: 2, medal: '🥈', isWinner: true };
+    return { rank: 3, medal: '🥉', isWinner: true };
+  }
+
+  let publishCountdownTimer = null;
+  function startPublishCountdown() {
+    cancelPublishCountdown();
+    const elNum  = document.getElementById('result-publish-countdown');
+    const elMsg  = elNum && elNum.parentElement;
+    const elBtnC = document.getElementById('result-publish-cancel');
+    const elBtnN = document.getElementById('result-publish-now');
+    if (!elNum || !elMsg) return;
+    elMsg.classList.remove('cancelled', 'published');
+    elNum.textContent = '3';
+    let n = 3;
+    publishCountdownTimer = setInterval(() => {
+      n -= 1;
+      if (n <= 0) {
+        clearInterval(publishCountdownTimer);
+        publishCountdownTimer = null;
+        markPublished();
+        return;
+      }
+      elNum.textContent = String(n);
+    }, 1000);
+  }
+  function cancelPublishCountdown() {
+    if (publishCountdownTimer) {
+      clearInterval(publishCountdownTimer);
+      publishCountdownTimer = null;
+    }
+  }
+  function markPublished() {
+    const elMsg = document.querySelector('#result-publish-wrap .sheet-result-publish-msg');
+    if (elMsg) {
+      elMsg.classList.add('published');
+      elMsg.innerHTML = '✓ Published to TikTok · view in your profile';
+    }
+  }
+  function markCancelled() {
+    cancelPublishCountdown();
+    const elMsg = document.querySelector('#result-publish-wrap .sheet-result-publish-msg');
+    if (elMsg) {
+      elMsg.classList.add('cancelled');
+      elMsg.innerHTML = 'Auto-publish cancelled — clip saved as draft';
+    }
+  }
+
+  function wireResultPageOnce() {
+    if (wireResultPageOnce.done) return;
+    wireResultPageOnce.done = true;
+
+    // Caption inline edit
+    const captionEl = document.getElementById('result-caption-text');
+    const editBtn   = document.getElementById('result-caption-edit');
+    if (editBtn && captionEl) {
+      editBtn.addEventListener('click', () => {
+        const editing = captionEl.getAttribute('contenteditable') === 'true';
+        captionEl.setAttribute('contenteditable', editing ? 'false' : 'true');
+        editBtn.textContent = editing ? 'edit' : 'done';
+        if (!editing) {
+          captionEl.focus();
+          // Place cursor at end
+          const range = document.createRange();
+          range.selectNodeContents(captionEl);
+          range.collapse(false);
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+      });
+    }
+
+    // Publish controls
+    const cancelBtn = document.getElementById('result-publish-cancel');
+    const nowBtn    = document.getElementById('result-publish-now');
+    if (cancelBtn) cancelBtn.addEventListener('click', markCancelled);
+    if (nowBtn)    nowBtn.addEventListener('click', () => { cancelPublishCountdown(); markPublished(); });
+
+    // Spotlight CTA (non-winner only)
+    const spotCta = document.getElementById('result-spotlight-cta');
+    if (spotCta) {
+      spotCta.addEventListener('click', () => {
+        spotCta.innerHTML = '<span class="lbl">✓ Generating your clip…</span>';
+        spotCta.style.pointerEvents = 'none';
+      });
+    }
+
+    // Clip play / sound / regenerate — UI-only mocks for demo
+    const playOverlay = document.getElementById('result-clip-play');
+    if (playOverlay) {
+      playOverlay.addEventListener('click', () => {
+        playOverlay.style.opacity = '0';
+        // In real impl: trigger <video>.play()
+      });
+    }
+    const soundBtn = document.getElementById('result-clip-sound');
+    if (soundBtn) {
+      soundBtn.addEventListener('click', () => {
+        const muted = soundBtn.textContent.startsWith('🔇');
+        soundBtn.textContent = muted ? '🔊 sound on' : '🔇 muted';
+      });
+    }
+    const regenBtn = document.getElementById('result-clip-regen');
+    if (regenBtn) {
+      regenBtn.addEventListener('click', () => {
+        regenBtn.textContent = '↻ regenerated';
+        regenBtn.disabled = true;
+        setTimeout(() => { regenBtn.textContent = '↻ regenerate'; regenBtn.disabled = false; }, 1500);
+      });
+    }
+  }
+
   function showResult({ won, score, max }) {
     setPhase('result');
     const wrap = document.getElementById('phase-result');
-    wrap.classList.toggle('lost', !won);
 
-    document.getElementById('result-label').textContent    = won ? 'Encore complete' : 'Run ended';
-    document.getElementById('result-headline').textContent = won ? 'Nice run!'        : 'So close.';
-    document.getElementById('result-score').textContent    = score;
-    document.getElementById('result-max').textContent      = max;
-    document.getElementById('host-score').textContent      = Math.max(1, max - 2);
-    document.getElementById('host-max').textContent        = max;
-    document.getElementById('rank-num').textContent        = won ? 234 : 1872;
+    const rinfo = rankFromResult({ won, score, max });
+    wrap.classList.toggle('lost', !rinfo.isWinner);
+
+    // v0.8 big RANK chip
+    const medalEl = document.getElementById('result-rank-medal');
+    const numEl   = document.getElementById('result-rank-num-big');
+    if (medalEl) medalEl.textContent = rinfo.medal;
+    if (numEl)   numEl.textContent   = rinfo.rank;
+
+    // Score / host columns (kept from v0.7 for compact summary)
+    document.getElementById('result-score').textContent = score;
+    document.getElementById('result-max').textContent   = max;
+    document.getElementById('host-score').textContent   = Math.max(1, max - 2);
+    document.getElementById('host-max').textContent     = max;
+
+    // Legacy secondary rank pill (still opens ranking sub-phase)
+    document.getElementById('rank-num').textContent = rinfo.isWinner ? 234 : 1872;
+
+    // Update viewer score on bottom-half of clip preview
+    const vscore = document.getElementById('result-clip-vscore');
+    if (vscore) vscore.textContent = score.toLocaleString();
+
+    wireResultPageOnce();
+
+    // Reset publish state + auto-start countdown (winner only)
+    cancelPublishCountdown();
+    const publishMsg = document.querySelector('#result-publish-wrap .sheet-result-publish-msg');
+    if (publishMsg) {
+      publishMsg.classList.remove('cancelled', 'published');
+      publishMsg.innerHTML = 'Auto-publishing to TikTok in <span id="result-publish-countdown">3</span>…';
+    }
+    if (rinfo.isWinner) {
+      startPublishCountdown();
+    }
+
+    // Reset Spotlight CTA (non-winner only)
+    const spotCta = document.getElementById('result-spotlight-cta');
+    if (spotCta) {
+      spotCta.innerHTML = '<span class="price">$0.5</span><span class="lbl">Make my clip</span>';
+      spotCta.style.pointerEvents = '';
+    }
   }
 
   function playAgain() {
@@ -500,11 +658,13 @@
     });
 
     // Extension pills
-    document.getElementById('rank-pill').addEventListener('click', showRanking);
-    document.getElementById('share-pill').addEventListener('click', () => {
+    // Note: v0.8 removed share-pill and gift-remix from HTML (replaced by
+    // split-screen clip flow); guard for null in case they come back.
+    document.getElementById('rank-pill')?.addEventListener('click', showRanking);
+    document.getElementById('share-pill')?.addEventListener('click', () => {
       cfg.onAck && cfg.onAck('Share — coming soon');
     });
-    document.querySelector('#phase-result .gift-remix .send').addEventListener('click', () => {
+    document.querySelector('#phase-result .gift-remix .send')?.addEventListener('click', () => {
       cfg.onAck && cfg.onAck('Gift Remix · M11+');
     });
 
@@ -518,5 +678,15 @@
     });
   }
 
-  window.EncoreSheet = { init, open, close };
+  // Expose showResult + a "force-open into a specific phase" helper for
+  // URL-hash demo driver (e.g. ?#result-winner) and integration tests.
+  function forceResult({ won, score, max }) {
+    if (!cfg) return; // not initialised yet
+    cfg.sheet.classList.remove('hidden');
+    cfg.backdrop && cfg.backdrop.classList.remove('hidden');
+    setPhase('result');
+    showResult({ won, score, max });
+  }
+
+  window.EncoreSheet = { init, open, close, forceResult, showResult };
 })();
