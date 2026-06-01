@@ -3,7 +3,7 @@
  *
  * Phases:
  *   loading  → 2.7s AI-generation feel (thumbnail + scan + status cycle + progress)
- *   game     → loads Mario's template (FPS / MOBA / BR) in an iframe via the
+ *   game     → loads Mario's template (GTA / Roblox / Free Fire BR) in an iframe via the
  *              V2G postMessage protocol (schema v1.1):
  *                parent → iframe: { type: 'launch', config: V2GResponse }
  *                iframe → parent: { type: 'encore_ready' }  (after load)
@@ -41,7 +41,7 @@
   // ── Mario template catalogue (matches encore_prototype.html `Games.x`) ─
   // Loaded into the iframe via { type: 'launch', config } on encore_ready.
   // schema.md v1.1 documents the V2GResponse shape.
-  const TEMPLATES = ['fps', 'moba', 'br', 'roblox', 'gta'];  // Mario v2: roblox + gta added 5/28
+  const TEMPLATES = ['gta', 'roblox', 'br'];  // Mario final set: GTA + Roblox + Free Fire BR
   const THEMES = {
     fps:    ['desert', 'snow', 'cyber',  'jungle'],
     moba:   ['grass',  'lava', 'ice',    'twilight'],
@@ -52,7 +52,7 @@
   const TEMPLATE_LABEL = {
     fps:    'Cover Strike',
     moba:   'Dragon Pit',
-    br:     'Final Circle',
+    br:     'Free Fire BR',
     td:     'Wave Defense',
     roblox: 'Obby Parkour',   // Mario v2 5/28
     gta:    'GTA Heist',      // Mario v2 5/28
@@ -60,7 +60,7 @@
   const TEMPLATE_DESC = {
     fps:    '1vN clutch',
     moba:   'dragon pit fight',
-    br:     'final circle',
+    br:     'free fire final circle',
     td:     'tower defense wave',
     roblox: 'platform parkour',   // Mario v2 5/28
     gta:    'shop heist run',     // Mario v2 5/28
