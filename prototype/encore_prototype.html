@@ -3428,6 +3428,29 @@
   // ============================================================
   //  V2G — embedded boot + parent message listener
   // ============================================================
+  let deferredEmbeddedLaunch = null;
+  function launchFromEmbeddedConfig(cfg) {
+    const tpl = cfg && cfg.template;
+    if (!Games[tpl]) {
+      if (document.readyState !== 'loading') {
+        console.warn('Encore: template not ready in launch config:', tpl, cfg);
+      }
+      deferredEmbeddedLaunch = cfg;
+      return false;
+    }
+    deferredEmbeddedLaunch = null;
+    pendingConfig = cfg;
+    audio();  // unlock audio context (best-effort; may fail without user gesture)
+    document.getElementById('splash').classList.remove('on');
+    document.getElementById('end').classList.remove('on');
+    startGame(tpl);
+    return true;
+  }
+  function flushDeferredEmbeddedLaunch() {
+    if (!deferredEmbeddedLaunch) return;
+    launchFromEmbeddedConfig(deferredEmbeddedLaunch);
+  }
+
   if (isEmbedded) {
     // Don't show the splash in embedded mode — wait for a launch message.
     document.getElementById('splash').classList.remove('on');
@@ -3442,23 +3465,20 @@
     if (!data || typeof data !== 'object') return;
     if (data.type === 'launch') {
       const cfg = data.config || {};
-      const tpl = cfg.template;
-      if (!Games[tpl]) {
-        console.warn('Encore: unknown template in launch config:', tpl, cfg);
-        return;
-      }
-      pendingConfig = cfg;
-      audio();  // unlock audio context (best-effort; may fail without user gesture)
-      document.getElementById('splash').classList.remove('on');
-      document.getElementById('end').classList.remove('on');
-      startGame(tpl);
+      launchFromEmbeddedConfig(cfg);
     } else if (data.type === 'reset') {
       // host can recall to splash
       pendingConfig = null;
+      deferredEmbeddedLaunch = null;
       backToMenu();
       if (isEmbedded) document.getElementById('splash').classList.remove('on');
     }
   });
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', flushDeferredEmbeddedLaunch, { once: true });
+  } else {
+    setTimeout(flushDeferredEmbeddedLaunch, 0);
+  }
 
   // ─── Dev/test override: ?force_template=<key> auto-starts that game ───
   // Skips splash card UI entirely. Useful for iPhone testing without going
