@@ -225,27 +225,23 @@
         <div class="sheet-result-clip-wrap" id="result-clip-wrap">
           <div class="sheet-result-section-label">Your Split-Screen Clip</div>
           <div class="sheet-result-clip" id="result-clip-preview">
-            <!-- top: host real footage placeholder -->
+            <!-- top: real LIVE footage (reuses the same reference video as the background stream) -->
             <div class="sheet-result-clip-half host">
+              <video class="sheet-result-clip-video"
+                     src="/reference/videos/encore_test2.mp4"
+                     muted autoplay loop playsinline preload="auto"></video>
               <div class="sheet-result-clip-tag tl">⏵ LIVE</div>
               <div class="sheet-result-clip-tag tr">@TK_Soi</div>
               <div class="sheet-result-clip-caption">1v3 retake</div>
-              <div class="sheet-result-clip-placeholder">
-                <span class="ico">🎥</span>
-                <span class="hint">host 15s footage</span>
-              </div>
             </div>
             <!-- middle divider: ⚡ ENCORE -->
             <div class="sheet-result-clip-divider"><span>⚡ ENCORE</span></div>
-            <!-- bottom: viewer pixel encore placeholder -->
+            <!-- bottom: Canvas 2D simulated pixel encore (animated by JS in encore-sheet.js) -->
             <div class="sheet-result-clip-half viewer">
+              <canvas class="sheet-result-clip-canvas" id="result-clip-canvas"></canvas>
               <div class="sheet-result-clip-tag tl">⊕ FPS</div>
               <div class="sheet-result-clip-tag tr">@you · 🥈 #2</div>
               <div class="sheet-result-clip-caption" id="result-clip-vscore">2,840</div>
-              <div class="sheet-result-clip-placeholder pixel">
-                <span class="ico">🎮</span>
-                <span class="hint">viewer 15s pixel encore</span>
-              </div>
             </div>
             <!-- brand corner -->
             <div class="sheet-result-clip-brand">⚡ Encore</div>

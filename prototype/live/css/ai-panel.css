@@ -723,6 +723,30 @@
   image-rendering: pixelated;
   text-shadow: 1px 1px 0 var(--accent-2);
 }
+
+/* Real LIVE footage in the host (top) half — cover-fit + fills container */
+.sheet-result-clip-video {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  z-index: 0;
+}
+/* Simulated pixel encore Canvas in the viewer (bottom) half */
+.sheet-result-clip-canvas {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  z-index: 0;
+}
+/* Tags + captions stay above the video/canvas */
+.sheet-result-clip-half .sheet-result-clip-tag,
+.sheet-result-clip-half .sheet-result-clip-caption {
+  z-index: 1;
+}
+
 .sheet-result-clip-divider {
   position: relative;
   height: 1px;

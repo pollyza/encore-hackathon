@@ -164,6 +164,8 @@
     clearLoading();
     clearAck();
     destroyIframe();
+    stopClipCanvasAnimation();
+    cancelPublishCountdown();
     cfg.sheet.classList.add('closing');
     cfg.backdrop.classList.add('closing');
     setTimeout(() => {
@@ -393,6 +395,188 @@
     }
   }
 
+  // ── Canvas 2D simulated pixel encore for the clip preview viewer half ──
+  // Pure visual mock — NOT the real game. Auto-bot character + crosshair
+  // tracking + enemies popping + score floats. Replace with real <video>
+  // when P1 hero asset (server-side rendered) lands.
+  let clipCanvasRAF = null;
+  let clipCanvasStart = 0;
+  function startClipCanvasAnimation() {
+    stopClipCanvasAnimation();
+    const cv = document.getElementById('result-clip-canvas');
+    if (!cv) return;
+    // Size canvas backing store to its display box for crisp pixels
+    const fit = () => {
+      const r = cv.getBoundingClientRect();
+      if (r.width === 0) return false;
+      cv.width  = Math.round(r.width);
+      cv.height = Math.round(r.height);
+      return true;
+    };
+    if (!fit()) {
+      // Container may still be laying out — retry next frame
+      requestAnimationFrame(() => startClipCanvasAnimation());
+      return;
+    }
+    const ctx = cv.getContext('2d');
+    clipCanvasStart = performance.now();
+    const draw = (now) => {
+      const t = now - clipCanvasStart;
+      drawMockEncoreScene(ctx, cv.width, cv.height, t);
+      clipCanvasRAF = requestAnimationFrame(draw);
+    };
+    clipCanvasRAF = requestAnimationFrame(draw);
+  }
+  function stopClipCanvasAnimation() {
+    if (clipCanvasRAF) {
+      cancelAnimationFrame(clipCanvasRAF);
+      clipCanvasRAF = null;
+    }
+  }
+
+  function drawMockEncoreScene(ctx, w, h, t) {
+    // Background — twilight desert gradient like FPS template
+    const sky = ctx.createLinearGradient(0, 0, 0, h);
+    sky.addColorStop(0,    '#241b2f');
+    sky.addColorStop(0.55, '#3a2540');
+    sky.addColorStop(1,    '#1f1828');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, w, h);
+
+    // Distant horizon line + mountain silhouette (parallax slow)
+    const horizonY = h * 0.55;
+    const px = (t * 0.012) % w;
+    ctx.fillStyle = '#0e0a14';
+    for (let i = -1; i < 3; i++) {
+      ctx.beginPath();
+      const baseX = i * w - px;
+      ctx.moveTo(baseX,           horizonY);
+      ctx.lineTo(baseX + w * 0.2, horizonY - 18);
+      ctx.lineTo(baseX + w * 0.35,horizonY - 6);
+      ctx.lineTo(baseX + w * 0.55,horizonY - 22);
+      ctx.lineTo(baseX + w * 0.8, horizonY - 10);
+      ctx.lineTo(baseX + w,       horizonY);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Ground (below horizon) — checker tiles parallax fast
+    ctx.fillStyle = '#19121f';
+    ctx.fillRect(0, horizonY, w, h - horizonY);
+    const tile = 14;
+    const px2 = (t * 0.06) % tile;
+    ctx.fillStyle = 'rgba(255,255,255,0.04)';
+    for (let y = horizonY; y < h; y += tile) {
+      const rowOffset = ((Math.floor((y - horizonY) / tile)) % 2) * tile;
+      for (let x = -tile + rowOffset - px2; x < w; x += tile * 2) {
+        ctx.fillRect(x, y, tile, 2);
+      }
+    }
+
+    // Scanline shimmer (subtle CRT)
+    const scanY = (t * 0.18) % h;
+    const grd = ctx.createLinearGradient(0, scanY - 30, 0, scanY + 30);
+    grd.addColorStop(0,   'rgba(37,244,238,0)');
+    grd.addColorStop(0.5, 'rgba(37,244,238,0.08)');
+    grd.addColorStop(1,   'rgba(37,244,238,0)');
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, scanY - 30, w, 60);
+
+    // Pixel character — moves left/right, idle bob
+    const charBaseX = w * 0.5 + Math.sin(t * 0.0008) * (w * 0.18);
+    const charBaseY = h * 0.78 + Math.sin(t * 0.005) * 1.5;
+    const stepFrame = Math.floor(t / 200) % 2;
+    drawPixelChar(ctx, charBaseX, charBaseY, stepFrame);
+
+    // Crosshair tracks toward the active enemy
+    const enemyT = ((t * 0.0006) % 1);
+    const enemyX = w * (0.15 + enemyT * 0.7);
+    const enemyY = horizonY + 26 + Math.sin(t * 0.006) * 3;
+    const crossX = charBaseX + (enemyX - charBaseX) * 0.9;
+    const crossY = charBaseY - 18 + (enemyY - (charBaseY - 18)) * 0.9;
+    drawCrosshair(ctx, crossX, crossY, t);
+
+    // Muzzle flash + tracer on fire beats
+    const fireBeat = (t % 700) < 90;
+    if (fireBeat) {
+      ctx.strokeStyle = 'rgba(255,210,0,0.7)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(charBaseX + 4, charBaseY - 10);
+      ctx.lineTo(crossX, crossY);
+      ctx.stroke();
+      // Muzzle
+      ctx.fillStyle = '#ffd23f';
+      ctx.fillRect(charBaseX + 3, charBaseY - 11, 3, 2);
+    }
+
+    // Enemy — pixel block
+    ctx.fillStyle = '#FE2C55';
+    ctx.fillRect(enemyX - 4, enemyY - 6, 8, 10);
+    ctx.fillStyle = '#7a1029';
+    ctx.fillRect(enemyX - 4, enemyY + 4, 8, 2);
+    // Enemy "hit flash" when crosshair is near
+    const dist = Math.hypot(crossX - enemyX, crossY - enemyY);
+    if (dist < 12 && fireBeat) {
+      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      ctx.fillRect(enemyX - 5, enemyY - 7, 10, 12);
+    }
+
+    // Score float — "+150" rising near char
+    const floatPhase = (t % 2400) / 2400;
+    if (floatPhase < 0.7) {
+      const fy = charBaseY - 30 - floatPhase * 30;
+      ctx.fillStyle = `rgba(37,244,238,${(1 - floatPhase / 0.7) * 0.9})`;
+      ctx.font = 'bold 10px "Space Grotesk", monospace';
+      ctx.fillText('+150', charBaseX + 8, fy);
+    }
+
+    // HUD score corner top-right
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.font = '8px "Space Grotesk", monospace';
+    ctx.fillText('HP', 6, 12);
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.fillRect(20, 6, 28, 6);
+    const hpFrac = 0.7 + Math.sin(t * 0.002) * 0.15;
+    ctx.fillStyle = '#25F4EE';
+    ctx.fillRect(20, 6, 28 * hpFrac, 6);
+  }
+
+  function drawPixelChar(ctx, x, y, stepFrame) {
+    // 8x14 px character
+    ctx.fillStyle = '#f1ddb6'; // skin tone
+    ctx.fillRect(x - 2, y - 16, 4, 4);     // head
+    ctx.fillStyle = '#e8e3d6'; // torso
+    ctx.fillRect(x - 3, y - 12, 6, 7);     // body
+    ctx.fillStyle = '#3a3026'; // weapon
+    ctx.fillRect(x + 2, y - 11, 6, 1);
+    ctx.fillStyle = '#1f1a14'; // legs
+    if (stepFrame === 0) {
+      ctx.fillRect(x - 3, y - 5, 2, 5);
+      ctx.fillRect(x + 1, y - 5, 2, 5);
+    } else {
+      ctx.fillRect(x - 4, y - 5, 2, 5);
+      ctx.fillRect(x + 2, y - 5, 2, 5);
+    }
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath();
+    ctx.ellipse(x, y + 1, 6, 1.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function drawCrosshair(ctx, x, y, t) {
+    ctx.strokeStyle = '#25F4EE';
+    ctx.lineWidth = 1;
+    const r = 7 + Math.sin(t * 0.008) * 1;
+    ctx.beginPath();
+    ctx.moveTo(x - r - 2, y); ctx.lineTo(x - 2, y);
+    ctx.moveTo(x + 2, y);     ctx.lineTo(x + r + 2, y);
+    ctx.moveTo(x, y - r - 2); ctx.lineTo(x, y - 2);
+    ctx.moveTo(x, y + 2);     ctx.lineTo(x, y + r + 2);
+    ctx.stroke();
+  }
+
   function wireResultPageOnce() {
     if (wireResultPageOnce.done) return;
     wireResultPageOnce.done = true;
@@ -495,6 +679,11 @@
     }
     if (rinfo.isWinner) {
       startPublishCountdown();
+      // Kick the simulated viewer-half pixel encore animation
+      startClipCanvasAnimation();
+    } else {
+      // Non-winner shows Spotlight card instead of clip → stop the canvas
+      stopClipCanvasAnimation();
     }
 
     // Reset Spotlight CTA (non-winner only)
