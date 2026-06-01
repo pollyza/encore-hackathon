@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Encore v0.6 — GTA · Roblox · Free Fire BR</title>
 <!-- CSS extracted to styles.css for multi-dev work (Ticket M9-prep) -->
-<link rel="stylesheet" href="styles.css?v=entry-ui-v2">
+<link rel="stylesheet" href="styles.css?v=entry-ui-v4">
 </head>
 <body>
 <div id="wrap">
@@ -3096,13 +3096,18 @@
     },
     br: {
       title: 'FREE FIRE · BOOYAH 决赛圈',
-      rows: isTouch ? [
+      rows: isTouch ? (isEmbedded ? [
+        ['🏆 目标',    '10 人乱斗 · 活到最后 = BOOYAH'],
+        ['🕹 左侧',    '拖着跑位 · 进安全圈躲毒'],
+        ['🔫 右下',    '按住开火 · 自动锁敌'],
+        ['🧱 技能',    'Q 冲刺 · W KIT · E Gloo 墙'],
+      ] : [
         ['🏆 目标',    '10 人乱斗 · 活到最后 = BOOYAH'],
         ['🕹 左摇杆',  '拖着跑位 · 进安全圈躲毒'],
         ['🔫 按住右侧', '自动锁敌开火 · 不用自己瞄'],
         ['🎁 空投',    '捡发光补给箱 = 换搞怪强枪'],
         ['🤸 技能',    'R 翻滚无敌 · Q 冲刺 · W 回血 · E Gloo 墙'],
-      ] : [
+      ]) : [
         ['🏆 目标',      '10 人乱斗 · 活到最后 = BOOYAH'],
         ['WASD 移动',    '跑位 · 进安全圈躲毒'],
         ['右键/空格 开火', '自动锁敌 · 不用自己瞄'],
@@ -3228,6 +3233,7 @@
     setBarsConfig({ showMP: current.showMP });
     setPills(current.pills || {});
     document.body.classList.toggle('br-mode', key === 'br');   // [PR] BR-only: lift skills cluster to free the bottom-right FIRE button zone
+    document.body.classList.toggle('embedded-mode', isEmbedded);
     const cfg = current.skills();
     setSkillsConfig(cfg);
     current.init();
@@ -3526,7 +3532,7 @@
 <script src="games/juice.js?v=r12a"></script>
 <script src="games/roblox.js?v=r12a"></script>
 <script src="games/gta.js?v=r12a"></script>
-<script src="games/br.js?v=r12a"></script>
+<script src="games/br.js?v=r12b"></script>
 <script>
   window.__encoreExternalGamesReady = true;
   if (window.__encoreFlushDeferredLaunch) window.__encoreFlushDeferredLaunch();

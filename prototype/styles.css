@@ -185,6 +185,66 @@
   body.br-mode #s-e { top: 0;    left: 76px; }   /* 速建墙 */
   body.br-mode #s-q { top: 76px; left: 0;    }   /* 冲刺 */
   body.br-mode #s-r { top: 76px; left: 76px; }   /* 翻滚 */
+  /* Live sheet compact HUD: keep the battle center clear. BR's full standalone
+     layout has room for a 2x2 cluster; inside the TikTok sheet it covers the
+     player, zone and enemies. Compact mode removes the duplicate movement
+     button and parks the remaining utilities on the lower-left edge. */
+  body.br-mode.embedded-mode #skills {
+    left: calc(14px + env(safe-area-inset-left, 0px));
+    right: auto;
+    bottom: calc(22px + env(safe-area-inset-bottom, 0px));
+    width: 132px;
+    height: 106px;
+  }
+  body.br-mode.embedded-mode .skill {
+    width: 48px;
+    height: 48px;
+    border-width: 2px;
+    background: rgba(7,11,18,0.46);
+    box-shadow: 0 5px 12px rgba(0,0,0,0.22);
+  }
+  body.br-mode.embedded-mode .skill .ico { font-size: 15px; }
+  body.br-mode.embedded-mode .skill .lbl { font-size: 8px; letter-spacing: 0; margin-top: 1px; }
+  body.br-mode.embedded-mode #s-w { top: 0;  left: 0;  }     /* KIT */
+  body.br-mode.embedded-mode #s-e { top: 0;  left: 56px; }   /* Gloo */
+  body.br-mode.embedded-mode #s-q { top: 58px; left: 28px; } /* Sprint */
+  body.br-mode.embedded-mode #s-r { display: none; }         /* Dodge kept on keyboard, hidden in live compact */
+  body.br-mode.embedded-mode #banner {
+    top: 34%;
+    padding: 0 42px;
+    font-size: 17px;
+    line-height: 1.34;
+    letter-spacing: 2px;
+  }
+  @media (max-width: 430px), (max-height: 680px) {
+    body.br-mode #skills {
+      left: calc(14px + env(safe-area-inset-left, 0px));
+      right: auto;
+      bottom: calc(22px + env(safe-area-inset-bottom, 0px));
+      width: 132px;
+      height: 106px;
+    }
+    body.br-mode .skill {
+      width: 48px;
+      height: 48px;
+      border-width: 2px;
+      background: rgba(7,11,18,0.46);
+      box-shadow: 0 5px 12px rgba(0,0,0,0.22);
+    }
+    body.br-mode .skill .ico { font-size: 15px; }
+    body.br-mode .skill .lbl { font-size: 8px; letter-spacing: 0; margin-top: 1px; }
+    body.br-mode #s-w { top: 0;  left: 0;  }
+    body.br-mode #s-e { top: 0;  left: 56px; }
+    body.br-mode #s-q { top: 58px; left: 28px; }
+    body.br-mode #s-r { display: none; }
+    body.br-mode #banner {
+      top: 34%;
+      padding: 0 42px;
+      font-size: 17px;
+      line-height: 1.34;
+      letter-spacing: 2px;
+    }
+  }
 
   /* Dedicated platformer JUMP button — chunky Roblox plastic part. Visual only
      (pointer-events:none): the #wrap touch router turns any right-side touch into

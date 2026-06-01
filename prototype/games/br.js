@@ -75,6 +75,11 @@
   function $particles() { return window.spawnParticles; }
   function $flashFCT()  { return window.flashFCT; }
   function $showBanner(){ return window.showBanner; }
+  const URL_PARAMS = new URLSearchParams(window.location.search);
+  const IS_EMBEDDED = URL_PARAMS.get('embedded') === '1';
+  function compactHud(W, H) {
+    return IS_EMBEDDED || W < 430 || H < 680;
+  }
 
   // ─── TUNING ─────────────────────────────────────────────────
   // Single source of truth for every feel constant (no scattered magic
@@ -1208,6 +1213,14 @@
     skills() {
       // q 冲刺 / w 回血 / (e slot = keyboard hold-ADS, no button) / r 翻滚闪避.
       // Dodge sits on R — a fresh key, no clash with the hold-E aim-down-sights.
+      if (IS_EMBEDDED) {
+        return [
+          { key: 'q', ico: '⚡', label: '冲刺', color: 'cyan' },
+          { key: 'w', ico: '➕', label: 'KIT', color: null   },
+          { key: 'e', ico: '🧱', label: 'Gloo', color: null },
+          { key: 'r', ico: '🌀', label: '翻滚', color: 'cyan' },
+        ];
+      }
       return [
         { key: 'q', ico: '⚡', label: '冲刺', color: 'cyan' },
         { key: 'w', ico: '➕', label: '回血', color: null   },
@@ -3152,9 +3165,13 @@
       c.restore();
     }
 
-    // R6 FF 开火键: 大红开火键, 抬到右手拇指甜区(不再贴底边; 整块右侧都能开火, 这是视觉提示)。
+    // R6 FF 开火键: 大红开火键。直播 sheet 里用 compact HUD 缩小并贴边,
+    // 避免压住中心战斗区; standalone 保留更强的手游按钮感。
     {
-      const fx = W - 84, fy = H - 188, fr = 52;
+      const compact = compactHud(W, H);
+      const fx = compact ? W - 58 : W - 84;
+      const fy = compact ? H - 98 : H - 188;
+      const fr = compact ? 38 : 52;
       const held = !!p.aiming;
       const pulse = 0.55 + 0.45 * Math.sin(performance.now() / 130);
       c.save();
@@ -3165,8 +3182,8 @@
       c.strokeStyle = `rgba(255,150,160,${0.55 + 0.45 * pulse})`; c.lineWidth = 3.5;
       c.beginPath(); c.arc(fx, fy, fr, 0, Math.PI * 2); c.stroke();
       c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle';
-      c.font = '30px sans-serif'; c.fillText('🔫', fx, fy - 9);
-      c.font = 'bold 15px sans-serif'; c.fillText('开火', fx, fy + 17);
+      c.font = (compact ? 22 : 30) + 'px sans-serif'; c.fillText('🔫', fx, fy - (compact ? 7 : 9));
+      c.font = 'bold ' + (compact ? 12 : 15) + 'px sans-serif'; c.fillText('开火', fx, fy + (compact ? 14 : 17));
       c.restore();
     }
 
@@ -3186,11 +3203,14 @@
     // (1) core-goal banner — the instant "what is this game" (full ~2.4s, then fades)
     if (ct > 1.8) {
       c.globalAlpha = Math.min(1, (ct - 1.8) / 0.8);
-      const bw = 318, bh = 46, bx = W / 2, by = H * 0.28;
+      const compact = compactHud(W, H);
+      const bw = compact ? Math.min(260, W - 48) : 318;
+      const bh = compact ? 40 : 46;
+      const bx = W / 2, by = compact ? H * 0.24 : H * 0.28;
       c.fillStyle = 'rgba(10,13,20,0.78)'; c.fillRect(bx - bw / 2, by - bh / 2, bw, bh);
       c.strokeStyle = 'rgba(255,216,74,0.7)'; c.lineWidth = 1.5; c.strokeRect(bx - bw / 2, by - bh / 2, bw, bh);
-      c.fillStyle = '#ffd84a'; c.font = 'bold 16px sans-serif'; c.fillText('活到最后 = BOOYAH! 🏆', bx, by - 9);
-      c.fillStyle = '#eaf2ff'; c.font = '12px sans-serif'; c.fillText('左摇杆跑动 · 按住右侧自动开火', bx, by + 12);
+      c.fillStyle = '#ffd84a'; c.font = 'bold ' + (compact ? 14 : 16) + 'px sans-serif'; c.fillText('活到最后 = BOOYAH!', bx, by - (compact ? 7 : 9));
+      c.fillStyle = '#eaf2ff'; c.font = (compact ? 11 : 12) + 'px sans-serif'; c.fillText('左侧跑位 · 右下开火', bx, by + (compact ? 11 : 12));
       c.globalAlpha = 1;
     }
     // (2) joystick hint (until first move)
@@ -3205,13 +3225,16 @@
     }
     // (3) fire-button hint (until first shot)
     if (!s.coachFired) {
-      const fx = W - 84, fy = H - 188;
+      const compact = compactHud(W, H);
+      const fx = compact ? W - 58 : W - 84;
+      const fy = compact ? H - 98 : H - 188;
       c.globalAlpha = 0.45 + pulse * 0.45;
       c.strokeStyle = '#ff6a78'; c.lineWidth = 3;
-      c.beginPath(); c.arc(fx, fy, 60 + pulse * 7, 0, Math.PI * 2); c.stroke();
+      c.beginPath(); c.arc(fx, fy, (compact ? 45 : 60) + pulse * 7, 0, Math.PI * 2); c.stroke();
       c.globalAlpha = 1;
-      c.fillStyle = 'rgba(10,13,20,0.76)'; c.fillRect(fx - 80, fy - 94, 160, 24);
-      c.fillStyle = '#ff8a96'; c.font = 'bold 13px sans-serif'; c.fillText('按住开火 · 自动瞄准', fx, fy - 82);
+      const labelW = compact ? 126 : 160;
+      c.fillStyle = 'rgba(10,13,20,0.76)'; c.fillRect(fx - labelW / 2, fy - (compact ? 74 : 94), labelW, 24);
+      c.fillStyle = '#ff8a96'; c.font = 'bold ' + (compact ? 12 : 13) + 'px sans-serif'; c.fillText('右下开火', fx, fy - (compact ? 62 : 82));
     }
     c.restore();
   }
