@@ -343,7 +343,7 @@
   // score is high). In real impl, rank comes from server after leaderboard
   // settles. The mock just needs to convincingly demo both states.
   function rankFromResult({ won, score, max }) {
-    if (!won) return { rank: 1872, medal: '😅', isWinner: false };
+    if (!won) return { rank: 18, medal: '😅', isWinner: false };
     // Demo heuristic: if score is at least 75% of max → #2; full → #1; else #3
     const ratio = max > 0 ? score / max : 0;
     if (ratio >= 1)    return { rank: 1, medal: '🥇', isWinner: true };
@@ -608,12 +608,23 @@
     if (cancelBtn) cancelBtn.addEventListener('click', markCancelled);
     if (nowBtn)    nowBtn.addEventListener('click', () => { cancelPublishCountdown(); markPublished(); });
 
-    // Spotlight CTA (non-winner only)
-    const spotCta = document.getElementById('result-spotlight-cta');
-    if (spotCta) {
-      spotCta.addEventListener('click', () => {
-        spotCta.innerHTML = '<span class="lbl">✓ Generating your clip…</span>';
-        spotCta.style.pointerEvents = 'none';
+    // Enhance CTA (v0.8.1 MVP single paid SKU, persistent in both winner/non-winner states)
+    const enhCta = document.getElementById('result-enhance-cta');
+    if (enhCta) {
+      enhCta.addEventListener('click', () => {
+        const gate = document.getElementById('result-enhance-gate');
+        const isGated = gate && !gate.hidden;
+        if (isGated) {
+          // gift-gate ON: simulate "sent gift, now unlocked" → swap to buy state
+          enhCta.querySelector('.head').textContent = 'Enhance unlocked';
+          enhCta.querySelector('.sub').textContent = 'Tap again to apply to next round';
+          gate.hidden = true;
+        } else {
+          enhCta.querySelector('.head').textContent = '✓ Enhance applied';
+          enhCta.querySelector('.sub').textContent = '🔥 Fire bullets · ❤️ Double HP next round';
+          enhCta.querySelector('.price').textContent = 'BUY';
+          enhCta.style.pointerEvents = 'none';
+        }
       });
     }
 
@@ -661,8 +672,9 @@
     document.getElementById('host-score').textContent   = Math.max(1, max - 2);
     document.getElementById('host-max').textContent     = max;
 
-    // Legacy secondary rank pill (still opens ranking sub-phase)
-    document.getElementById('rank-num').textContent = rinfo.isWinner ? 234 : 1872;
+    // Legacy secondary rank pill (still opens ranking sub-phase);
+    // v0.8.1 uses the same rank as the big chip so numbers are consistent
+    document.getElementById('rank-num').textContent = rinfo.rank;
 
     // Update viewer score on bottom-half of clip preview
     const vscore = document.getElementById('result-clip-vscore');
@@ -682,15 +694,26 @@
       // Kick the simulated viewer-half pixel encore animation
       startClipCanvasAnimation();
     } else {
-      // Non-winner shows Spotlight card instead of clip → stop the canvas
+      // Non-winner shows Retry card instead of clip → stop the canvas
       stopClipCanvasAnimation();
+      // Compute spots-from-#3 gap for the Retry card stats
+      const gapEl = document.getElementById('result-retry-gap');
+      if (gapEl) {
+        const youRank = rinfo.rank; // already a faux rank like 15 / 1872
+        gapEl.textContent = Math.max(1, youRank - 3);
+      }
     }
 
-    // Reset Spotlight CTA (non-winner only)
-    const spotCta = document.getElementById('result-spotlight-cta');
-    if (spotCta) {
-      spotCta.innerHTML = '<span class="price">$0.5</span><span class="lbl">Make my clip</span>';
-      spotCta.style.pointerEvents = '';
+    // Reset Enhance CTA to default state (works in both winner + non-winner)
+    const enhCta = document.getElementById('result-enhance-cta');
+    if (enhCta) {
+      enhCta.style.pointerEvents = '';
+      const head = enhCta.querySelector('.head');
+      const sub  = enhCta.querySelector('.sub');
+      const pric = enhCta.querySelector('.price');
+      if (head) head.textContent = 'Enhance · next round';
+      if (sub)  sub.textContent  = '🔥 Fire bullets · ❤️ Double HP · ➕ Extra life';
+      if (pric) pric.textContent = '$0.5';
     }
   }
 

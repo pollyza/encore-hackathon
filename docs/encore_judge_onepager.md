@@ -27,7 +27,7 @@ TikTok LIVE 观众侧互动 SKU 栈(礼物 / 弹幕 / 关注 / 礼物互动 mini
 
 ## 业务价值
 
-**收入模型(MVP 单一收入流)**:观众侧付费功能(Enhance + Spotlight)+ 主播可设礼物 gift-gate 解锁付费入口 → 礼物走 TikTok LIVE 正常分成给主播。
+**收入模型(MVP 单一付费 SKU = Enhance)**:观众玩完一局想再赢 → $0.5-1 Enhance 续命(火焰子弹 / 双倍 HP / 额外一条命)→ 主播可设礼物 gift-gate (OFF / 50 / 200 / 500 金币)→ 礼物走 TikTok LIVE 正常分成给主播。**铁律**:基础 Encore 玩 / 进 Top 3 winner 自动免费 clip / 被动 collab **永远 free**;gift-gate 只作用于付费 Enhance 入口,不是基础试玩门票。**v0.8.1 砍掉 Spotlight**(失败局没人愿意付费发布自己的失败录像);Remix 留 Phase 2;Sponsor/Loot 不做。
 
 **MVP 不预设 ARPU lift 百分比** —— 没有 TikTok gaming LIVE 真实付费数据,任何具体数字都是 marketing 不是 business。要 5-10 主播灰度 1 周拿真实 baseline 后再算。
 
@@ -60,6 +60,9 @@ TikTok LIVE 观众侧互动 SKU 栈(礼物 / 弹幕 / 关注 / 礼物互动 mini
 ✅ V2G Vision pipeline  真接入 Claude Vision, 已用 2 个真实 TikTok LIVE 视频跑通
 ✅ LIVE shell 高保真    iPhone 14 phone frame + 4-phase FSM + ack overlay
                        (Claude Design handoff → vanilla JS 重建, 7 文件 2900+ 行)
+✅ Split-screen clip    主播 15s + viewer 15s + @tag 架构与渲染成本测算就绪
+                       (viewer 端 input log → 服务端确定性重渲, 详见 §可落地)
+                       Demo 帧 T-24h 内补 UI mock
 ✅ 部署 + 扫码          Vercel production + landing page + QR
 ✅ 多人协作基础设施     CODEOWNERS + 接口契约 + playtest-check + deploy.sh
 ```
@@ -70,14 +73,14 @@ TikTok LIVE 观众侧互动 SKU 栈(礼物 / 弹幕 / 关注 / 礼物互动 mini
 
 ## 可落地路径 (评分维度: 可落地性 20%)
 
-- **集成**: bottom sheet **永不挤压** LIVE 主画面 / 永不 pause / 永不静音 / 主播 5s 倒计时 promote/skip 控制触发频率。Non-interference 第一原则锁死架构边界。
+- **集成**: bottom sheet **永不挤压** LIVE 主画面 / 永不 pause / 永不静音。**主播侧 promote 策略**:默认 **auto-promote**(主播完全零干预);可主播侧 pre-set 规则(如"仅 ace/clutch 自动 promote"/"比赛模式静音 Encore")或赛后 batch unpublish 不要的 clip。**默认无操作就工作**,完全契合 non-interference 第一原则——主播打 ranked 中根本不需要看屏幕角落。
 - **成本路径**: 单 Vision 检测 $6.75/直播间·h → 优化 4 步(关键帧 diff / 小模型分流 / prompt cache / 规则 fallback)→ 目标 ~50× 优化,全量 ~$1M/月。
 - **法务 / IP**: 全程抽象像素 + 程序化美术,**零游戏 IP 资产**;Vision 仅读取视觉信号,无 OCR 游戏 UI 文字。
 - **二次分发架构**: viewer 端只上传 input log(几 KB),服务端确定性重渲 → 全量 7.5M clip/日的渲染成本仅 ~$50-200/日,相比 Vision 可忽略。
 - **Roadmap**:
   - **M9** — 5-10 头部主播内测,人工 FORCE 触发,验证体验是否扰乱主播
   - **M10** — Phase 1 灰度 100 主播,Vision 自动触发 + clip 二次分发 + 算法 reach 验证
-  - **M11** — 礼物经济实装(Enhance + Spotlight + gift-gate),验证 unit economics
+  - **M11** — 礼物经济实装(Enhance 单 SKU + gift-gate),验证 unit economics
   - **M11+** — Remix 付费功能(AI 真生成式 DSL)
   - **M12+** — 短视频 feed 流入口(先验证 LIVE 闭环成立) + 模板扩展
 

@@ -273,28 +273,37 @@
           </div>
         </div>
 
-        <!-- NON-WINNER ONLY: Spotlight "Make my clip" pay card -->
-        <div class="sheet-result-spotlight-wrap" id="result-spotlight-wrap">
-          <div class="sheet-result-spotlight">
-            <div class="sheet-result-spotlight-head">
-              <div class="sheet-result-spotlight-icon">💎</div>
-              <div class="sheet-result-spotlight-titles">
-                <div class="title">Make your own clip</div>
-                <div class="sub">Split-screen with @TK_Soi · published to your profile</div>
+        <!-- NON-WINNER ONLY: "Almost there" retry card (replaces v0.8 Spotlight per v0.8.1) -->
+        <div class="sheet-result-retry-wrap" id="result-retry-wrap">
+          <div class="sheet-result-retry">
+            <div class="sheet-result-retry-head">
+              <div class="sheet-result-retry-icon">🎯</div>
+              <div class="sheet-result-retry-titles">
+                <div class="title">Almost there</div>
+                <div class="sub">Top 3 auto-publishes a clip. Play again to claim a slot.</div>
               </div>
             </div>
-            <div class="sheet-result-spotlight-preview">
-              <span class="hint">preview locked</span>
+            <div class="sheet-result-retry-stats" id="result-retry-stats">
+              <span class="k">You're</span>
+              <span class="v"><strong id="result-retry-gap">12</strong> spots from #3</span>
             </div>
-            <button class="sheet-result-spotlight-cta" id="result-spotlight-cta">
-              <span class="price">$0.5</span>
-              <span class="lbl">Make my clip</span>
-            </button>
-            <div class="sheet-result-spotlight-gate" id="result-spotlight-gate" hidden>
-              <span>or send</span>
-              <button class="gift-btn">🪙 50 to @TK_Soi</button>
-              <span>to unlock</span>
+          </div>
+        </div>
+
+        <!-- PERSISTENT (both states): Enhance upsell card -->
+        <div class="sheet-result-enhance-wrap" id="result-enhance-wrap">
+          <button class="sheet-result-enhance" id="result-enhance-cta">
+            <span class="ico">⚡</span>
+            <div class="body">
+              <div class="head">Enhance · next round</div>
+              <div class="sub">🔥 Fire bullets · ❤️ Double HP · ➕ Extra life</div>
             </div>
+            <span class="price">$0.5</span>
+          </button>
+          <div class="sheet-result-enhance-gate" id="result-enhance-gate" hidden>
+            <span>Host requires</span>
+            <button class="gift-btn">🪙 50 gift</button>
+            <span>to unlock</span>
           </div>
         </div>
 
@@ -474,7 +483,7 @@
   //
   //   streamer.html#result-winner  → Top-3 winner state (clip + caption + countdown)
   //   streamer.html#result-lost    → Non-winner state (💎 Spotlight pay card)
-  //   streamer.html#result-gate    → Non-winner + main streamer's gift-gate ON
+  //   streamer.html#result-gate    → Any state + Enhance gift-gate ON (host requires gift)
   function applyHashDriver() {
     const h = (location.hash || '').toLowerCase();
     if (!h.startsWith('#result-')) return;
@@ -490,7 +499,7 @@
         EncoreSheet.forceResult({ won: false, score: 4, max: 8 });
       } else if (h === '#result-gate') {
         EncoreSheet.forceResult({ won: false, score: 4, max: 8 });
-        const gate = document.getElementById('result-spotlight-gate');
+        const gate = document.getElementById('result-enhance-gate');
         if (gate) gate.hidden = false;
       }
     });
