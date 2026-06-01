@@ -3428,10 +3428,12 @@
   // ============================================================
   //  V2G — embedded boot + parent message listener
   // ============================================================
+  const EMBEDDED_EXTERNAL_TEMPLATES = new Set(['gta', 'roblox', 'br']);
   let deferredEmbeddedLaunch = null;
   function launchFromEmbeddedConfig(cfg) {
     const tpl = cfg && cfg.template;
-    if (!Games[tpl]) {
+    const needsExternalModule = isEmbedded && EMBEDDED_EXTERNAL_TEMPLATES.has(tpl);
+    if (!Games[tpl] || (needsExternalModule && !window.__encoreExternalGamesReady)) {
       if (document.readyState !== 'loading') {
         console.warn('Encore: template not ready in launch config:', tpl, cfg);
       }
@@ -3450,6 +3452,8 @@
     if (!deferredEmbeddedLaunch) return;
     launchFromEmbeddedConfig(deferredEmbeddedLaunch);
   }
+  window.__encoreExternalGamesReady = false;
+  window.__encoreFlushDeferredLaunch = flushDeferredEmbeddedLaunch;
 
   if (isEmbedded) {
     // Don't show the splash in embedded mode — wait for a launch message.
@@ -3523,5 +3527,9 @@
 <script src="games/roblox.js?v=r12a"></script>
 <script src="games/gta.js?v=r12a"></script>
 <script src="games/br.js?v=r12a"></script>
+<script>
+  window.__encoreExternalGamesReady = true;
+  if (window.__encoreFlushDeferredLaunch) window.__encoreFlushDeferredLaunch();
+</script>
 </body>
 </html>

@@ -325,7 +325,7 @@
      no longer loaded — the game phase now renders Mario's iframe templates
      (GTA/Roblox/Free Fire BR) via the V2G postMessage protocol. -->
 <script src="js/observer-client.js?v=8"></script>
-<script src="js/encore-sheet.js?v=9"></script>
+<script src="js/encore-sheet.js?v=10"></script>
 <script src="js/live-room.js?v=8"></script>
 <script>
 (() => {
@@ -353,7 +353,7 @@
   // Vision detection cache — observer-client populates this when a real
   // V2G highlight is detected. encore-sheet calls pickConfig() to decide
   // which Mario template to launch; if no cached detection is available
-  // it falls back to a random fps/moba/br config (handled internally).
+  // it falls back to a random GTA/Roblox/Free Fire BR config (handled internally).
   // This is the seam where real Vision will plug in later.
   let cachedDetection = null;
   const pickConfig = () => {
