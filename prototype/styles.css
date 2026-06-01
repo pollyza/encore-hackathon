@@ -88,14 +88,19 @@
   .pill.kit { border-color: #90ff90; color: #90ff90; }
   .pill.hidden { display: none; }
 
+  /* Floating joystick — positioned by JS where the thumb lands; hidden at rest.
+     pointer-events:none because the #wrap-level router handles all touches. */
   #joy {
-    position: absolute; bottom: 30px; left: 30px;
-    width: 130px; height: 130px;
+    position: absolute; left: 30px; top: 50%;
+    width: 120px; height: 120px;
     border-radius: 50%;
-    background: rgba(255,255,255,0.06);
-    border: 2px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.05);
+    border: 2px solid rgba(255,255,255,0.18);
     z-index: 15;
     touch-action: none;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.12s ease;
   }
   #joy-knob {
     position: absolute; top: 50%; left: 50%;
@@ -120,7 +125,9 @@
   #aimpad.hidden { display: none; }
 
   #skills {
-    position: absolute; bottom: 30px; right: 20px;
+    position: absolute;
+    bottom: calc(30px + env(safe-area-inset-bottom, 0px));
+    right: calc(20px + env(safe-area-inset-right, 0px));
     width: 180px; height: 180px;
     z-index: 16;
   }
@@ -169,10 +176,49 @@
   #s-w { top: 0; left: 60px; }
   #s-e { top: 0; left: 120px; }
   #s-r { top: 70px; left: 116px; }
+  /* [PR] .br-mode (BR only): top-mobile-game right-thumb layout (FF/PUBGM/CODM).
+     Abilities = a tidy 2×2 cluster up-left of the big FIRE button (canvas-drawn
+     at W-84,H-188 in br.js drawHUD). br-mode-scoped → roblox/gta unaffected. */
+  body.br-mode #skills { bottom: calc(150px + env(safe-area-inset-bottom, 0px)); right: calc(158px + env(safe-area-inset-right, 0px)); width: 132px; height: 132px; transform: none; }
+  body.br-mode .skill  { width: 56px; height: 56px; }
+  body.br-mode #s-w { top: 0;    left: 0;    }   /* 回血 */
+  body.br-mode #s-e { top: 0;    left: 76px; }   /* 速建墙 */
+  body.br-mode #s-q { top: 76px; left: 0;    }   /* 冲刺 */
+  body.br-mode #s-r { top: 76px; left: 76px; }   /* 翻滚 */
+
+  /* Dedicated platformer JUMP button — chunky Roblox plastic part. Visual only
+     (pointer-events:none): the #wrap touch router turns any right-side touch into
+     the jump, so the whole right half is a generous hit area and this just shows
+     where to press + reacts via .held. Shown (display:flex) only in platformer mode
+     (toggled inline in startGame); hidden otherwise. */
+  #jumpbtn {
+    position: absolute;
+    right: calc(24px + env(safe-area-inset-right, 0px));
+    bottom: calc(48px + env(safe-area-inset-bottom, 0px));
+    width: 110px; height: 110px;
+    border-radius: 24px;
+    display: none;
+    flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+    background: linear-gradient(180deg, #8be86f 0%, #57c23e 54%, #3e9e2c 100%);
+    border: 3px solid rgba(0,0,0,0.30);
+    box-shadow: inset 0 6px 0 rgba(255,255,255,0.48), inset 0 -8px 0 rgba(0,0,0,0.22), 0 6px 14px rgba(0,0,0,0.42);
+    color: #173410;
+    z-index: 16;
+    touch-action: none;
+    pointer-events: auto;
+    -webkit-user-select: none; user-select: none;
+    transition: transform 0.06s ease, filter 0.06s ease, box-shadow 0.06s ease;
+  }
+  #jumpbtn .jb-arrow { font-size: 30px; line-height: 1; text-shadow: 0 1px 0 rgba(255,255,255,0.45); }
+  #jumpbtn .jb-txt { font-family: 'Arial Black', system-ui, monospace; font-weight: 800; font-size: 15px; letter-spacing: 2px; }
+  #jumpbtn.held {
+    transform: translateY(4px) scale(0.95); filter: brightness(0.9);
+    box-shadow: inset 0 3px 0 rgba(255,255,255,0.32), inset 0 -3px 0 rgba(0,0,0,0.25), 0 2px 6px rgba(0,0,0,0.4);
+  }
 
   #hud-game, #joy, #skills, #bars, #hud-top, #brand, #pills, #aimpad { display: none; }
   body.playing #joy, body.playing #skills,
-  body.playing #bars, body.playing #brand, body.playing #pills { display: block; }
+  body.playing #bars, body.playing #pills { display: block; }   /* #brand hidden in-play — it overlapped the centered timer (硬伤) */
   body.playing #hud-top { display: flex; }
   body.playing #aimpad { display: block; }
 
