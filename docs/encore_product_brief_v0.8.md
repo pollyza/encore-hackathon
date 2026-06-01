@@ -118,8 +118,7 @@ AI 仍然在产品里、是必需基建，但**它不是定位句**。定位句�
   · ON = winner clip 自动以 Collab Post 形式发布（主播侧无操作）
   · OFF = winner clip 仅以 @tag 形式发布，主播可后续手动决定每条是否 Duet
 
-[付费功能 gift-gate]
-  · Enhance / Spotlight / Remix 三档分别配置
+[Enhance gift-gate]（MVP 唯一付费功能 gate;Spotlight 已砍,Remix 是 Phase 2）
   · 候选:OFF（推荐）/ 50 / 200 / 500 金币
   · 超过 500 金币 dashboard 出软警告"该 gate 转化率比同档主播低 X%"（数据出来后才显示）
 ```
@@ -139,11 +138,12 @@ skip → 该高光不进入 Encore 流程
 主播继续打 ranked，不再被 Encore 流程打扰
 ```
 
-**直播后（异步）**:
+**直播后（异步,主播零操作）**:
 
-- 30 min 内主播可逐条 review winner clip 决定是否 veto
-- 不 veto → 自动发布到 viewer profile + @tag 主播 + 可选 Collab
-- 全局可一键关闭 Encore 后续直播默认配置
+- Top 3 winner clip 渲染完成后(~3-5 min)自动发布到 viewer profile + @tag 主播,主播侧无任何 review/审阅环节
+- 不喜欢某条 clip → 走 TikTok 既有"举报 / 请求删除"通道(与任何被 @tag 内容一样,跟 Encore 解耦)
+- 全局想关闭 Encore → dashboard Encore 开关一键关
+- **为什么不设主播 review 窗口**:跟 non-interference 第一原则自相矛盾——任何"主播必须 review N 条 clip" 都是操作题,主播打 ranked 不会专门盯着审 winner clip。删除该机制,把信任放在"viewer consent + 质量门槛 + TikTok 既有内容治理"三道防线上
 
 ### 3.2 观众侧
 
@@ -152,10 +152,9 @@ skip → 该高光不进入 Encore 流程
 ```
 弹窗:
   「玩 Encore 即同意:
-   · 你的玩法记录可能被生成为 split-screen 短视频
-   · 进入 Top 3 winner 时自动 publish 到你的 TikTok profile, @tag 主播
-   · 失败或非 winner 局不自动 publish, 你可付费选择发布
-   · 同意条款可随时在设置中撤回」
+   · 进入 Top 3 winner 时,你的玩法会被生成 split-screen 短视频,自动 publish 到你的 TikTok profile,@tag 主播
+   · 仅 Top 3 winner 会生成 clip,其他名次不生成 / 不发布,**不会有任何失败录像被发布**
+   · 同意条款可随时在设置中撤回(已发布的 clip 走 TikTok 普通删除流程)」
   [同意才能继续玩]
 ```
 
@@ -379,34 +378,62 @@ v0.7 中"5-10% ARPU lift"、"$87/直播"等数字**全部撤回**，原因:
 
 这些是**叙事价值**不是数字承诺，但是给平台高层讲 Encore 时必须讲清楚的。
 
-### 5.4 未来变现拓展矩阵(v0.8.1 新增)
+### 5.4 未来变现 · 3 大类权益矩阵(v0.8.1)
 
-MVP 单一 Enhance 是起点,不是终局。后续每阶段加 1-2 个新 SKU,每个对应明确用户心智:
+MVP 单一 Enhance 是起点。后续 SKU 按**3 大类权益**展开,每类对应明确用户心智:
 
-| 阶段 | SKU | 心智 / 类型 | 关键依赖 |
-|---|---|---|---|
-| **MVP / M9-M10** | **Enhance**($0.5-1) | C2C · 功能性续币 | 现有礼物中台 |
-| **Phase 2 / M11+** | **Remix**($2-5) | C2C · 创造性付费 + AI 真用例 | LLM 生成式 DSL 工程到位 |
-| **Phase 2 / M11+** | **Game publisher CPI 漏斗** | **B2B** · 游戏厂商按归因 install 付费 | clip 量 ≥ 100K/日 + 厂商主动洽谈 |
-| **Phase 2 / M12+** | **Brand collab Encore** | **B2B** · 品牌 sponsor 专属模板 | 跟 TikTok ad sales 中台对接 |
-| **Phase 3 / M14+** | **Encore Battle Pass / 季度订阅** | C2C · 月卡解锁主题皮肤 + 段位 + Enhance bundle | 留存数据先验证(MVP 后 6+ 月) |
-| **Phase 3 / M14+** | **Social-Challenge Spotlight v2**($1-2) | C2C · 重设计,"@ 朋友 challenge" 而非"发布失败" | TikTok 朋友 tag 基建 |
-| **Phase 3 / M14+** | **Encore Tournament** | 平台抽成 · 主播开联赛,viewer 参赛费 + 奖金池 | 头部主播运营 + 反作弊 |
-| **Phase 4+ / 探索** | **观众 VIP 分级** | C2C · 月费 → priority 上 Top 3 + 专属皮肤 | TikTok creator economy 升级 |
-| **Phase 4+ / 探索** | **Gift constellation** | C2C · 集体送礼达 threshold → 全场解锁专属模板 | 派对玩法生态 + 高粘性主播池 |
+#### 🅰 付费改变游戏体验(C2C · 个体增益)
 
-**矩阵的设计原则**:
+> **心智**:"我想玩得不一样 / 玩得更爽 / 玩得更好"
 
-1. **每个 SKU 一个心智** — 不堆叠心理负担在用户身上;Enhance(功能)/ Remix(创造)/ CPI(归因)/ Brand(协作)/ Pass(订阅)/ Tournament(竞技)
-2. **C2C 单 SKU 不超过 3 个并存** — 避免 SKU 内卷自相蚕食(Phase 3 时 Enhance + Remix + Pass 三档已是上限)
-3. **B2B 是 Phase 2 启动重点** — Game publisher CPI 单条规模潜力 > 所有 C2C 之和(参考 TikTok 现有 game ads 体量)
-4. **任何"赌博 / Loot box / Sponsor 主播下一局"永不进入** — 监管 + non-interference 红线
+| SKU | 描述 | 阶段 |
+|---|---|---|
+| **Enhance** | 改自己下一局:火焰子弹 / 双倍 HP / 额外一条命 · $0.5-1 | **MVP** |
+| **Skin / Theme** | 角色 / 武器 / 场景皮肤(单购 + 累积解锁) | Phase 2 (M11+) |
+| **Remix** | LLM 生成自定义参数("slower, shotgun, pink enemies")· $2-5 · AI 真不可替代用例 | Phase 2 (M11+) |
+| **Upgrade 道具** | 永久属性微提升(命中辅助 / 反应窗口 / 视野范围)| Phase 3 (M14+) |
+| **Battle Pass / VIP 月卡** | 月费解锁皮肤库 + 累积 Enhance 包 + priority 上 Top 3 | Phase 3 (M14+) |
+
+🅰 类是 LTV 长尾,Enhance → Skin → Battle Pass 是经典手游变现阶梯。
+
+#### 🅱 厂商合作(B2B · 品牌 / 游戏发行)
+
+> **心智**:"游戏 LIVE 是 game 的自然发行漏斗,厂商付费买 organic 流量"
+
+| SKU | 描述 | 阶段 |
+|---|---|---|
+| **Game publisher install CPI 漏斗** | clip 内嵌"Play [Game] →" CTA,厂商按归因 install 付费 | Phase 2 (M11+,clip 量 ≥ 100K/日 + 厂商主动洽谈) |
+| **Brand collab Encore** | 品牌方 sponsor 特定 Encore 模板(类比 TikTok Branded Effect)| Phase 2 (M12+,跟 TikTok ad sales 中台对接) |
+| **联运资源位** | 厂商在 #Encore tag 下投放主推游戏专属模板 | Phase 3 (M14+) |
+
+🅱 类**是 Phase 2 启动重点 + 长期主增长引擎** — 单条规模潜力 > 所有 🅰 之和(参考 TikTok 现有 game ads 体量)。
+
+#### 🅲 多人 / 跟主播一起玩(社交杠杆 · 平台抽成)
+
+> **心智**:"我想跟别人一起玩(主播 / 朋友 / 全场观众)"
+
+| SKU | 描述 | 阶段 |
+|---|---|---|
+| **Friend Challenge**(Spotlight v2) | $1-2 = 自动 @ 3 朋友"打过我看看",viral 杠杆 | Phase 3 (M14+,需 TikTok 朋友 tag 基建) |
+| **Encore Tournament** | 主播开 Encore 联赛 + 奖金池,viewer 参赛费,平台抽成 | Phase 3 (M14+,头部主播运营 + 反作弊) |
+| **Gift Constellation** | 全场观众集体送礼达 threshold → 解锁主播专属 Encore 模板 | Phase 3 (M14+,派对玩法生态) |
+| **主播 co-play 时段** | 主播开放 Encore co-play,viewer 跟主播同框打 | Phase 4+ (探索) |
+
+🅲 类转化率最低但**viral 系数最高**,适合 Phase 3+ 扩大盘 + 跨品类延伸(派对、卡牌、IRL 也能用)。
+
+---
+
+**3 大类的设计原则**:
+
+1. **每类一个心智,不混淆** — 个体爽(A) / 厂商投放(B) / 社交一起玩(C)
+2. **A 是 LTV 阶梯,B 是规模主引擎,C 是社交杠杆** — 各打各的位置
+3. **任何"赌博 / Loot box / Sponsor 主播下一局"永不进入** — 监管 + non-interference 红线
 
 **收入结构演化预期**(定性,非数字):
 
-- M9-M10:Enhance 单核,验证可行性
-- M11-M14:C2C(Enhance + Remix) + B2B(CPI + Brand)双轮,B2B 大概率成主增长引擎
-- M14+:增加订阅 + 竞技层,提升 LTV;C2C 用户分层(VIP / 普通)
+- M9-M10:仅 A 类 Enhance 单核,验证 unit economics
+- M11-M14:**A(Enhance + Skin + Remix)+ B(CPI + Brand)双轮**,B 大概率成主增长引擎
+- M14+:加 C 类社交层,提升 viral 系数 + LTV;A 类升级到 Battle Pass / VIP 分层
 
 ---
 
