@@ -233,6 +233,27 @@
       touchMode: 'platformer',            // LEFT = move stick, RIGHT/JUMP btn = tap jump
       skills() { return [null, null, null, null]; },   // jump = dedicated on-screen JUMP button (not a skill slot)
 
+      applyGiftBoost(boost) {
+        const state = $state(); if (!state || !state.player) return false;
+        const p = state.player;
+        // pick the gift — explicit pool key, else rotate so repeat sends differ
+        let key = ROBLOX_GIFTS[boost] ? boost : null;
+        if (!key) { state._giftRot = (state._giftRot || 0); key = ROBLOX_GIFT_KEYS[state._giftRot % ROBLOX_GIFT_KEYS.length]; state._giftRot++; }
+        const g = ROBLOX_GIFTS[key];
+        // every Roblox gift = the playground dream "I can fly" + ONE death-save
+        // (a struggling player's second wind). Distinct VISUAL/meme per gift.
+        p._giftShield = Math.max(p._giftShield || 0, 1);
+        p.immuneT = Math.max(p.immuneT || 0, 2.2);
+        p.stamina = T.jump.stamMax;
+        if (key === 'wings') p._giftWingsT = g.dur;
+        else if (key === 'oof') p._giftOofT = g.dur;
+        else p._giftCoilT = g.dur;
+        state.giftBoost = { key, name: g.name, ico: g.ico, tone: g.tone, t: g.dur, age: 0 };
+        try { if (window.showBanner) window.showBanner(g.ico + ' ' + g.name, g.tone, 2.0); } catch (_) {}
+        try { if (window.Juice) { window.Juice.flash(g.tone, 110); window.Juice.confetti($W()); window.Juice.popup(g.ico + ' ' + g.name, $W()/2, $H()*0.32, { color: g.tone, size: 25, dur: 1.4 }); window.Juice.addTrauma(0.4); } } catch (_) {}
+        return true;
+      },
+
       init() {
         const Iso = $Iso(); if (!Iso) return;
         const themeKey = getThemeKey();
@@ -278,9 +299,15 @@
         const p = state.player;
         if (!p.alive || p.finished) return;
         if (state.evt && state.evt.cfg && state.evt.cfg.phone) { state.evt = null; $sfx('pickup'); return; }  // 接电话: 按一下挂断
-        if (canJump(p)) doJump(p);                                          // grounded (or coyote) → normal jump
+        const grounded = canJump(p);
+        if (grounded) doJump(p);                                            // grounded (or coyote) → normal jump
         else if (!p.airJumped && p.stamina >= T.jump.stamCost) doDoubleJump(state, p);   // mid-air → DOUBLE JUMP if 耐力够
         else p.jumpBuffer = T.jump.buffer;                                  // can't jump now → buffer for landing
+        if (p._giftOofT > 0) {                                              // OOF spring: bouncier launch + the iconic meme
+          p.vy = Math.max(p.vy, T.jump.vy * 1.15);
+          try { if (window.Juice) window.Juice.popup('OOF!', wx2sx(p.px), wy2sy(p.py) - 30, { color: '#ffd24a', size: 20 }); } catch (_) {}
+          $sfx('bigjump');
+        }
       },
       onActionUp() {},
       castPress() {}, castRelease() {},
@@ -301,6 +328,9 @@
         if (p.alive && !p.finished) {
           const t = state.time;
           if (p.immuneT > 0) p.immuneT = Math.max(0, p.immuneT - dt);   // post-respawn grace
+          if (p._giftCoilT > 0) p._giftCoilT = Math.max(0, p._giftCoilT - dt);
+          if (p._giftWingsT > 0) p._giftWingsT = Math.max(0, p._giftWingsT - dt);   // GIFT: wings / OOF spring timers
+          if (p._giftOofT > 0)   p._giftOofT   = Math.max(0, p._giftOofT - dt);
           let mvx = 0;
           try { if (typeof window.getMoveVec === 'function') { const mv = window.getMoveVec(); mvx = mv.x || 0; } } catch (_) {}
           const em = eventMod(state);
@@ -320,8 +350,15 @@
           if (p.onPlat) p.runPhase += Math.abs(steerX) * dt * 16;
 
           // ── vertical physics (fixed-height jump; double-jump fires on press) ──
-          p.vy -= T.jump.gravity * (rm.gravK || 1) * dt;                     // 月球重力 run-mod floats
-          if (p.stamina < T.jump.stamMax) p.stamina = Math.min(T.jump.stamMax, p.stamina + T.jump.stamRegen * dt);  // 耐力回充
+          const coil = p._giftCoilT > 0, wings = p._giftWingsT > 0, oof = p._giftOofT > 0;
+          const gift = coil || wings || oof;
+          const gMul = wings ? 0.5 : (coil ? 0.78 : (oof ? 0.62 : 1));        // GIFT: lighter gravity (wings = floatiest)
+          p.vy -= T.jump.gravity * (rm.gravK || 1) * gMul * dt;
+          // GIFT flight: keep the air-jump available + topped-up stamina → tap to
+          // keep climbing (wings = fly, OOF = mega-bounce). Wings also glide (cap fall).
+          if (gift) { p.airJumped = false; p.stamina = T.jump.stamMax; }
+          if (wings && p.vy > 135) p.vy = 135;
+          if (p.stamina < T.jump.stamMax) p.stamina = Math.min(T.jump.stamMax, p.stamina + T.jump.stamRegen * (gift ? 1.9 : 1) * dt);  // 耐力回充
           if (p.spinT > 0) p.spinT -= dt;                                    // double-jump flip anim
           p.py += p.vy * dt;
           if (p.squashT > 0) p.squashT -= dt;
@@ -673,6 +710,63 @@
   }
 
   // blocky Roblox-style avatar, side view, feet at (px,py)
+  // ═══ GIFT "ENHANCE" SPECTACLE (Roblox) ═══════════════════════════════════
+  // The playground fantasy: a TikTok gift makes you FLY. Each is a Roblox-culture
+  // meme, big & shareable, strong-but-timed (12-14s) + a one-time death-save, so a
+  // struggling player gets a dramatic second wind without it being auto-win.
+  const ROBLOX_GIFTS = {
+    wings: { ico: '🪽', name: 'Dominus 大翅膀', tone: '#b06bff', dur: 14 },   // giant glowing wings → glide/fly
+    coil:  { ico: '🌀', name: '反重力线圈',      tone: '#5fe0ff', dur: 14 },   // low-grav float (classic Gravity Coil)
+    oof:   { ico: '🚀', name: 'OOF 火箭弹簧',    tone: '#ffd24a', dur: 12 },   // mega-bounce spring + the iconic OOF
+  };
+  const ROBLOX_GIFT_KEYS = ['wings', 'coil', 'oof'];
+
+  // Drawn BEHIND the avatar body (called early in drawPlayer). World-space, scaled.
+  function drawGiftAvatar(c, p, X, F) {
+    const t = (p._giftWingsT > 0) ? 'wings' : (p._giftOofT > 0) ? 'oof' : (p._giftCoilT > 0) ? 'coil' : null;
+    if (!t) return;
+    const now = performance.now();
+    const tone = t === 'wings' ? '#b06bff' : t === 'oof' ? '#ffd24a' : '#5fe0ff';
+    // radiant glow halo behind everyone
+    c.save();
+    const cy = F - 20, pulse = 0.5 + 0.5 * Math.sin(now / 150);
+    const grad = c.createRadialGradient(X, cy, 4, X, cy, 40);
+    grad.addColorStop(0, tone); grad.addColorStop(1, 'rgba(0,0,0,0)');
+    c.globalAlpha = 0.45 + 0.25 * pulse; c.fillStyle = grad;
+    c.beginPath(); c.arc(X, cy, 38, 0, Math.PI * 2); c.fill();
+    c.globalAlpha = 1; c.restore();
+    if (t === 'wings') {
+      // BIG majestic feathered wings — span ~2.5× the avatar, arching up & out, flapping.
+      const flap = Math.sin(now / 120) * 16;
+      for (const s of [-1, 1]) {
+        c.save(); c.translate(X, F - 26);
+        const wg = c.createLinearGradient(0, 0, s * 56, -40);
+        wg.addColorStop(0, '#e9d6ff'); wg.addColorStop(0.6, '#b06bff'); wg.addColorStop(1, '#7a3fd0');
+        c.fillStyle = wg; c.strokeStyle = '#5a2aa8'; c.lineWidth = 1.6;
+        c.beginPath(); c.moveTo(0, 2);
+        c.quadraticCurveTo(s * 22, -34 - flap, s * 56, -30 - flap);     // top edge sweeping up & out
+        c.quadraticCurveTo(s * 44, -10 - flap * 0.4, s * 50, 2);        // outer tip
+        c.quadraticCurveTo(s * 40, 4, s * 34, 12);                      // lower feather 1
+        c.quadraticCurveTo(s * 30, 4, s * 22, 14);                      // lower feather 2
+        c.quadraticCurveTo(s * 18, 6, s * 8, 12);                       // lower feather 3
+        c.closePath(); c.fill(); c.stroke();
+        c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = 1.2;     // feather ribs
+        for (const f of [0.45, 0.7, 0.92]) { c.beginPath(); c.moveTo(s * 6, 2); c.lineTo(s * 50 * f, (-32 - flap) * f + 4); c.stroke(); }
+        c.restore();
+      }
+      // a couple of drifting feather sparkles for share-worthy flair
+      c.save(); c.fillStyle = '#e9d6ff'; c.globalAlpha = 0.8;
+      const fy = (now / 9) % 60; c.fillRect(X - 30, F - 50 + fy * 0.3, 2, 2); c.fillRect(X + 26, F - 60 + ((fy + 30) % 60) * 0.3, 2, 2);
+      c.globalAlpha = 1; c.restore();
+    } else if (t === 'oof') {                               // chunky coiled spring under the feet
+      c.save(); c.strokeStyle = '#ffd24a'; c.lineWidth = 4; c.lineCap = 'round'; c.beginPath();
+      for (let i = 0; i <= 6; i++) { const yy = F + i * 2.6; const xx = X + (i % 2 ? 9 : -9); if (i === 0) c.moveTo(xx, yy); else c.lineTo(xx, yy); }
+      c.stroke();
+      c.fillStyle = '#ffe78a'; c.fillRect(X - 11, F + 16, 22, 4);       // spring base plate
+      c.lineCap = 'butt'; c.restore();
+    }
+  }
+
   function drawPlayer(c, p, pal, scale) {
     const sx = wx2sx(p.px), feet = wy2sy(p.py);
     let sxk = 1, syk = 1;
@@ -682,6 +776,7 @@
     if (p.spinT > 0) { const cy = feet - 19, ang = (1 - p.spinT / 0.42) * Math.PI * 2 * (p.facing || 1);   // double-jump flip
       c.translate(sx, cy); c.rotate(ang); c.translate(-sx, -cy); }
     const X = sx, F = feet, dir = p.facing;
+    drawGiftAvatar(c, p, X, F);                                      // GIFT wings / spring / aura (behind the body)
     const C = p.egg ? GOLD_NOOB : NOOB;                              // 1/8 rare gold skin
     // legs — classic noob GREEN (running stagger on ground; tucked in air)
     const swing = p.onPlat ? Math.round(Math.sin(p.runPhase) * 3) : (p.vy > 0 ? -2 : 2);
@@ -1015,6 +1110,22 @@
   // if no safe spot exists yet (can't happen — the start pad is always one).
   function killPlayer(state) {
     const p = state.player; if (!p || !p.alive || p.finished) return;
+    if ((p._giftShield || 0) > 0) {
+      p._giftShield -= 1;
+      p.immuneT = Math.max(p.immuneT || 0, 1.6);
+      p.stamina = T.jump.stamMax;
+      p.airJumped = false;
+      if (p.lastSafe) {
+        p.px = p.lastSafe.x; p.py = p.lastSafe.y; p.vy = 0; p.vx = 0;
+        p.onPlat = (p.lastSafePlat && !p.lastSafePlat._gone) ? p.lastSafePlat : null;
+        p.coyote = T.jump.coyote;
+      } else {
+        p.vy = Math.max(p.vy, T.jump.doubleVy * 0.72);
+      }
+      try { if (window.Juice) { window.Juice.flash('#ff5a7a', 100); window.Juice.popup('护盾救命!', wx2sx(p.px), wy2sy(p.py) - 34, { color: '#ffe24a', size: 20 }); } } catch (_) {}
+      $sfx('pickup');
+      return;
+    }
     p.deaths = (p.deaths || 0) + 1; p.combo = 0;
     try { if (window.Juice) { window.Juice.addTrauma(0.6); window.Juice.flash('#ff4655', 110);
       window.Juice.popup('OOF!', wx2sx(p.px), wy2sy(p.py) - 28, { color: '#ffffff', size: 30 }); } } catch (_) {}   // the iconic Roblox death meme
