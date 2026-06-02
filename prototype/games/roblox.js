@@ -63,6 +63,9 @@
     View.SCALE = Math.max(1.9, Math.min(2.7, W / 185)); View.restY = H * T.cam.restY; }
   function wx2sx(x) { return Math.round(View.W * T.cam.restX + (x - View.camX) * View.SCALE); }
   function wy2sy(y) { return Math.round(View.restY - (y - View.camY) * View.SCALE); }   // camera follows Y too → player stays framed
+  // read-only QA hook: the player's on-screen feet-y + canvas height (verify the
+  // camera keeps the player in-frame on big jumps). Same pattern as __qaSet* hooks.
+  try { window.__qaRobloxSY = () => { const s = $state(); return (s && s.player) ? { sy: wy2sy(s.player.py), H: View.H } : null; }; } catch (_) {}
 
   // ============================================================
   //  CHAOS EVENTS — the star. Each TELEGRAPHS (~0.95s warning that tells you HOW
@@ -437,11 +440,24 @@
           try { if (window.scoreEl) window.scoreEl.textContent = '分 ' + (state.kills || 0); } catch (_) {}   // top-right = live score (clean, gives a "why")
         }
 
-        // camera follows X (rest at restX) and the GROUND LEVEL in Y (not the jump
-        // apex) → jumps rise + fall within frame instead of flying into empty sky.
+        // camera follows X (rest at restX). Vertical = DEAD-ZONE follow: keep the
+        // player inside a comfort band on screen — stable on small hops, but it
+        // tracks them UP into the sky on big gift launches (wings/coil/OOF) so the
+        // paid effect is never lost off-screen (user: "宁可让视角跟着飞到天空").
         if (p.onPlat) p._groundY = p.py;
         View.camX += (p.px - View.camX) * T.cam.followLerp;
-        View.camY += (((p._groundY != null ? p._groundY : p.py)) - View.camY) * T.cam.followLerpY;
+        const SC = View.SCALE, rY = View.restY;
+        const sy = rY - (p.py - View.camY) * SC;          // player's current screen-y
+        const topB = View.H * 0.20, botB = View.H * 0.72; // comfort band
+        let camTY = View.camY;
+        if (sy < topB)      camTY = p.py - (rY - topB) / SC;   // too high → pan up with them
+        else if (sy > botB) camTY = p.py - (rY - botB) / SC;   // too low → pan down
+        View.camY += (camTY - View.camY) * 0.22;
+        // hard safety clamp — even a fast launch can never push the player off-screen
+        const hardTop = View.H * 0.10, hardBot = View.H * 0.88;
+        const syNow = rY - (p.py - View.camY) * SC;
+        if (syNow < hardTop) View.camY = p.py - (rY - hardTop) / SC;
+        else if (syNow > hardBot) View.camY = p.py - (rY - hardBot) / SC;
       },
 
       draw() { drawScene($state()); },
