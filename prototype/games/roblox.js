@@ -466,6 +466,53 @@
   }
   function palOf(state) { return state.theme || PALETTES.grass; }
 
+  // GIFT sky easter eggs — fly high enough (wings/coil/OOF) and the sky turns to
+  // space, with Roblox-culture memes revealing the higher you go: MOON (嫦娥 + 玉兔 +
+  // a Transformer) → DEEP SPACE (火星 + 🚀 + 马斯克 + a 👽 UFO). Pure cosmetic, driven
+  // by altitude above your launch platform — the payoff for the "fly to the moon"
+  // moment a paid gift creates (made to be screenshot/shared). Normal jumps never
+  // reach the threshold, so it only shows on a gift flight.
+  function drawSkyEasterEggs(ctx, state, W, H) {
+    const p = state.player; if (!p) return;
+    const ground = (p._groundY != null ? p._groundY : p.py);
+    const alt = p.py - ground;
+    if (alt < 220) return;                                            // still in the normal play area
+    const sky   = Math.max(0, Math.min(1, (alt - 220) / 280));        // 220→500 : darken to space + stars
+    const moon  = Math.max(0, Math.min(1, (alt - 450) / 300));        // 450→750 : moon scene
+    const space = Math.max(0, Math.min(1, (alt - 850) / 350));        // 850→1200: deep space
+    const t = state.time || 0;
+    ctx.save(); ctx.textAlign = 'center';
+    ctx.globalAlpha = 0.6 * sky; ctx.fillStyle = '#0a0a26'; ctx.fillRect(0, 0, W, H);   // space
+    ctx.fillStyle = '#ffffff';                                         // twinkling stars
+    for (let i = 0; i < 44; i++) { const sx = (i * 9973) % W, sy = (i * 6311) % Math.round(H * 0.72);
+      ctx.globalAlpha = sky * (0.25 + 0.6 * (0.5 + 0.5 * Math.sin(t * 3 + i))); ctx.fillRect(sx, sy, 2, 2); }
+    if (moon > 0.02) {                                                 // ── MOON: 玉兔 + 嫦娥 + 变形金刚 ──
+      ctx.globalAlpha = moon;
+      ctx.fillStyle = '#e9edf2'; ctx.beginPath(); ctx.arc(W * 0.73, H * 0.24, 50, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#d2d9e0'; [[8,-12,8],[-15,5,10],[18,14,6]].forEach(c => { ctx.beginPath(); ctx.arc(W*0.73+c[0], H*0.24+c[1], c[2], 0, Math.PI*2); ctx.fill(); });
+      ctx.font = '20px sans-serif'; ctx.fillText('🐰', W * 0.73, H * 0.24 + 4);
+      ctx.fillStyle = '#bfe0ff'; ctx.font = 'bold 12px sans-serif'; ctx.fillText('玉兔', W * 0.73, H * 0.24 + 40);
+      ctx.font = '20px sans-serif'; ctx.fillText('🧚', W * 0.57, H * 0.18 + 2 * Math.sin(t * 2));
+      ctx.fillStyle = '#ffd0e8'; ctx.font = 'bold 12px sans-serif'; ctx.fillText('嫦娥', W * 0.57, H * 0.18 + 20);
+      ctx.font = '22px sans-serif'; ctx.fillText('🤖', W * 0.87, H * 0.40);
+      ctx.fillStyle = '#9fd0ff'; ctx.font = 'bold 11px sans-serif'; ctx.fillText('变形金刚', W * 0.87, H * 0.40 + 18);
+      ctx.globalAlpha = 1;
+    }
+    if (space > 0.02) {                                               // ── DEEP SPACE: 火星 + 🚀 + 马斯克 + 👽 ──
+      ctx.globalAlpha = space;
+      ctx.fillStyle = '#c1502e'; ctx.beginPath(); ctx.arc(W * 0.24, H * 0.20, 44, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#9b3c20'; ctx.beginPath(); ctx.arc(W * 0.24 - 12, H * 0.20 + 8, 12, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffcaa0'; ctx.font = 'bold 12px sans-serif'; ctx.fillText('火星', W * 0.24, H * 0.20 + 58);
+      ctx.font = '24px sans-serif'; ctx.fillText('🚀', W * 0.42, H * 0.34 - 4 * Math.sin(t * 3));
+      ctx.font = '20px sans-serif'; ctx.fillText('🧑‍🚀', W * 0.33, H * 0.42);
+      ctx.fillStyle = '#bfe0ff'; ctx.font = 'bold 11px sans-serif'; ctx.fillText('马斯克', W * 0.33, H * 0.42 + 18);
+      ctx.font = '24px sans-serif'; ctx.fillText('🛸', W * 0.64, H * 0.14 + 3 * Math.sin(t * 2.2));
+      ctx.font = '16px sans-serif'; ctx.fillText('👽', W * 0.64, H * 0.14 + 22);
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+  }
+
   // ============================================================
   //  Render — pure 2D side view
   // ============================================================
@@ -489,6 +536,7 @@
     }
     ctx.fillStyle = state._skyGrad; ctx.fillRect(-40, -40, W + 80, H + 80);
     drawSkyAccent(ctx, bd, state, W, H);                 // stars / moon / sun / lightning — sky-fixed, behind everything
+    drawSkyEasterEggs(ctx, state, W, H);                 // GIFT: fly high → space + Roblox memes (moon嫦娥玉兔变形金刚 / 火星马斯克外星人)
     if (bd.weather === 'clouds') drawClouds(ctx, W, H, bd.cloud);
     drawHills(ctx, pal, W, H, bd);
     drawWeather(ctx, bd, state, W, H);                   // rain / snow / leaves — BEHIND platforms (never hides a hazard)

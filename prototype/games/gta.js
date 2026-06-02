@@ -161,6 +161,8 @@
     chopperSweepWU:   115,
     chopperBeamLanes: 0.9,
     chopperHeatRate:  0.22,
+    chopperFireCd:    0.42,   // while you're in the beam the heli machine-guns you (real punishment, not just "stays hot")
+    chopperBulletDmg: 9,
     // 爆胎漂移 (random event #6, user-named "开着开着爆胎"): a tyre blows → the car
     // drifts to one side & steering goes loose for a beat; counter-steer to save it
     // (操作空间, never an instant death). No damage — it's a skill check, not malice.
@@ -1169,6 +1171,26 @@
         else if (s.chopper.x <= s.latLeft) { s.chopper.x = s.latLeft; s.chopper.dir = 1; }
         if (Math.abs(p.wx - s.chopper.x) < TUNING.chopperBeamLanes * ws) {
           s.heat = Math.min(TUNING.heatMax, s.heat + TUNING.chopperHeatRate * dt); s.heatCalmT = 0; s.stars = Math.ceil(s.heat - 1e-6);
+          // R: caught in the beam → the heli STRAFES you (a real threat that can bust
+          // you, not just "stays hot"). Direct strafe damage = reliable punishment on
+          // a moving runner; the falling tracers below sell it visually. Drive OUT of
+          // the beam to break it.
+          s.chopper.fireT = (s.chopper.fireT || 0) - dt;
+          if (s.chopper.fireT <= 0) {
+            s.chopper.fireT = TUNING.chopperFireCd;
+            // visible machine-gun tracers raining from the heli onto your lane (cosmetic)
+            for (let k = 0; k < 3; k++) s.copBullets.push({ wx: s.chopper.x + (Math.random()-0.5)*ws*0.8, wy: p.wy + ws*(6-k*1.5), vx: 0, vy: -TUNING.copBulletSpeedWU*1.3, life: 0.45, _minD: 1e9, dmg: 0, heli: true });
+            const Jc = $J(); if (Jc) { Jc.flash('#ffd24a', 26); }
+            pushShake(s, 6);
+            // the actual hit (machine-gun rattle). Gated by the heli's OWN fireT, so we
+            // do NOT touch p.invulnT — doing so also made you immune to cop slams.
+            p.hp = Math.max(0, p.hp - TUNING.chopperBulletDmg); s.robCombo = 0;
+            pushSpark(s, P.sx(p.wx), P.sy(p.wy), '#ffd84a', 8);
+            const SFX = $SFX(); try { if (SFX.hit) SFX.hit(); } catch (_) {}
+            if (window.showBanner) window.showBanner(`🚁 直升机扫射! HP ${p.hp}`, '#ff6a4a', 0.5);
+            if (p.hp <= 0) { return this._bust(s); }
+            if (!s.chopper._warned) { s.chopper._warned = true; gtaToast(s, '🚁 直升机开火!快躲开探照灯!', '#ff6a4a', false); }
+          }
         }
       } else if (s.chopper) s.chopper = null;
 
@@ -1396,7 +1418,7 @@
         b.wx += b.vx * dt; b.wy += b.vy * dt; b.life -= dt;
         const d = Math.hypot(b.wx - p.wx, b.wy - p.wy); b._minD = Math.min(b._minD, d);
         if (d < p.r + 6 && (p.invulnT || 0) <= 0) {
-          b.life = 0; p.hp = Math.max(0, p.hp - TUNING.copBulletDmg); p.invulnT = 0.6; s.robCombo = 0;
+          b.life = 0; p.hp = Math.max(0, p.hp - (b.dmg || TUNING.copBulletDmg)); p.invulnT = 0.6; s.robCombo = 0;
           pushShake(s, 8); pushSpark(s, P.sx(p.wx), P.sy(p.wy), '#ffd84a', 10);
           const J = $J(); if (J) { J.flash('#ff7744', 70); J.chroma(80); }
           const SFX = $SFX(); try { if (SFX.hit) SFX.hit(); } catch (_) {}
