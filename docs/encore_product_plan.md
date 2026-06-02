@@ -293,6 +293,8 @@ Encore 服务端 (asynchronous worker)
 - 7.5M × 1s = ~2000 CPU·h/日 ≈ **$50-200/日 全量级别**(云上 spot 实例)
 - 相比 Vision 检测成本(见 §7.2)可忽略
 
+**Demo 阶段已经端侧打通(M8 完成)**:hackathon demo 里我们用浏览器原生 Canvas + MediaRecorder 把整条链路真的跑出来了 —— 玩家玩 30 秒,游戏 canvas 直接被 MediaRecorder 抓帧成一段录屏,winner 时刻这段录屏再被 drawImage 到上下分屏合成 canvas 的下半屏,上半屏是跟主播 LIVE mode 匹配的程序化 Canvas 场景,合成 canvas 自己再被 MediaRecorder 抓帧出最终 9:16 的真 .webm 文件,观众能下载、能通过 Web Share API 分享。**这证明了技术可行性**;生产环境会换到上面 §4.2 描述的服务端 ffmpeg 路径,主要为了规模 + 玩家流量 / 电量友好,不为了"是不是能做出来"。
+
 ### 4.3 Vision 检测 + 主播 promote 策略
 
 **默认 auto-promote**——主播在 FPS 交火 / MOBA 团战中根本不需要看屏幕角落,5s 静默倒计时结束自动放出 bottom sheet。这是 non-interference 第一原则的落地形式:**默认无操作就工作**,主播完全零干预,不强迫主播做"director 决策"。
@@ -648,6 +650,7 @@ Hackathon 阶段和 Phase 1 上线**不解决**的三件事:
 | **新手引导** | 5-tier HOW TO PLAY 卡片,触屏 / 桌面双适配,可关 |
 | **LIVE 高保真模块** | streamer.html 7 个模块化文件、4-phase 状态机、4-entry mode、Loading/Result/Ranking 三页、iPhone frame + fit-scale |
 | **Mario 真模板集成** | `encore_prototype.html?embedded=1` via iframe + V2G postMessage v1.1 |
+| **Winner clip 真合成** | Canvas + MediaRecorder 端侧合成上下分屏短视频:主播半屏跟 LIVE mode 匹配的程序化场景,玩家半屏是从游戏 iframe 真录屏的回放,合成 540×960 9:16 .webm,Download + Web Share 按钮真能用 |
 | **Landing 页 + QR** | 评委现场扫码体验 |
 | **公开 demo** | Vercel + GitHub v1 tag + 13 页演讲 deck |
 
@@ -675,7 +678,7 @@ Hackathon 阶段和 Phase 1 上线**不解决**的三件事:
 | 里程碑 | 内容 | 价值 |
 |---|---|---|
 | **M9(NOW)** | 真 AI 美术批量切入(MJ / SD / DALL-E)| 视觉接近 Astrocade 级,可上 PRD |
-| **M10** | TikTok feed shell + 真 SDK 接入 | 完整看→玩→播闭环, clip 自动回流 |
+| **M10** | TikTok SDK 接入(短视频已在浏览器里真合成 .webm,剩下把它丢进 TikTok 发布器)| 完整看→玩→播闭环,clip 自动回流到玩家 TikTok |
 | **M11** | 礼物经济实装(**Enhance 单 SKU + gift-gate**)| 商业化验证;v0.8.1 砍 Spotlight,Sponsor / Loot 不做 |
 | **M11+ (Phase 2)** | **AI Remix 付费功能**($2-5/次,LLM 生成式 DSL) | 唯一真生成式 AI 用例,差异化护城河 |
 | **M12** | 第 4 个模板家族(塔防 / 自走棋 / Survivors 三选一)| 模板覆盖率 60% → 75% |

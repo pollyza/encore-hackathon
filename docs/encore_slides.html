@@ -1398,7 +1398,7 @@ h2.section-title .red { color: var(--c-red); }
                 <div class="loop-stage">STAGE 03</div>
                 <div class="ico">🎬</div>
                 <div class="label">播</div>
-                <div class="desc">玩得最好的前 3 名,自动剪成"主播 15s + 玩家 15s"上下分屏短视频,发到玩家自己 TikTok,@主播,带 #Encore。</div>
+                <div class="desc">玩得最好的前 3 名,自动剪成"主播 15s + 玩家 15s"上下分屏短视频(浏览器端 Canvas + MediaRecorder 实合成, 真 .webm 文件可下载可分享), 发到玩家自己 TikTok, @主播, 带 #Encore。</div>
             </div>
         </div>
         <div class="loop-cn reveal" style="--delay:1s">看 · 玩 · 播</div>
@@ -1683,8 +1683,10 @@ h2.section-title .red { color: var(--c-red); }
             <li class="done reveal-right" style="--delay:0.65s"><span class="mark">✓</span><span>Claude Vision 实时观察 LIVE 视频帧</span></li>
             <li class="done reveal-left" style="--delay:0.7s"><span class="mark">✓</span><span>streamer.html + postMessage iframe 协议</span></li>
             <li class="done reveal-right" style="--delay:0.75s"><span class="mark">✓</span><span>JSON config 注入到游戏(theme + scenario 覆盖)</span></li>
-            <li class="partial reveal-left" style="--delay:0.8s"><span class="mark">◐</span><span>真 AI 精灵切入 <span class="meta">(管道就绪 / 待跑 MJ-DALL-E 批次)</span></span></li>
-            <li class="partial reveal-right" style="--delay:0.85s"><span class="mark">◐</span><span>TikTok feed shell 集成 <span class="meta">(UI 仿真版已有 · 真 SDK 待 M11)</span></span></li>
+            <li class="done reveal-left" style="--delay:0.78s"><span class="mark">✓</span><span>短视频真合成 <span class="meta">(浏览器端 Canvas + MediaRecorder → 真 .webm,可下载可分享)</span></span></li>
+            <li class="done reveal-right" style="--delay:0.81s"><span class="mark">✓</span><span>玩家游戏真录屏 <span class="meta">(从游戏 iframe canvas 抓 stream → 接进短视频下半屏)</span></span></li>
+            <li class="partial reveal-left" style="--delay:0.84s"><span class="mark">◐</span><span>真 AI 精灵切入 <span class="meta">(管道就绪 / 待跑 MJ-DALL-E 批次)</span></span></li>
+            <li class="partial reveal-right" style="--delay:0.87s"><span class="mark">◐</span><span>TikTok feed 真接入 <span class="meta">(浏览器 .webm 已出, 待接 TikTok SDK 把文件丢进发布器)</span></span></li>
         </ul>
     </div>
 </section>
@@ -1754,7 +1756,7 @@ h2.section-title .red { color: var(--c-red); }
             <div class="rm next reveal-left" style="--delay:0.54s">
                 <div class="when">M10 · 下一步</div>
                 <div class="title">接入 TikTok feed,真分享链路打通</div>
-                <div class="body">前 3 名自动剪上下分屏短视频 → 发到玩家自己 TikTok + @主播 + 可选联名。需要 TikTok SDK 和 CDN 支持。</div>
+                <div class="body">合成已经在浏览器里跑通了(Canvas + MediaRecorder 真出 .webm 文件,可下载可分享)。 剩下要接的是 TikTok SDK / 深链:让"share"按钮直接把这个文件丢进 TikTok 发布器,预填 @主播 + #Encore + Play [游戏名] 按钮。</div>
             </div>
             <div class="rm next reveal-left" style="--delay:0.66s">
                 <div class="when">M11 · 再下一步</div>

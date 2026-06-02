@@ -76,8 +76,10 @@ TikTok 游戏直播观众现在能做的事:送礼、刷弹幕、关注、点选
 ✅ V2G Vision 链路      真接入 Claude Vision,已用 2 个真实 TikTok 直播视频跑通
 ✅ LIVE 高保真壳        iPhone 14 phone frame + 4-phase 状态机 + ack overlay
                        (Claude Design handoff → vanilla JS 重建,7 文件 2900+ 行)
-✅ 短视频生成 mock      上下分屏(主播录像 + Canvas 实时模拟玩家像素游戏)+
-                       @ 主播 + 编辑文案 + 自动发布倒计时 + 联名 UI 全做完
+✅ 短视频真合成        端侧 Canvas + MediaRecorder 把主播 LIVE 风格 +
+                       玩家真实游戏录屏(从 iframe 抓 canvas)合成 9:16 .webm,
+                       下载 / Web Share 按钮真能用 + @ 主播 + 编辑文案 +
+                       自动发布倒计时 + 联名 UI 全做完
 ✅ 部署 + 扫码          Vercel production + landing page + QR
 ✅ 多人协作基础设施     CODEOWNERS + 接口契约 + playtest-check + deploy.sh
 ```
