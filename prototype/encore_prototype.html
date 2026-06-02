@@ -3257,17 +3257,19 @@
   }
 
   // V2G scenario application — read pendingConfig.scenario and patch state
-  // post-init: clamp enemy count, override starting HP, swap weapon (BR).
+  // post-init: clamp enemy count, override starting HP, apply Gift Boost.
   function applyScenarioOverrides() {
     if (!pendingConfig || !pendingConfig.scenario) return;
     const sc = pendingConfig.scenario;
     if (sc.hp_start != null && state.player) {
-      const hp = Math.max(10, Math.min(100, sc.hp_start | 0));
+      const hpCap = sc.gift_boost ? 200 : 100;
+      const hp = Math.max(10, Math.min(hpCap, sc.hp_start | 0));
       state.player.hp = hp;
       state.player.maxHp = Math.max(state.player.maxHp, hp);
     }
     if (sc.enemy_count != null) {
-      const desired = Math.max(1, Math.min(5, sc.enemy_count | 0));
+      const maxEnemies = current === Games.br ? 9 : 5;
+      const desired = Math.max(1, Math.min(maxEnemies, sc.enemy_count | 0));
       // Trim or extend either the enemies (FPS/MOBA champs) or bots (BR) arrays
       if (state.enemies && state.enemies.length > desired) {
         state.enemies.length = desired;
@@ -3286,6 +3288,9 @@
       };
       const rar = rarityForWeapon[sc.weapon];
       if (rar) state.player.weapon = brWeaponForRarity(rar);
+    }
+    if (sc.gift_boost && current && typeof current.applyGiftBoost === 'function') {
+      current.applyGiftBoost(sc.gift_boost, sc);
     }
     // Append the description to mode badge if present (gives the streamer
     // visible proof that the AI-detected scenario landed)
@@ -3513,7 +3518,7 @@
       pendingConfig = {
         template: forceTemplate,
         theme:    forceTheme || null,
-        scenario: {},
+        scenario: _params.get('gift_boost') ? { gift_boost: _params.get('gift_boost') } : {},
       };
       startGame(forceTemplate);
     };
@@ -3530,9 +3535,9 @@
 <!-- External game modules — register on window.Games after main IIFE exposes engine globals.
      ?v= version query busts stale browser cache of the game modules (bump on each ship). -->
 <script src="games/juice.js?v=r12a"></script>
-<script src="games/roblox.js?v=r12a"></script>
-<script src="games/gta.js?v=r12a"></script>
-<script src="games/br.js?v=r12b"></script>
+<script src="games/roblox.js?v=r14"></script>
+<script src="games/gta.js?v=r14"></script>
+<script src="games/br.js?v=r14"></script>
 <script>
   window.__encoreExternalGamesReady = true;
   if (window.__encoreFlushDeferredLaunch) window.__encoreFlushDeferredLaunch();
