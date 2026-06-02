@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 
 <link rel="stylesheet" href="css/live-shell.css">
-<link rel="stylesheet" href="css/ai-panel.css">
+<link rel="stylesheet" href="css/ai-panel.css?v=2">
 <link rel="stylesheet" href="css/mini-games.css">
 </head>
 <body>
@@ -230,13 +230,13 @@
             <span>↗</span> Share clip
           </button>
         </div>
-        <div class="gift-remix">
-          <div class="ico">🎁</div>
+        <div class="gift-remix" id="gift-boost">
+          <div class="ico" id="gift-boost-ico">🎁</div>
           <div class="body">
-            <div class="head">Send as Gift Remix</div>
-            <div class="sub">Send TK Sói your run + a Rose · 5 coins</div>
+            <div class="head" id="gift-boost-head">Send as Gift Remix</div>
+            <div class="sub" id="gift-boost-sub">Send TK Sói your run + a Rose · 5 coins</div>
           </div>
-          <button class="send">Send</button>
+          <button class="send" id="gift-boost-send">Send</button>
         </div>
         <div class="feedback-block">
           <div class="label">How was it?</div>
@@ -325,7 +325,7 @@
      no longer loaded — the game phase now renders Mario's iframe templates
      (GTA/Roblox/Free Fire BR) via the V2G postMessage protocol. -->
 <script src="js/observer-client.js?v=8"></script>
-<script src="js/encore-sheet.js?v=10"></script>
+<script src="js/encore-sheet.js?v=12"></script>
 <script src="js/live-room.js?v=8"></script>
 <script>
 (() => {

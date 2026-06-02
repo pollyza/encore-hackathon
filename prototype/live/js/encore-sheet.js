@@ -66,6 +66,29 @@
     gta:    'shop heist run',     // Mario v2 5/28
   };
   const WEAPONS = ['pistol', 'smg', 'rifle', 'sniper'];
+  // GIFT "Enhance" layer — per-game pools of community-meme boosts. The result
+  // screen rotates through each pool so every round offers a DIFFERENT gift
+  // (variety = repeat-purchase pull). Each is big & funny & on-brand; strong but
+  // timed, never gates play. Keys match the game modules' applyGiftBoost pools.
+  const GIFT_POOLS = {
+    br: [
+      { key: 'tank',    ico: '🚁', head: 'BOOYAH Airdrop',  sub: 'Air-drops a tank cannon — huge AOE shells', button: '🌹 5' },
+      { key: 'eagle',   ico: '🦅', head: 'Falco Airstrike', sub: 'Pet eagle carpet-bombs the lobby',          button: '🌹 5' },
+      { key: 'shotgun', ico: '🔫', head: 'Golden M1887',    sub: 'Iconic gold shotgun — point-blank melt',    button: '🌹 5' },
+    ],
+    gta: [
+      { key: 'cartel', ico: '🚁', head: 'Cartel Airstrike', sub: 'Chopper missiles waste the cops on your tail', button: '🌹 5' },
+      { key: 'fbi',    ico: '🚔', head: 'FBI Escort',       sub: 'Two armored SUVs flank & shield you',          button: '🌹 5' },
+      { key: 'heat',   ico: '🧊', head: "Lester's Wipe",    sub: 'Clear your whole wanted level — cops give up',  button: '🌹 5' },
+    ],
+    roblox: [
+      { key: 'wings', ico: '🪽', head: 'Dominus Wings', sub: 'Giant glowing wings — take off & glide', button: '🌹 5' },
+      { key: 'coil',  ico: '🌀', head: 'Gravity Coil',  sub: 'Low-grav float + a one-time save',       button: '🌹 5' },
+      { key: 'oof',   ico: '🚀', head: 'OOF Rocket',    sub: 'Mega-bounce spring — to the moon, OOF!', button: '🌹 5' },
+    ],
+  };
+  const giftRotation = {};   // template -> next index, so consecutive rounds offer different gifts
+  let pickedGift = null;     // the gift currently shown on the result screen (copy + send agree)
 
   // IFRAME URL — relative to /live/streamer.html, hits /prototype/encore_prototype.html
   // (which the deploy mirror flattens to /encore_prototype.html). Both work.
@@ -73,10 +96,13 @@
 
   // Random V2GResponse — used when no real Vision detection is available.
   // Each open() pulls a fresh config so demo rounds feel varied.
+  const URL_PARAMS = new URLSearchParams(window.location.search);
   function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
   function makeRandomConfig() {
-    const template = pickRandom(TEMPLATES);
-    const theme    = pickRandom(THEMES[template]);
+    const forcedTemplate = URL_PARAMS.get('force_template');
+    const template = TEMPLATES.includes(forcedTemplate) ? forcedTemplate : pickRandom(TEMPLATES);
+    const forcedTheme = URL_PARAMS.get('force_theme');
+    const theme = (THEMES[template] || []).includes(forcedTheme) ? forcedTheme : pickRandom(THEMES[template]);
     let scenario;
     // Per-template scenario fields (Mario v2 5/28)
     if (template === 'roblox') {
@@ -93,6 +119,13 @@
         cop_spawn_rate: 0.2,
         map_size:       1500,
         description:    TEMPLATE_DESC[template],
+      };
+    } else if (template === 'br') {
+      scenario = {
+        enemy_count: 9,
+        hp_start:    100,
+        description: TEMPLATE_DESC[template],
+        weapon:      pickRandom(WEAPONS),
       };
     } else {
       // fps / moba / br / td legacy fields
@@ -120,6 +153,7 @@
   let phase = 'closed';           // closed | loading | game | result | ranking
   let lastResult = null;
   let currentConfig = null;       // last V2GResponse we launched the iframe with
+  let nextConfigOverride = null;   // one-shot config used by Gift Boost replay
   let loadingRAF = null;
   let loadingStageIv = null;
   let ackTimer = null;
@@ -179,7 +213,8 @@
   }
 
   // ── LOADING phase ─────────────────────────────────────────────────────
-  function startLoading() {
+  function startLoading(forcedConfig) {
+    if (forcedConfig) nextConfigOverride = forcedConfig;
     setPhase('loading');
 
     // Reset visuals
@@ -259,9 +294,10 @@
   // (e.g. observer-client passing a real Vision detection).
   function startGame() {
     setPhase('game');
-    currentConfig = cfg.pickConfig
+    currentConfig = nextConfigOverride || (cfg.pickConfig
       ? (cfg.pickConfig() || makeRandomConfig())
-      : makeRandomConfig();
+      : makeRandomConfig());
+    nextConfigOverride = null;
 
     // Update sheet header subtitle to show the picked template + theme
     const subEl = document.querySelector('#sheet-header .brand .text .sub');
@@ -345,12 +381,72 @@
     document.getElementById('host-score').textContent      = Math.max(1, max - 2);
     document.getElementById('host-max').textContent        = max;
     document.getElementById('rank-num').textContent        = won ? 234 : 1872;
+    updateGiftBoostCopy(won);
   }
 
   function playAgain() {
     destroyIframe();
     document.getElementById('phase-game').innerHTML = '';
     startLoading();
+  }
+
+  function giftPoolFor(t) { return GIFT_POOLS[t] || GIFT_POOLS.br; }
+
+  // Pick the NEXT gift in this template's pool (rotates each result screen → variety).
+  function rollGift(t) {
+    const pool = giftPoolFor(t);
+    const i = (giftRotation[t] || 0) % pool.length;
+    giftRotation[t] = i + 1;
+    return pool[i];
+  }
+
+  function currentGiftBoost() {
+    if (pickedGift) return pickedGift;
+    const t = (currentConfig && currentConfig.template) || 'br';
+    return (pickedGift = rollGift(t));
+  }
+
+  function updateGiftBoostCopy(won) {
+    const t = (currentConfig && currentConfig.template) || 'br';
+    pickedGift = rollGift(t);                       // fresh, different gift each round
+    const boost = pickedGift;
+    const head = document.getElementById('gift-boost-head');
+    const sub = document.getElementById('gift-boost-sub');
+    const ico = document.getElementById('gift-boost-ico');
+    const send = document.getElementById('gift-boost-send');
+    if (ico) ico.textContent = boost.ico;
+    // won → flex/show-off framing; lost → comeback framing (the empathetic second wind)
+    if (head) head.textContent = won ? ('Flex it · ' + boost.head) : ('Comeback · ' + boost.head);
+    if (sub) sub.textContent = won ? (boost.sub + ' — go viral') : (boost.sub + ' — bounce back');
+    if (send) send.textContent = boost.button;
+  }
+
+  function makeGiftBoostConfig() {
+    const base = currentConfig || makeRandomConfig();
+    const boost = currentGiftBoost();
+    const scenario = Object.assign({}, base.scenario || {}, {
+      gift_boost: boost.key,
+      gift_label: boost.head,
+      description: (base.scenario && base.scenario.description) || TEMPLATE_DESC[base.template] || 'gift boosted run',
+    });
+    return Object.assign({}, base, {
+      scenario,
+      _meta: Object.assign({}, base._meta || {}, {
+        gift: boost.key,
+        coins: 5,
+        model: 'demo-gift-boost',
+      }),
+    });
+  }
+
+  function sendGiftBoost() {
+    const boost = currentGiftBoost();
+    const boosted = makeGiftBoostConfig();
+    cfg.onAck && cfg.onAck(boost.ico + ' ' + boost.head + ' sent · enjoy the boost!');
+    pickedGift = null;                              // next round rolls a fresh gift
+    destroyIframe();
+    document.getElementById('phase-game').innerHTML = '';
+    startLoading(boosted);
   }
 
   // ── RANKING phase ─────────────────────────────────────────────────────
@@ -504,9 +600,7 @@
     document.getElementById('share-pill').addEventListener('click', () => {
       cfg.onAck && cfg.onAck('Share — coming soon');
     });
-    document.querySelector('#phase-result .gift-remix .send').addEventListener('click', () => {
-      cfg.onAck && cfg.onAck('Gift Remix · M11+');
-    });
+    document.getElementById('gift-boost-send').addEventListener('click', sendGiftBoost);
 
     // Ranking back + tabs
     document.getElementById('ranking-back').addEventListener('click', () => setPhase('result'));

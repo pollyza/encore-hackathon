@@ -342,9 +342,13 @@
   margin: 14px 18px 0;
   padding: 12px 14px;
   border-radius: 16px;
-  background: linear-gradient(120deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-  border: 1px dashed rgba(255,255,255,.18);
+  background:
+    linear-gradient(120deg,
+      color-mix(in srgb, var(--accent) 16%, rgba(255,255,255,.04)),
+      color-mix(in srgb, var(--accent-2) 12%, rgba(255,255,255,.02)));
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, rgba(255,255,255,.16));
   display: flex; align-items: center; gap: 10px;
+  box-shadow: 0 10px 26px color-mix(in srgb, var(--accent) 16%, transparent);
 }
 #phase-result .gift-remix .ico {
   width: 38px; height: 38px;
@@ -357,12 +361,13 @@
 #phase-result .gift-remix .head { font-size: 12px; font-weight: 800; color: #fff; }
 #phase-result .gift-remix .sub  { font-size: 10.5px; color: rgba(255,255,255,.55); }
 #phase-result .gift-remix .send {
-  background: transparent;
-  border: 1px solid rgba(255,255,255,.25);
+  background: linear-gradient(120deg, var(--accent), #ff8a3c);
+  border: 0;
   color: #fff;
-  padding: 6px 12px;
+  padding: 7px 12px;
   border-radius: var(--pill-radius);
   font-size: 11px; font-weight: 700;
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
 #phase-result .feedback-block {
