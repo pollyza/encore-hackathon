@@ -164,7 +164,7 @@
     clearLoading();
     clearAck();
     destroyIframe();
-    stopClipCanvasAnimation();
+    stopAllClipAnimations();
     cancelPublishCountdown();
     cfg.sheet.classList.add('closing');
     cfg.backdrop.classList.add('closing');
@@ -397,24 +397,30 @@
 
   // ── Canvas 2D simulated pixel encore for the clip preview viewer half ──
   // Pure visual mock — NOT the real game. Auto-bot character + crosshair
-  // tracking + enemies popping + score floats. Replace with real <video>
-  // when P1 hero asset (server-side rendered) lands.
+  // tracking + enemies popping + score floats. Future: swap to a playback
+  // of the actual player's gameplay (MediaRecorder on the game canvas
+  // during play → blob → <video> source here).
   let clipCanvasRAF = null;
   let clipCanvasStart = 0;
+  let clipHostCanvasRAF = null;       // host (top half) drawing loop
+  let clipHostCanvasStart = 0;
+  let clipOutputBlobUrl = null;        // last finished ClipComposer URL
+
+  // Fits a canvas's backing store to its CSS box. Returns true on success;
+  // false when the container hasn't laid out yet (0×0).
+  function fitCanvas(cv) {
+    const r = cv.getBoundingClientRect();
+    if (r.width === 0) return false;
+    cv.width  = Math.round(r.width);
+    cv.height = Math.round(r.height);
+    return true;
+  }
+
   function startClipCanvasAnimation() {
     stopClipCanvasAnimation();
     const cv = document.getElementById('result-clip-canvas');
     if (!cv) return;
-    // Size canvas backing store to its display box for crisp pixels
-    const fit = () => {
-      const r = cv.getBoundingClientRect();
-      if (r.width === 0) return false;
-      cv.width  = Math.round(r.width);
-      cv.height = Math.round(r.height);
-      return true;
-    };
-    if (!fit()) {
-      // Container may still be laying out — retry next frame
+    if (!fitCanvas(cv)) {
       requestAnimationFrame(() => startClipCanvasAnimation());
       return;
     }
@@ -428,9 +434,131 @@
     clipCanvasRAF = requestAnimationFrame(draw);
   }
   function stopClipCanvasAnimation() {
-    if (clipCanvasRAF) {
-      cancelAnimationFrame(clipCanvasRAF);
-      clipCanvasRAF = null;
+    if (clipCanvasRAF) { cancelAnimationFrame(clipCanvasRAF); clipCanvasRAF = null; }
+  }
+
+  // Host (top) half: paints the matching LIVE scene (fps/gta/roblox) from
+  // window.LiveScenes (exported by streamer.html). Genre-consistent with
+  // whatever the streamer was playing when the highlight triggered.
+  function startClipHostCanvasAnimation() {
+    stopClipHostCanvasAnimation();
+    const cv = document.getElementById('result-clip-host-canvas');
+    if (!cv) return;
+    if (!fitCanvas(cv)) {
+      requestAnimationFrame(() => startClipHostCanvasAnimation());
+      return;
+    }
+    const ctx = cv.getContext('2d');
+    const mode = (window.LiveMode || 'fps');
+    const sceneFn = (window.LiveScenes && window.LiveScenes[mode]) || null;
+    if (!sceneFn) return;     // streamer.html scenes not loaded — degrade gracefully
+    clipHostCanvasStart = performance.now();
+    const draw = (now) => {
+      const t = now - clipHostCanvasStart;
+      sceneFn(ctx, cv.width, cv.height, t);
+      clipHostCanvasRAF = requestAnimationFrame(draw);
+    };
+    clipHostCanvasRAF = requestAnimationFrame(draw);
+  }
+  function stopClipHostCanvasAnimation() {
+    if (clipHostCanvasRAF) { cancelAnimationFrame(clipHostCanvasRAF); clipHostCanvasRAF = null; }
+  }
+
+  // Tear down everything related to the winner clip preview (used when
+  // switching to non-winner state or closing the sheet).
+  function stopAllClipAnimations() {
+    stopClipCanvasAnimation();
+    stopClipHostCanvasAnimation();
+    if (window.ClipComposer) window.ClipComposer.stop();
+    // Reset action buttons + revoke stale blob URL
+    if (clipOutputBlobUrl) { URL.revokeObjectURL(clipOutputBlobUrl); clipOutputBlobUrl = null; }
+    const out = document.getElementById('result-clip-output');
+    if (out) { out.hidden = true; out.removeAttribute('src'); }
+    const dl = document.getElementById('result-clip-download');
+    const sh = document.getElementById('result-clip-share');
+    if (dl) { dl.disabled = true; dl.textContent = '⬇ recording…'; }
+    if (sh) { sh.disabled = true; sh.textContent = '↗ share'; }
+  }
+
+  // Kicks the on-screen split-screen draw + the offscreen composite
+  // recorder. When ClipComposer fires onReady, swap the preview canvases
+  // for a real <video> playback of the recorded blob and enable
+  // Download / Share buttons.
+  function startWinnerClipComposition() {
+    startClipHostCanvasAnimation();
+    startClipCanvasAnimation();
+    if (!window.ClipComposer) return;   // graceful degrade if script missing
+
+    const hostCv   = document.getElementById('result-clip-host-canvas');
+    const viewerCv = document.getElementById('result-clip-canvas');
+    const compCv   = document.getElementById('result-clip-composite');
+    if (!hostCv || !viewerCv || !compCv) return;
+
+    window.ClipComposer.start({
+      hostCanvas:      hostCv,
+      viewerCanvas:    viewerCv,
+      compositeCanvas: compCv,
+      mode:            (window.LiveMode || 'fps'),
+      onReady: ({ url, mime }) => {
+        clipOutputBlobUrl = url;
+        const out  = document.getElementById('result-clip-output');
+        const prev = document.getElementById('result-clip-preview');
+        if (out) {
+          out.src = url;
+          out.hidden = false;
+          out.play().catch(() => { /* user gesture required — controls handle it */ });
+        }
+        if (prev) prev.style.display = 'none';     // hide the live split-screen
+        const dl = document.getElementById('result-clip-download');
+        const sh = document.getElementById('result-clip-share');
+        if (dl) {
+          dl.disabled = false;
+          dl.textContent = '⬇ Download';
+          dl.onclick = () => downloadBlobUrl(url, suggestedFileName(mime));
+        }
+        if (sh) {
+          sh.disabled = false;
+          sh.textContent = '↗ Share';
+          sh.onclick = () => shareBlobUrl(url, mime);
+        }
+      },
+      onError: (err) => {
+        console.warn('[ClipComposer] recording failed:', err && err.message);
+        // Disable share, keep download as "preview only" fallback
+        const dl = document.getElementById('result-clip-download');
+        const sh = document.getElementById('result-clip-share');
+        if (dl) { dl.disabled = true; dl.textContent = '⚠ rec unsupported'; }
+        if (sh) { sh.disabled = true; }
+      },
+    });
+  }
+
+  function suggestedFileName(mime) {
+    const ext = mime && mime.startsWith('video/mp4') ? 'mp4' : 'webm';
+    return `encore-clip.${ext}`;
+  }
+  function downloadBlobUrl(url, filename) {
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+  async function shareBlobUrl(url, mime) {
+    try {
+      const resp = await fetch(url);
+      const blob = await resp.blob();
+      const file = new File([blob], suggestedFileName(mime), { type: mime || 'video/webm' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'My Encore clip',
+          text:  "Played @TK_Soi's highlight — ranked top-3 on Encore ⚡",
+        });
+      } else {
+        // No Web Share — fall back to download
+        downloadBlobUrl(url, suggestedFileName(mime));
+      }
+    } catch (e) {
+      console.warn('[ClipComposer] share failed:', e && e.message);
     }
   }
 
@@ -690,12 +818,27 @@
       publishMsg.innerHTML = 'Auto-publishing to TikTok in <span id="result-publish-countdown">3</span>…';
     }
     if (rinfo.isWinner) {
+      // Reset clip state from any prior round (output blob / buttons /
+      // hidden preview), then start a fresh recording.
+      stopAllClipAnimations();
       startPublishCountdown();
-      // Kick the simulated viewer-half pixel encore animation
-      startClipCanvasAnimation();
+      const prev = document.getElementById('result-clip-preview');
+      if (prev) prev.style.display = '';
+      // Genre-match viewer tag emoji to current LIVE mode.
+      const viewerTag = document.getElementById('result-clip-viewer-tag');
+      if (viewerTag) {
+        const mode = (window.LiveMode || 'fps');
+        viewerTag.textContent =
+          mode === 'gta'    ? '⊕ GTA'
+        : mode === 'roblox' ? '⊕ OBBY'
+        : '⊕ FPS';
+      }
+      // Kick the offscreen composite + MediaRecorder. After ~12s a real
+      // .webm/.mp4 Blob is ready and Download / Share buttons enable.
+      startWinnerClipComposition();
     } else {
-      // Non-winner shows Retry card instead of clip → stop the canvas
-      stopClipCanvasAnimation();
+      // Non-winner shows Retry card instead of clip → tear down everything
+      stopAllClipAnimations();
       // Compute spots-from-#3 gap for the Retry card stats
       const gapEl = document.getElementById('result-retry-gap');
       if (gapEl) {

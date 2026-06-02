@@ -241,25 +241,31 @@
           </div>
         </div>
 
-        <!-- WINNER ONLY: split-screen clip preview -->
+        <!-- WINNER ONLY: split-screen clip preview
+             Live preview = on-screen split (host canvas + viewer canvas).
+             In parallel, ClipComposer (js/clip-composer.js) draws both halves
+             into an offscreen 540×960 composite canvas and runs MediaRecorder
+             on its captureStream → real .webm Blob the viewer can download
+             or Web-Share. -->
         <div class="sheet-result-clip-wrap" id="result-clip-wrap">
           <div class="sheet-result-section-label">Your Split-Screen Clip</div>
           <div class="sheet-result-clip" id="result-clip-preview">
-            <!-- top: real LIVE footage (reuses the same reference video as the background stream) -->
+            <!-- top: Canvas2D LIVE scene matching current host mode
+                 (fps/gta/roblox), drawn by window.LiveScenes exported from
+                 the streamer.html IIFE. Was a <video src="encore_test2.mp4">
+                 but that file is 423MB + gitignored → 404 on every deploy. -->
             <div class="sheet-result-clip-half host">
-              <video class="sheet-result-clip-video"
-                     src="/reference/videos/encore_test2.mp4"
-                     muted autoplay loop playsinline preload="auto"></video>
+              <canvas class="sheet-result-clip-video" id="result-clip-host-canvas"></canvas>
               <div class="sheet-result-clip-tag tl">⏵ LIVE</div>
               <div class="sheet-result-clip-tag tr">@TK_Soi</div>
-              <div class="sheet-result-clip-caption">1v3 retake</div>
+              <div class="sheet-result-clip-caption" id="result-clip-host-caption">1v3 retake</div>
             </div>
             <!-- middle divider: ⚡ ENCORE -->
             <div class="sheet-result-clip-divider"><span>⚡ ENCORE</span></div>
             <!-- bottom: Canvas 2D simulated pixel encore (animated by JS in encore-sheet.js) -->
             <div class="sheet-result-clip-half viewer">
               <canvas class="sheet-result-clip-canvas" id="result-clip-canvas"></canvas>
-              <div class="sheet-result-clip-tag tl">⊕ FPS</div>
+              <div class="sheet-result-clip-tag tl" id="result-clip-viewer-tag">⊕ FPS</div>
               <div class="sheet-result-clip-tag tr">@you · 🥈 #2</div>
               <div class="sheet-result-clip-caption" id="result-clip-vscore">2,840</div>
             </div>
@@ -268,8 +274,22 @@
             <!-- play overlay (autoplay muted in real impl) -->
             <div class="sheet-result-clip-play" id="result-clip-play"><span>▶</span></div>
           </div>
+          <!-- Offscreen composite canvas — 540×960 (TikTok 9:16) — drawn by
+               ClipComposer in parallel with the on-screen preview. Pushed
+               off-viewport rather than display:none, because Chrome's
+               canvas.captureStream() does NOT emit frames for canvases
+               with display:none (verified: blob came out as 110 bytes
+               with the hidden attribute set). -->
+          <canvas id="result-clip-composite" width="540" height="960"
+                  style="position:fixed; left:-9999px; top:0; pointer-events:none;"
+                  aria-hidden="true"></canvas>
+          <!-- Recorded output player — hidden until ClipComposer finishes
+               (~12s after winner state opens). Shown in place of the
+               live preview once a real Blob is available. -->
+          <video id="result-clip-output" hidden controls muted playsinline></video>
           <div class="sheet-result-clip-actions">
-            <button class="sheet-result-clip-action" id="result-clip-sound">🔇 muted</button>
+            <button class="sheet-result-clip-action" id="result-clip-download" disabled>⬇ recording…</button>
+            <button class="sheet-result-clip-action" id="result-clip-share" disabled>↗ share</button>
             <button class="sheet-result-clip-action" id="result-clip-regen">↻ regenerate</button>
           </div>
         </div>
@@ -424,7 +444,8 @@
      no longer loaded — the game phase now renders Mario's iframe templates
      (GTA/Roblox/Free Fire BR) via the V2G postMessage protocol. -->
 <script src="js/observer-client.js?v=8"></script>
-<script src="js/encore-sheet.js?v=10"></script>
+<script src="js/clip-composer.js?v=1"></script>
+<script src="js/encore-sheet.js?v=11"></script>
 <script src="js/live-room.js?v=8"></script>
 <script>
 (() => {
@@ -886,6 +907,17 @@
   // Run on initial load + on hash change (live preview iteration)
   applyHashDriver();
   window.addEventListener('hashchange', applyHashDriver);
+
+  // ── Export LIVE scene renderers + current mode so encore-sheet.js can
+  //    paint the matching host scene into the winner-clip composer.
+  //    (Genre-match: the clip's top half mirrors what the streamer was
+  //    actually playing when the highlight triggered.)
+  window.LiveScenes = {
+    fps:    drawFpsScene,
+    gta:    drawGtaScene,
+    roblox: drawRobloxScene,
+  };
+  window.LiveMode = currentMode;
 })();
 </script>
 

@@ -107,11 +107,15 @@ if [[ -f "$REPO_ROOT/prototype/live/streamer.html" ]]; then
     fi
     if [[ -d "$PREVIEW_DIR/prototype/live" ]]; then
         sync_file "$REPO_ROOT/prototype/live/streamer.html" "$PREVIEW_DIR/prototype/live/streamer.html"
-        # Also sync the LIVE css + js files that streamer.html depends on.
-        for f in css/live-shell.css css/encore-sheet.css js/live-room.js js/encore-sheet.js js/observer-client.js js/mini-games.js; do
-            src="$REPO_ROOT/prototype/live/$f"
-            dst="$PREVIEW_DIR/prototype/live/$f"
-            [[ -f "$src" && -f "$dst" ]] && sync_file "$src" "$dst"
+        # Sync every css/*.css and js/*.js that lives under prototype/live/.
+        # Glob over the source so newly-added files (clip-composer.js etc.)
+        # don't get silently dropped.
+        for src in "$REPO_ROOT/prototype/live/css/"*.css "$REPO_ROOT/prototype/live/js/"*.js; do
+            [[ -f "$src" ]] || continue
+            rel="${src#$REPO_ROOT/prototype/live/}"
+            dst="$PREVIEW_DIR/prototype/live/$rel"
+            mkdir -p "$(dirname "$dst")"
+            sync_file "$src" "$dst"
         done
     fi
 fi
