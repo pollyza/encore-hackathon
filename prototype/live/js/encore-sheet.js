@@ -77,13 +77,13 @@
       { key: 'shotgun', ico: '🔫', head: 'Golden M1887',    sub: 'Iconic gold shotgun — point-blank melt',    button: '🌹 5' },
     ],
     gta: [
-      { key: 'cartel', ico: '🚁', head: 'Cartel Airstrike', sub: 'Chopper missiles waste the cops on your tail', button: '🌹 5' },
-      { key: 'fbi',    ico: '🚔', head: 'FBI Escort',       sub: 'Two armored SUVs flank & shield you',          button: '🌹 5' },
-      { key: 'heat',   ico: '🧊', head: "Lester's Wipe",    sub: 'Clear your whole wanted level — cops give up',  button: '🌹 5' },
+      { key: 'cartel', ico: '🚁', head: 'Cartel Airstrike', sub: 'A chopper rides shotgun & bombs your path',     button: '🌹 5' },
+      { key: 'fbi',    ico: '🚔', head: 'FBI Escort',       sub: 'Armored SUVs flank you — bulletproof run',     button: '🌹 5' },
+      { key: 'tank',   ico: '🛡', head: 'Rhino Tank',       sub: 'Become a tank — plow through everything',       button: '🌹 5' },
     ],
     roblox: [
       { key: 'wings', ico: '🪽', head: 'Dominus Wings', sub: 'Giant glowing wings — take off & glide', button: '🌹 5' },
-      { key: 'coil',  ico: '🌀', head: 'Gravity Coil',  sub: 'Low-grav float + a one-time save',       button: '🌹 5' },
+      { key: 'coil',  ico: '🌀', head: 'Gravity Coil',  sub: 'The classic gear — moon-jump sky-high',  button: '🌹 5' },
       { key: 'oof',   ico: '🚀', head: 'OOF Rocket',    sub: 'Mega-bounce spring — to the moon, OOF!', button: '🌹 5' },
     ],
   };
