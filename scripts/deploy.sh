@@ -97,9 +97,23 @@ if [[ -f "$REPO_ROOT/docs/encore_slides.html" ]]; then
 fi
 
 # LIVE streamer host — now under prototype/live/ (was prototype/) as of v0.6.1
-if [[ -f "$REPO_ROOT/prototype/live/streamer.html" && -d "$DEPLOY_DIR/prototype" ]]; then
-    mkdir -p "$DEPLOY_DIR/prototype/live"
-    sync_file "$REPO_ROOT/prototype/live/streamer.html" "$DEPLOY_DIR/prototype/live/streamer.html"
+# Sync to BOTH mirrors. The earlier version only synced to DEPLOY_DIR, which
+# left /tmp/encore-preview/prototype/live/streamer.html stale and produced
+# "I verified the old code" false-positives in local preview checks.
+if [[ -f "$REPO_ROOT/prototype/live/streamer.html" ]]; then
+    if [[ -d "$DEPLOY_DIR/prototype" ]]; then
+        mkdir -p "$DEPLOY_DIR/prototype/live"
+        sync_file "$REPO_ROOT/prototype/live/streamer.html" "$DEPLOY_DIR/prototype/live/streamer.html"
+    fi
+    if [[ -d "$PREVIEW_DIR/prototype/live" ]]; then
+        sync_file "$REPO_ROOT/prototype/live/streamer.html" "$PREVIEW_DIR/prototype/live/streamer.html"
+        # Also sync the LIVE css + js files that streamer.html depends on.
+        for f in css/live-shell.css css/encore-sheet.css js/live-room.js js/encore-sheet.js js/observer-client.js js/mini-games.js; do
+            src="$REPO_ROOT/prototype/live/$f"
+            dst="$PREVIEW_DIR/prototype/live/$f"
+            [[ -f "$src" && -f "$dst" ]] && sync_file "$src" "$dst"
+        done
+    fi
 fi
 
 # Note: prototype/v2g/observer.py is intentionally NOT synced to the deploy
