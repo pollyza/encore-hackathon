@@ -3277,6 +3277,14 @@
       if (state.bots && state.bots.length > desired) {
         state.bots.length = desired;
       }
+      // BR: keep the lobby count in sync with the ACTUAL bots so 清场 = 吃鸡 works
+      // regardless of the configured enemy_count (startPlayers was baked at init to
+      // 10; trimming bots without this left the win needing eliminations that can
+      // never happen).
+      if (current === Games.br && state.bots) {
+        state.startPlayers = state.bots.length + 1;
+        state.eliminated = 0;
+      }
       // Update score line display so HUD reflects the override
       if (current === Games.fps || current === Games.moba) {
         scoreEl.textContent = `K 0/${desired}`;

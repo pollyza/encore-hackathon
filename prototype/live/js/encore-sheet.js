@@ -92,7 +92,7 @@
 
   // IFRAME URL — relative to /live/streamer.html, hits /prototype/encore_prototype.html
   // (which the deploy mirror flattens to /encore_prototype.html). Both work.
-  const IFRAME_URL = '../encore_prototype.html?embedded=1&v=v2g-ready-r2';
+  const IFRAME_URL = '../encore_prototype.html?embedded=1&v=v2g-ready-r3';
 
   // Random V2GResponse — used when no real Vision detection is available.
   // Each open() pulls a fresh config so demo rounds feel varied.
