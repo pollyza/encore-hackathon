@@ -444,6 +444,47 @@ h2.section-title .red { color: var(--c-red); }
     line-height: 1.55;
 }
 
+/* SKU pills used in §FUTURE MONETIZATION bucket cards (reuses .vision-grid + .v-step) */
+.sku-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin: 0.7rem 0 0.5rem;
+}
+.sku-pill {
+    font-family: var(--font-mono);
+    font-size: clamp(0.55rem, 0.7vw, 0.7rem);
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--bg-line);
+    padding: 0.22rem 0.55rem;
+    border-radius: 12px;
+    color: var(--text-secondary);
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+.sku-pill.mvp {
+    border-color: var(--c-teal);
+    color: var(--c-teal);
+    font-weight: 700;
+    background: rgba(37,244,238,0.08);
+}
+.bucket-note {
+    margin-top: 0.55rem !important;
+    font-style: italic;
+    opacity: 0.7;
+    font-size: clamp(0.6rem, 0.8vw, 0.75rem) !important;
+}
+.bucket-callout {
+    margin-top: clamp(1rem, 2vw, 1.4rem);
+    padding: 0.7rem 1rem;
+    background: rgba(255,255,255,0.03);
+    border-left: 2px solid var(--c-gold);
+    font-family: var(--font-mono);
+    font-size: clamp(0.6rem, 0.85vw, 0.8rem);
+    color: var(--text-secondary);
+    line-height: 1.55;
+}
+
 /* ===========================================
    SLIDE 4 — LOOP
    3-stage flow with pulsing arrows
@@ -1254,7 +1295,7 @@ h2.section-title .red { color: var(--c-red); }
 <body>
 
 <div class="progress-bar"></div>
-<div class="slide-counter" id="slideCounter">01 / 12</div>
+<div class="slide-counter" id="slideCounter">01 / 14</div>
 <nav class="nav-dots" id="navDots"></nav>
 <div class="keyboard-hint">
     <span class="key">←</span><span class="key">→</span> 翻页 ·
@@ -1280,22 +1321,22 @@ h2.section-title .red { color: var(--c-red); }
      ============================================ -->
 <section class="slide">
     <div class="slide-content">
-        <div class="eyebrow reveal" style="--delay:0.05s">01 · THE PROBLEM</div>
-        <h2 class="section-title reveal" style="--delay:0.15s">观众互动 SKU 栈,<br><span class="accent">缺少"并行 agency"层。</span></h2>
+        <div class="eyebrow reveal" style="--delay:0.05s">01 · 问题</div>
+        <h2 class="section-title reveal" style="--delay:0.15s">观众只能看,<br><span class="accent">不能玩。</span></h2>
         <p class="lead reveal" style="--delay:0.3s">
-            TikTok LIVE 现有观众侧 SKU 全栈 —— 礼物、弹幕、关注、礼物互动 mini-game、Polls ——
-            <strong>没有一个让观众"自己做点什么"</strong>。
-            礼物是单向,弹幕是文字,关注是 0/1,礼物互动 mini-game 是借主播的手玩(代价是<strong>蚕食 gaming LIVE 本身</strong>:主播变 MC,不再 play)。
-            观众的"我也想动手"被整个 SKU 栈堵在外面。
+            主播打出 1v3 翻盘那一刻,直播间几千个观众都很兴奋 ——
+            但他们能做的就是 <strong>刷弹幕、送礼物、点关注</strong>。没有一个功能让观众也能<strong>自己上手玩一下</strong>。
+            <br><br>
+            有些"送礼物影响主播游戏"的小游戏,确实让观众动了手,但代价是<strong>主播变 MC 不再认真打了</strong> —— 反而把游戏直播本身给毁了。
         </p>
         <div class="problem-grid">
             <div class="stat reveal" style="--delay:0.5s">
-                <div class="num">0 / 5</div>
-                <div class="lbl">现有观众侧 SKU 里<br>提供"自主操作 + 不干预主播"档位的数量</div>
+                <div class="num">0</div>
+                <div class="lbl">现有功能里能让观众<br>自己玩一下、又不打扰主播的</div>
             </div>
             <div class="stat good reveal" style="--delay:0.65s">
                 <div class="num">30s</div>
-                <div class="lbl">Encore 的"并行 agency"窗口 ——<br>观众自己玩,主播继续打 ranked</div>
+                <div class="lbl">Encore 给观众的小窗口 ——<br>自己玩一把,主播照常打 ranked</div>
             </div>
         </div>
     </div>
@@ -1306,26 +1347,26 @@ h2.section-title .red { color: var(--c-red); }
      ============================================ -->
 <section class="slide">
     <div class="slide-content">
-        <div class="eyebrow reveal" style="--delay:0.05s">02 · WHAT IS ENCORE</div>
-        <h2 class="section-title reveal" style="--delay:0.15s">把主播的高光时刻,<span class="accent">实时重构成观众能玩的 30 秒迷你游戏。</span></h2>
+        <div class="eyebrow reveal" style="--delay:0.05s">02 · Encore 是什么</div>
+        <h2 class="section-title reveal" style="--delay:0.15s">主播打的那一波,<span class="accent">30 秒后变成观众能玩的小游戏。</span></h2>
         <div class="vision-grid">
             <div class="v-step reveal-scale" style="--delay:0.3s">
                 <div class="step-num">STEP 01</div>
                 <div class="ico">👁</div>
-                <h3>OBSERVE</h3>
-                <p>AI Vision 持续观察 LIVE 画面,识别 kill / clutch / ace / 抢龙 等高光事件。本质是把"主播按高光按钮"自动化。</p>
+                <h3>看见</h3>
+                <p>AI 一直盯着主播在打什么,识别出 1v3 翻盘、抢龙、ace 这种高光时刻 ——<br>就是把"主播按高光按钮"这件事自动化。</p>
             </div>
             <div class="v-step reveal-scale" style="--delay:0.45s">
                 <div class="step-num">STEP 02</div>
                 <div class="ico">🧬</div>
-                <h3>STRUCTURE</h3>
-                <p>把高光时刻提取成一份 JSON config:游戏类型、地图主题、敌人数、起始 HP、武器、场景描述。这就是 V2G 的"语言"。</p>
+                <h3>转写</h3>
+                <p>把刚才那个场面提炼成几个参数:什么游戏、几个敌人、什么武器、地图什么样 ——<br>用一份 JSON 描述清楚。</p>
             </div>
             <div class="v-step reveal-scale" style="--delay:0.6s">
                 <div class="step-num">STEP 03</div>
                 <div class="ico">🎮</div>
-                <h3>RECONSTRUCT</h3>
-                <p>客户端在 30 秒内把 config 渲染成一个体素像素风的 mini game,以 bottom sheet 形式弹给当时在场的观众。</p>
+                <h3>还原</h3>
+                <p>30 秒内,客户端把这份 JSON 渲染成一个像素小游戏,<br>从屏幕底部弹出来给当时在场的观众玩。</p>
             </div>
         </div>
     </div>
@@ -1336,28 +1377,28 @@ h2.section-title .red { color: var(--c-red); }
      ============================================ -->
 <section class="slide">
     <div class="slide-content">
-        <div class="eyebrow reveal" style="--delay:0.05s">03 · THE LOOP</div>
-        <h2 class="section-title reveal" style="--delay:0.15s">看 → 玩 → 播 <span class="accent">三元闭环</span></h2>
+        <div class="eyebrow reveal" style="--delay:0.05s">03 · 看 · 玩 · 播</div>
+        <h2 class="section-title reveal" style="--delay:0.15s">三步走完一轮,<span class="accent">主播什么都不用做。</span></h2>
         <div class="loop-row">
             <div class="loop-box watch reveal-left" style="--delay:0.3s">
                 <div class="loop-stage">STAGE 01</div>
                 <div class="ico">📺</div>
-                <div class="label">WATCH</div>
-                <div class="desc">主播打游戏,AI 全程观察。识别到高光时刻 → 自动触发。</div>
+                <div class="label">看</div>
+                <div class="desc">主播照常打 ranked,AI 在旁边一直看。识别出高光时刻 → 自动触发。</div>
             </div>
             <div class="loop-arrow reveal" style="--delay:0.5s">▶</div>
             <div class="loop-box play reveal-scale" style="--delay:0.55s">
                 <div class="loop-stage">STAGE 02</div>
                 <div class="ico">🕹</div>
-                <div class="label">PLAY</div>
-                <div class="desc">观众在 bottom sheet 玩 30 秒,玩法/场景/配色与刚才高光一致。</div>
+                <div class="label">玩</div>
+                <div class="desc">观众在屏幕底部弹出的小窗口里玩 30 秒,玩的是刚才那个高光场面的变体。</div>
             </div>
             <div class="loop-arrow a2 reveal" style="--delay:0.7s">▶</div>
             <div class="loop-box replay reveal-right" style="--delay:0.75s">
                 <div class="loop-stage">STAGE 03</div>
                 <div class="ico">🎬</div>
-                <div class="label">BROADCAST</div>
-                <div class="desc">Top 3 winner 自动产出"主播 15s + viewer 15s" split-screen 短视频,发布到 viewer profile + @tag 主播,带 #Encore tag 回流 feed。</div>
+                <div class="label">播</div>
+                <div class="desc">玩得最好的前 3 名,自动剪成"主播 15s + 玩家 15s"上下分屏短视频,发到玩家自己 TikTok,@主播,带 #Encore。</div>
             </div>
         </div>
         <div class="loop-cn reveal" style="--delay:1s">看 · 玩 · 播</div>
@@ -1369,8 +1410,8 @@ h2.section-title .red { color: var(--c-red); }
      ============================================ -->
 <section class="slide">
     <div class="slide-content">
-        <div class="eyebrow reveal" style="--delay:0.05s">04 · THE 3 TEMPLATES (PHASE 1)</div>
-        <h2 class="section-title reveal" style="--delay:0.15s">不是真生成式,<span class="accent">是模板参数化。</span></h2>
+        <div class="eyebrow reveal" style="--delay:0.05s">04 · 三套模板</div>
+        <h2 class="section-title reveal" style="--delay:0.15s">不真造游戏,<span class="accent">套预制模板。</span></h2>
         <p class="lead reveal" style="--delay:0.25s">Path B 决策:AI 不写游戏代码,只产 JSON config。3 个预制模板覆盖 TikTok 游戏 LIVE 内容供给的 <strong>60-70%</strong>。</p>
         <div class="tpl-grid">
             <div class="tpl fps reveal" style="--delay:0.4s">
@@ -1418,8 +1459,8 @@ h2.section-title .red { color: var(--c-red); }
      ============================================ -->
 <section class="slide">
     <div class="slide-content">
-        <div class="eyebrow reveal" style="--delay:0.05s">05 · INTERACTION & UX</div>
-        <h2 class="section-title reveal" style="--delay:0.15s">Bottom sheet,<span class="accent">永不压缩 LIVE 主画面。</span></h2>
+        <div class="eyebrow reveal" style="--delay:0.05s">05 · 界面规则</div>
+        <h2 class="section-title reveal" style="--delay:0.15s">从屏幕底部弹出,<span class="accent">永远不挡主播画面。</span></h2>
         <div class="ux-row">
             <div class="phone reveal-scale" style="--delay:0.35s">
                 <div class="live-bg"></div>
@@ -1451,31 +1492,83 @@ h2.section-title .red { color: var(--c-red); }
      ============================================ -->
 <section class="slide">
     <div class="slide-content">
-        <div class="eyebrow reveal" style="--delay:0.05s">06 · GIFT ECONOMY</div>
-        <h2 class="section-title reveal" style="--delay:0.15s">MVP 单一付费 SKU,<span class="accent">"想再赢一把?Enhance 续命。"</span></h2>
+        <div class="eyebrow reveal" style="--delay:0.05s">06 · 怎么收钱</div>
+        <h2 class="section-title reveal" style="--delay:0.15s">唯一付费点:<span class="accent">想再玩一把,$0.5 续命。</span></h2>
         <div class="gift-grid">
             <div class="gift reveal" style="--delay:0.3s">
-                <div class="name">ENHANCE</div>
+                <div class="name">ENHANCE · 第一版</div>
                 <div class="what">改造你的<br>下一局</div>
-                <div class="ex">"火焰子弹"皮肤 · "双倍 HP" 开局 · "额外一条命" · $0.5-1 · MVP 唯一付费点。功能性续币心智。</div>
+                <div class="ex">火焰子弹皮肤 · 双倍 HP 开局 · 多一条命 · $0.5-1 · 跟街机塞币一个意思,简单直接。</div>
             </div>
             <div class="gift reveal" style="--delay:0.42s">
-                <div class="name">REMIX</div>
+                <div class="name">REMIX · 第二阶段</div>
                 <div class="what">AI 生成<br>自定义玩法</div>
-                <div class="ex">"slower, shotgun, pink enemies" → LLM 出新参数 · $2-5 · Phase 2 (M11+),唯一真生成式 AI 用例。</div>
+                <div class="ex">说一句"敌人慢一点、武器换霰弹枪、敌人染粉色"→ AI 给你生成新参数 · $2-5 · 这才是 AI 真正不可替代的功能。</div>
             </div>
         </div>
-        <div class="gift-iron reveal" style="--delay:0.85s">v0.8.1 砍 Spotlight(失败局没人愿付费发布失败录像)· 玩 Encore / 进 Top 3 自动免费 clip / 被动 collab 永远免费 · 主播可设 Enhance gift-gate · 主播分成 ≥ 普通 LIVE 礼物分成</div>
+        <div class="gift-iron reveal" style="--delay:0.85s">玩 Encore / 进前 3 自动免费短视频 / 被联名 —— 这些永远免费 · 主播可以设置"先送礼物给我才能买 Enhance" · 主播分成 ≥ 普通直播礼物 · 没人愿意付费发自己的失败录像,所以失败局不卖 clip</div>
     </div>
 </section>
 
 <!-- ============================================
-     SLIDE 8 — V2G ARCHITECTURE
+     SLIDE 8 — FUTURE MONETIZATION · 3 BUCKETS  (v0.8.1)
      ============================================ -->
 <section class="slide">
     <div class="slide-content">
-        <div class="eyebrow reveal" style="--delay:0.05s">07 · V2G ARCHITECTURE</div>
-        <h2 class="section-title reveal" style="--delay:0.15s">观察 → 推理 → 配置 → 播放,<span class="accent">全链路 ≤ 6 秒。</span></h2>
+        <div class="eyebrow reveal" style="--delay:0.05s">07 · 未来怎么赚钱</div>
+        <h2 class="section-title reveal" style="--delay:0.15s">三类收入,<span class="accent">每类对应一种人想付费。</span></h2>
+        <div class="vision-grid">
+            <div class="v-step reveal-scale" style="--delay:0.3s">
+                <div class="step-num">A · 观众付费</div>
+                <div class="ico">⚡</div>
+                <h3>玩得更爽</h3>
+                <p>"我想玩得不一样、更爽、更厉害"</p>
+                <div class="sku-pills">
+                    <span class="sku-pill mvp">Enhance · 第一版</span>
+                    <span class="sku-pill">皮肤 / 主题</span>
+                    <span class="sku-pill">AI 自定义玩法</span>
+                    <span class="sku-pill">升级道具</span>
+                    <span class="sku-pill">月卡 / VIP</span>
+                </div>
+                <p class="bucket-note">小额连续付,长期收</p>
+            </div>
+            <div class="v-step reveal-scale" style="--delay:0.45s">
+                <div class="step-num">B · 厂商付费</div>
+                <div class="ico">🎯</div>
+                <h3>厂商把这当广告位</h3>
+                <p>"游戏直播就是厂商的天然发行渠道"</p>
+                <div class="sku-pills">
+                    <span class="sku-pill">游戏安装归因 CPI</span>
+                    <span class="sku-pill">品牌联名 Encore</span>
+                    <span class="sku-pill">联运资源位</span>
+                </div>
+                <p class="bucket-note">第二阶段开始 · 长期最大头</p>
+            </div>
+            <div class="v-step reveal-scale" style="--delay:0.6s">
+                <div class="step-num">C · 多人玩</div>
+                <div class="ico">🤝</div>
+                <h3>跟朋友 / 跟主播一起</h3>
+                <p>"我想拉朋友、跟主播同框打"</p>
+                <div class="sku-pills">
+                    <span class="sku-pill">挑战朋友</span>
+                    <span class="sku-pill">Encore 联赛</span>
+                    <span class="sku-pill">集体送礼解锁</span>
+                    <span class="sku-pill">主播同框打</span>
+                </div>
+                <p class="bucket-note">容易病毒式扩散</p>
+            </div>
+        </div>
+        <div class="bucket-callout reveal" style="--delay:0.9s">节奏:第一版只有 A 类 Enhance → M11-M14 加 B 类厂商合作(主力) → M14+ 加 C 类社交玩法 · 不做赌博、抽奖、影响主播游戏的礼物</div>
+    </div>
+</section>
+
+<!-- ============================================
+     SLIDE 9 — V2G ARCHITECTURE
+     ============================================ -->
+<section class="slide">
+    <div class="slide-content">
+        <div class="eyebrow reveal" style="--delay:0.05s">08 · 技术链路</div>
+        <h2 class="section-title reveal" style="--delay:0.15s">看 → 想 → 配 → 玩,<span class="accent">总共不到 6 秒。</span></h2>
         <div class="arch-panel reveal-blur" style="--delay:0.3s">
 <pre>
 <span class="dim">┌─────────────────────────────────────────────────────────────────┐</span>
@@ -1515,8 +1608,8 @@ h2.section-title .red { color: var(--c-red); }
      ============================================ -->
 <section class="slide demo-slide">
     <div class="slide-content">
-        <div class="eyebrow reveal" style="--delay:0.05s">⚡ DEMO · PLAY IT NOW</div>
-        <h2 class="section-title reveal" style="--delay:0.15s">点一下 <span class="accent">就能玩。</span></h2>
+        <div class="eyebrow reveal" style="--delay:0.05s">⚡ 现场演示</div>
+        <h2 class="section-title reveal" style="--delay:0.15s">扫码 <span class="accent">就能玩。</span></h2>
         <p class="lead reveal" style="--delay:0.25s">
             选一个模板 — FPS / MOBA / BR — 30 秒玩完。
             <strong>点击 iframe 进入游戏</strong>,按键盘 <code class="key-inline">←</code> <code class="key-inline">→</code> 回到 deck。
@@ -1576,8 +1669,8 @@ h2.section-title .red { color: var(--c-red); }
      ============================================ -->
 <section class="slide">
     <div class="slide-content">
-        <div class="eyebrow reveal" style="--delay:0.05s">08 · WHAT'S BUILT TODAY (v0.6)</div>
-        <h2 class="section-title reveal" style="--delay:0.15s">原型已跑通,<span class="accent">完整 V2G 链路演示就绪。</span></h2>
+        <div class="eyebrow reveal" style="--delay:0.05s">09 · 已经做出来的东西</div>
+        <h2 class="section-title reveal" style="--delay:0.15s">原型跑通,<span class="accent">完整链路可演示。</span></h2>
         <ul class="built-grid">
             <li class="done reveal-left" style="--delay:0.3s"><span class="mark">✓</span><span>Iso 体素渲染器(w2s 投影 + 块体 + z-sort + 静态 bg bake)</span></li>
             <li class="done reveal-right" style="--delay:0.35s"><span class="mark">✓</span><span>3 模板核心机制(掩体战 / 技能预瞄 / 武器稀有度)</span></li>
@@ -1600,40 +1693,40 @@ h2.section-title .red { color: var(--c-red); }
      ============================================ -->
 <section class="slide">
     <div class="slide-content">
-        <div class="eyebrow reveal" style="--delay:0.05s">09 · LOCKED PRODUCT DECISIONS</div>
-        <h2 class="section-title reveal" style="--delay:0.15s">设计真理在飞书,<span class="accent">代码追随文档。</span></h2>
+        <div class="eyebrow reveal" style="--delay:0.05s">10 · 几条不变的硬规则</div>
+        <h2 class="section-title reveal" style="--delay:0.15s">设计真理在飞书,<span class="accent">代码追着文档跑。</span></h2>
         <div class="dec-grid">
             <div class="dec reveal-left" style="--delay:0.3s">
-                <div class="label">PATH</div>
-                <div class="text"><strong>Path B</strong>(模板参数化),不做真生成式。AI 出 JSON config → 路由到 3 模板。</div>
+                <div class="label">怎么造</div>
+                <div class="text"><strong>套模板,不真造游戏</strong>。AI 出一份参数 → 套到 3 套预制模板里。</div>
             </div>
             <div class="dec reveal-right" style="--delay:0.35s">
-                <div class="label">ART</div>
-                <div class="text"><strong>抽象像素风</strong>(Roblox / MC 系)。规避所有游戏 IP 风险,千元机兼容。</div>
+                <div class="label">美术</div>
+                <div class="text"><strong>抽象像素风</strong>(Roblox / Minecraft 那种)。不碰任何游戏 IP,千元机也能跑。</div>
             </div>
             <div class="dec reveal-left" style="--delay:0.4s">
-                <div class="label">ENTRY POINT</div>
-                <div class="text"><strong>LIVE-first</strong>。M12 之前不做短视频流入口(转化率塌方)。</div>
+                <div class="label">入口</div>
+                <div class="text"><strong>直播间优先</strong>。M12 之前不做短视频入口(异步场景转化率会塌)。</div>
             </div>
             <div class="dec reveal-right" style="--delay:0.45s">
-                <div class="label">UX RULE</div>
-                <div class="text"><strong>Bottom sheet 上滑覆盖</strong>,永不压缩 LIVE 主画面。8-状态 FSM。</div>
+                <div class="label">界面</div>
+                <div class="text"><strong>从屏幕底部弹出</strong>,永远不挡主播画面。8 个状态有清晰流程图。</div>
             </div>
             <div class="dec reveal-left" style="--delay:0.5s">
-                <div class="label">MONETIZATION</div>
-                <div class="text"><strong>MVP 单一付费点 = Enhance + gift-gate</strong>。Phase 2:Remix + B2B(CPI / Brand)。<strong>Spotlight / Sponsor / Loot 不做</strong>(动机不足 / 干预主播 / 监管风险)。</div>
+                <div class="label">收钱</div>
+                <div class="text">第一版<strong>只有一个付费点:Enhance + 主播 gift-gate</strong>。第二阶段加 Remix + 厂商合作。<strong>不做 Spotlight / 不做赌博礼物 / 不让礼物影响主播游戏</strong>。</div>
             </div>
             <div class="dec reveal-right" style="--delay:0.55s">
-                <div class="label">TEMPLATE COVERAGE</div>
-                <div class="text"><strong>3 套模板必备</strong>(FPS + MOBA + BR)。覆盖约 60-70% 游戏 LIVE 内容。</div>
+                <div class="label">模板覆盖</div>
+                <div class="text"><strong>必备 3 套</strong>:FPS + MOBA + 吃鸡。覆盖约 60-70% 游戏直播内容。</div>
             </div>
             <div class="dec reveal-left" style="--delay:0.6s">
-                <div class="label">CREATOR SHARE</div>
-                <div class="text">Encore 礼物中<strong>主播分成 ≥ 普通 LIVE 礼物分成</strong>。生态绑定。</div>
+                <div class="label">主播分成</div>
+                <div class="text">Encore 礼物中<strong>主播分成 ≥ 普通直播礼物分成</strong>。让主播有动力开。</div>
             </div>
             <div class="dec reveal-right" style="--delay:0.65s">
-                <div class="label">DEMO SCOPE</div>
-                <div class="text">客户端 + 局域网部署。<strong>无后端服务</strong>(observer.py 是本地代理)。</div>
+                <div class="label">最重要的规则</div>
+                <div class="text"><strong>不打扰主播打游戏</strong>。主播玩什么、怎么玩、什么时候玩,Encore 永远不动。主播零操作,审 clip / 改游戏 / 抽奖 通通不做。</div>
             </div>
         </div>
     </div>
@@ -1644,33 +1737,33 @@ h2.section-title .red { color: var(--c-red); }
      ============================================ -->
 <section class="slide">
     <div class="slide-content">
-        <div class="eyebrow reveal" style="--delay:0.05s">10 · ROADMAP</div>
-        <h2 class="section-title reveal" style="--delay:0.15s">从 demo 到 M12,<span class="accent">5 个里程碑。</span></h2>
+        <div class="eyebrow reveal" style="--delay:0.05s">11 · 路线图</div>
+        <h2 class="section-title reveal" style="--delay:0.15s">从 demo 到第二阶段,<span class="accent">5 个里程碑。</span></h2>
         <div class="roadmap">
             <div class="rm done reveal-left" style="--delay:0.3s">
-                <div class="when">M8 · DONE</div>
-                <div class="title">Demo prototype (v0.6)</div>
-                <div class="body">3 模板 + 主题切换 + V2G 链路打通 + Claude Vision 接入。可上台演示。</div>
+                <div class="when">M8 · 已完成</div>
+                <div class="title">Demo 跑通</div>
+                <div class="body">3 套模板 + 主题切换 + AI 视觉链路 + Claude Vision 接入。现在可以上台演示。</div>
             </div>
             <div class="rm now reveal-left" style="--delay:0.42s">
-                <div class="when">M9 · NOW</div>
-                <div class="title">AI 美术批量切入</div>
-                <div class="body">跑 22 个 prompt 通过 Midjourney / DALL-E / SD,过 process.py → pack.py。视觉接近 Astrocade 水准。</div>
+                <div class="when">M9 · 进行中</div>
+                <div class="title">AI 美术上线</div>
+                <div class="body">用 Midjourney / DALL-E / SD 跑 22 个 prompt 批量生成像素素材。视觉做到 Astrocade 那种级别。</div>
             </div>
             <div class="rm next reveal-left" style="--delay:0.54s">
-                <div class="when">M10 · NEXT</div>
-                <div class="title">TikTok feed shell + 真分享链路</div>
-                <div class="body">Top 3 winner 自动 split-screen 短视频回流 + viewer profile + @tag 主播 + 可选 Duet。需接 TikTok SDK + CDN。</div>
+                <div class="when">M10 · 下一步</div>
+                <div class="title">接入 TikTok feed,真分享链路打通</div>
+                <div class="body">前 3 名自动剪上下分屏短视频 → 发到玩家自己 TikTok + @主播 + 可选联名。需要 TikTok SDK 和 CDN 支持。</div>
             </div>
             <div class="rm next reveal-left" style="--delay:0.66s">
-                <div class="when">M11 · NEXT</div>
-                <div class="title">第 4 个模板家族(可选)</div>
-                <div class="body">塔防 / 自走棋 / Vampire-Survivors 三选一。需先改飞书 Brief。</div>
+                <div class="when">M11 · 再下一步</div>
+                <div class="title">礼物经济上线(Enhance + gift-gate)</div>
+                <div class="body">唯一付费 SKU 灰度 5-10 个主播,看转化率 + 主播 gift-gate 设置 + 礼物分成是否跑得通。</div>
             </div>
             <div class="rm phase2 reveal-left" style="--delay:0.78s">
-                <div class="when">PHASE 2 · M14+</div>
-                <div class="title">生成式行为 DSL</div>
-                <div class="body">LLM 每条 Encore 输出独立 DSL(波次 / 单位 / 技能 / 胜负条件)。是 Astrocade-tier 的竞争位。</div>
+                <div class="when">第二阶段 · M14+</div>
+                <div class="title">真 AI 生成关卡</div>
+                <div class="body">LLM 每一条 Encore 自己生成波次、单位、技能、胜负条件。这才是 Astrocade 级别的真竞争位。</div>
             </div>
         </div>
     </div>
