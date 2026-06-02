@@ -2014,9 +2014,17 @@ function setupDemoEmbed() {
             setTimeout(() => {
                 let ok = false;
                 try {
-                    ok = !!iframe.contentDocument?.querySelector('.template-card');
+                    const doc = iframe.contentDocument;
+                    if (doc) {
+                        // Robust check: ANY of these markers means a real Encore page loaded.
+                        // Mario v2 sometimes dismisses splash quickly, so we don't require
+                        // .template-card specifically. Title check is most reliable.
+                        ok = (doc.title && doc.title.toLowerCase().includes('encore'))
+                          || !!doc.querySelector('#splash, #wrap, canvas, .template-card');
+                    }
                 } catch (_) {
-                    // Cross-origin access blocked → assume it loaded (we can't tell)
+                    // Cross-origin access blocked → assume it loaded (browser blocks us
+                    // from peeking inside, but the iframe is still rendering content)
                     ok = true;
                 }
                 if (ok) {
