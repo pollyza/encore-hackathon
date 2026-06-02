@@ -423,6 +423,24 @@
           if (!p.onPlat) p._lastAirT = state.time;                      // remember when last airborne (LASER forgives a recent jump)
           if (p.onPlat && p.onPlat._dx) p.px += p.onPlat._dx;           // ride horizontally-moving platforms
 
+          // GIFT FLIGHT banks progress: wings/coil/OOF sail forward WITHOUT landing, so
+          // p.lastSafe never advanced and a fall dumped you back at the takeoff point
+          // (the "飞到 75% 摔下来又回到起点" bug). While a flight gift is active, advance the
+          // respawn anchor to the furthest solid ground you've sailed OVER — a fall then
+          // keeps the progress you flew to. (Reaching finishX still wins outright, below.)
+          if (!p.onPlat && (p._giftWingsT > 0 || p._giftCoilT > 0 || p._giftOofT > 0)) {
+            let best = p.lastSafe;
+            for (const pl of state.platforms) {
+              if (pl.kind || pl.vanish) continue;                       // solid, non-vanishing ground only
+              if (pl.x <= p.px + 4 && pl.x > (best ? best.x : -1e9)) best = pl;
+            }
+            if (best && best !== p.lastSafe) {
+              p.lastSafe = { x: best.x, y: best.y }; p.lastSafePlat = best;
+              if (best.checkpoint && !best._reached) { best._reached = true; $sfx('pickup');
+                try { if (window.Juice) window.Juice.popup('✓ 存档', wx2sx(best.x), wy2sy(best.y) - 42, { color:'#5af5e0', size:14 }); } catch (_) {} }
+            }
+          }
+
           // Reaching the finish line counts as a WIN even mid-air — so a gift flight
           // (wings/coil/OOF) that sails OVER the obstacles to the end actually wins,
           // instead of overshooting into the void and wasting the flight (白飞).
