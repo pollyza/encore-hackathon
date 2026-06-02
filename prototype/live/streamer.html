@@ -33,10 +33,10 @@
 
   <!-- ── Stream background ───────────────────────────────────────────── -->
   <div id="stream-bg">
-    <video id="live-video" muted playsinline loop preload="metadata">
-      <!-- Absolute path so both /tmp/encore-preview/live/ and
-           /Users/.../prototype/live/ resolve correctly (servers run from
-           their own repo root or mirror root). -->
+    <!-- LIVE clip is gitignored (large, fetch-on-demand), so it 404s on clean
+         checkouts / deploys → hide it on error and let #stream-bg's gradient show
+         (never a broken/blank box). -->
+    <video id="live-video" muted playsinline loop preload="metadata" onerror="this.style.display='none'">
       <source src="/reference/videos/encore_test2.mp4" type="video/mp4">
     </video>
     <div class="atmosphere"></div>
@@ -229,6 +229,7 @@
             <div class="sheet-result-clip-half host">
               <video class="sheet-result-clip-video"
                      src="/reference/videos/encore_test2.mp4"
+                     onerror="this.style.display='none'"
                      muted autoplay loop playsinline preload="auto"></video>
               <div class="sheet-result-clip-tag tl">⏵ LIVE</div>
               <div class="sheet-result-clip-tag tr">@TK_Soi</div>
@@ -508,6 +509,21 @@
   applyHashDriver();
   window.addEventListener('hashchange', applyHashDriver);
 })();
+</script>
+
+<script>
+  // The LIVE clip (reference/videos/*.mp4) is gitignored "fetch-on-demand", so on a
+  // clean checkout / Vercel deploy it 404s. Hide any video that fails to load so it
+  // never shows a broken box — #stream-bg's gradient + the result canvas are the
+  // intended fallbacks. (Robust JS listener: inline onerror doesn't fire for a
+  // failed <source> child.)
+  document.querySelectorAll('#live-video, .sheet-result-clip-video').forEach((v) => {
+    const hide = () => { v.style.display = 'none'; };
+    v.addEventListener('error', hide, true);
+    if (v.querySelector && v.querySelector('source')) v.querySelectorAll('source').forEach(s => s.addEventListener('error', hide));
+    // already failed before the listener attached?
+    if (v.networkState === 3 /* NO_SOURCE */ || (v.error)) hide();
+  });
 </script>
 
 </body>
