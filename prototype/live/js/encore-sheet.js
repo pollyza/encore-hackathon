@@ -164,6 +164,8 @@
     clearLoading();
     clearAck();
     destroyIframe();
+    stopClipCanvasAnimation();
+    cancelPublishCountdown();
     cfg.sheet.classList.add('closing');
     cfg.backdrop.classList.add('closing');
     setTimeout(() => {
@@ -333,18 +335,386 @@
     showResult(result);
   }
 
+  // v0.8 split-screen second-distribution mock: derive UI state from rank.
+  // Top-3 winner → clip preview + caption + auto-publish countdown
+  // Non-winner   → Spotlight "Make my clip" pay card
+  //
+  // For demo determinism: rank is computed from won + score (top-3 if won and
+  // score is high). In real impl, rank comes from server after leaderboard
+  // settles. The mock just needs to convincingly demo both states.
+  function rankFromResult({ won, score, max }) {
+    if (!won) return { rank: 18, medal: '😅', isWinner: false };
+    // Demo heuristic: if score is at least 75% of max → #2; full → #1; else #3
+    const ratio = max > 0 ? score / max : 0;
+    if (ratio >= 1)    return { rank: 1, medal: '🥇', isWinner: true };
+    if (ratio >= 0.75) return { rank: 2, medal: '🥈', isWinner: true };
+    return { rank: 3, medal: '🥉', isWinner: true };
+  }
+
+  let publishCountdownTimer = null;
+  function startPublishCountdown() {
+    cancelPublishCountdown();
+    const elNum  = document.getElementById('result-publish-countdown');
+    const elMsg  = elNum && elNum.parentElement;
+    const elBtnC = document.getElementById('result-publish-cancel');
+    const elBtnN = document.getElementById('result-publish-now');
+    if (!elNum || !elMsg) return;
+    elMsg.classList.remove('cancelled', 'published');
+    elNum.textContent = '3';
+    let n = 3;
+    publishCountdownTimer = setInterval(() => {
+      n -= 1;
+      if (n <= 0) {
+        clearInterval(publishCountdownTimer);
+        publishCountdownTimer = null;
+        markPublished();
+        return;
+      }
+      elNum.textContent = String(n);
+    }, 1000);
+  }
+  function cancelPublishCountdown() {
+    if (publishCountdownTimer) {
+      clearInterval(publishCountdownTimer);
+      publishCountdownTimer = null;
+    }
+  }
+  function markPublished() {
+    const elMsg = document.querySelector('#result-publish-wrap .sheet-result-publish-msg');
+    if (elMsg) {
+      elMsg.classList.add('published');
+      elMsg.innerHTML = '✓ Published to TikTok · view in your profile';
+    }
+  }
+  function markCancelled() {
+    cancelPublishCountdown();
+    const elMsg = document.querySelector('#result-publish-wrap .sheet-result-publish-msg');
+    if (elMsg) {
+      elMsg.classList.add('cancelled');
+      elMsg.innerHTML = 'Auto-publish cancelled — clip saved as draft';
+    }
+  }
+
+  // ── Canvas 2D simulated pixel encore for the clip preview viewer half ──
+  // Pure visual mock — NOT the real game. Auto-bot character + crosshair
+  // tracking + enemies popping + score floats. Replace with real <video>
+  // when P1 hero asset (server-side rendered) lands.
+  let clipCanvasRAF = null;
+  let clipCanvasStart = 0;
+  function startClipCanvasAnimation() {
+    stopClipCanvasAnimation();
+    const cv = document.getElementById('result-clip-canvas');
+    if (!cv) return;
+    // Size canvas backing store to its display box for crisp pixels
+    const fit = () => {
+      const r = cv.getBoundingClientRect();
+      if (r.width === 0) return false;
+      cv.width  = Math.round(r.width);
+      cv.height = Math.round(r.height);
+      return true;
+    };
+    if (!fit()) {
+      // Container may still be laying out — retry next frame
+      requestAnimationFrame(() => startClipCanvasAnimation());
+      return;
+    }
+    const ctx = cv.getContext('2d');
+    clipCanvasStart = performance.now();
+    const draw = (now) => {
+      const t = now - clipCanvasStart;
+      drawMockEncoreScene(ctx, cv.width, cv.height, t);
+      clipCanvasRAF = requestAnimationFrame(draw);
+    };
+    clipCanvasRAF = requestAnimationFrame(draw);
+  }
+  function stopClipCanvasAnimation() {
+    if (clipCanvasRAF) {
+      cancelAnimationFrame(clipCanvasRAF);
+      clipCanvasRAF = null;
+    }
+  }
+
+  function drawMockEncoreScene(ctx, w, h, t) {
+    // Background — twilight desert gradient like FPS template
+    const sky = ctx.createLinearGradient(0, 0, 0, h);
+    sky.addColorStop(0,    '#241b2f');
+    sky.addColorStop(0.55, '#3a2540');
+    sky.addColorStop(1,    '#1f1828');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, w, h);
+
+    // Distant horizon line + mountain silhouette (parallax slow)
+    const horizonY = h * 0.55;
+    const px = (t * 0.012) % w;
+    ctx.fillStyle = '#0e0a14';
+    for (let i = -1; i < 3; i++) {
+      ctx.beginPath();
+      const baseX = i * w - px;
+      ctx.moveTo(baseX,           horizonY);
+      ctx.lineTo(baseX + w * 0.2, horizonY - 18);
+      ctx.lineTo(baseX + w * 0.35,horizonY - 6);
+      ctx.lineTo(baseX + w * 0.55,horizonY - 22);
+      ctx.lineTo(baseX + w * 0.8, horizonY - 10);
+      ctx.lineTo(baseX + w,       horizonY);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Ground (below horizon) — checker tiles parallax fast
+    ctx.fillStyle = '#19121f';
+    ctx.fillRect(0, horizonY, w, h - horizonY);
+    const tile = 14;
+    const px2 = (t * 0.06) % tile;
+    ctx.fillStyle = 'rgba(255,255,255,0.04)';
+    for (let y = horizonY; y < h; y += tile) {
+      const rowOffset = ((Math.floor((y - horizonY) / tile)) % 2) * tile;
+      for (let x = -tile + rowOffset - px2; x < w; x += tile * 2) {
+        ctx.fillRect(x, y, tile, 2);
+      }
+    }
+
+    // Scanline shimmer (subtle CRT)
+    const scanY = (t * 0.18) % h;
+    const grd = ctx.createLinearGradient(0, scanY - 30, 0, scanY + 30);
+    grd.addColorStop(0,   'rgba(37,244,238,0)');
+    grd.addColorStop(0.5, 'rgba(37,244,238,0.08)');
+    grd.addColorStop(1,   'rgba(37,244,238,0)');
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, scanY - 30, w, 60);
+
+    // Pixel character — moves left/right, idle bob
+    const charBaseX = w * 0.5 + Math.sin(t * 0.0008) * (w * 0.18);
+    const charBaseY = h * 0.78 + Math.sin(t * 0.005) * 1.5;
+    const stepFrame = Math.floor(t / 200) % 2;
+    drawPixelChar(ctx, charBaseX, charBaseY, stepFrame);
+
+    // Crosshair tracks toward the active enemy
+    const enemyT = ((t * 0.0006) % 1);
+    const enemyX = w * (0.15 + enemyT * 0.7);
+    const enemyY = horizonY + 26 + Math.sin(t * 0.006) * 3;
+    const crossX = charBaseX + (enemyX - charBaseX) * 0.9;
+    const crossY = charBaseY - 18 + (enemyY - (charBaseY - 18)) * 0.9;
+    drawCrosshair(ctx, crossX, crossY, t);
+
+    // Muzzle flash + tracer on fire beats
+    const fireBeat = (t % 700) < 90;
+    if (fireBeat) {
+      ctx.strokeStyle = 'rgba(255,210,0,0.7)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(charBaseX + 4, charBaseY - 10);
+      ctx.lineTo(crossX, crossY);
+      ctx.stroke();
+      // Muzzle
+      ctx.fillStyle = '#ffd23f';
+      ctx.fillRect(charBaseX + 3, charBaseY - 11, 3, 2);
+    }
+
+    // Enemy — pixel block
+    ctx.fillStyle = '#FE2C55';
+    ctx.fillRect(enemyX - 4, enemyY - 6, 8, 10);
+    ctx.fillStyle = '#7a1029';
+    ctx.fillRect(enemyX - 4, enemyY + 4, 8, 2);
+    // Enemy "hit flash" when crosshair is near
+    const dist = Math.hypot(crossX - enemyX, crossY - enemyY);
+    if (dist < 12 && fireBeat) {
+      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      ctx.fillRect(enemyX - 5, enemyY - 7, 10, 12);
+    }
+
+    // Score float — "+150" rising near char
+    const floatPhase = (t % 2400) / 2400;
+    if (floatPhase < 0.7) {
+      const fy = charBaseY - 30 - floatPhase * 30;
+      ctx.fillStyle = `rgba(37,244,238,${(1 - floatPhase / 0.7) * 0.9})`;
+      ctx.font = 'bold 10px "Space Grotesk", monospace';
+      ctx.fillText('+150', charBaseX + 8, fy);
+    }
+
+    // HUD score corner top-right
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.font = '8px "Space Grotesk", monospace';
+    ctx.fillText('HP', 6, 12);
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.fillRect(20, 6, 28, 6);
+    const hpFrac = 0.7 + Math.sin(t * 0.002) * 0.15;
+    ctx.fillStyle = '#25F4EE';
+    ctx.fillRect(20, 6, 28 * hpFrac, 6);
+  }
+
+  function drawPixelChar(ctx, x, y, stepFrame) {
+    // 8x14 px character
+    ctx.fillStyle = '#f1ddb6'; // skin tone
+    ctx.fillRect(x - 2, y - 16, 4, 4);     // head
+    ctx.fillStyle = '#e8e3d6'; // torso
+    ctx.fillRect(x - 3, y - 12, 6, 7);     // body
+    ctx.fillStyle = '#3a3026'; // weapon
+    ctx.fillRect(x + 2, y - 11, 6, 1);
+    ctx.fillStyle = '#1f1a14'; // legs
+    if (stepFrame === 0) {
+      ctx.fillRect(x - 3, y - 5, 2, 5);
+      ctx.fillRect(x + 1, y - 5, 2, 5);
+    } else {
+      ctx.fillRect(x - 4, y - 5, 2, 5);
+      ctx.fillRect(x + 2, y - 5, 2, 5);
+    }
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath();
+    ctx.ellipse(x, y + 1, 6, 1.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function drawCrosshair(ctx, x, y, t) {
+    ctx.strokeStyle = '#25F4EE';
+    ctx.lineWidth = 1;
+    const r = 7 + Math.sin(t * 0.008) * 1;
+    ctx.beginPath();
+    ctx.moveTo(x - r - 2, y); ctx.lineTo(x - 2, y);
+    ctx.moveTo(x + 2, y);     ctx.lineTo(x + r + 2, y);
+    ctx.moveTo(x, y - r - 2); ctx.lineTo(x, y - 2);
+    ctx.moveTo(x, y + 2);     ctx.lineTo(x, y + r + 2);
+    ctx.stroke();
+  }
+
+  function wireResultPageOnce() {
+    if (wireResultPageOnce.done) return;
+    wireResultPageOnce.done = true;
+
+    // Caption inline edit
+    const captionEl = document.getElementById('result-caption-text');
+    const editBtn   = document.getElementById('result-caption-edit');
+    if (editBtn && captionEl) {
+      editBtn.addEventListener('click', () => {
+        const editing = captionEl.getAttribute('contenteditable') === 'true';
+        captionEl.setAttribute('contenteditable', editing ? 'false' : 'true');
+        editBtn.textContent = editing ? 'edit' : 'done';
+        if (!editing) {
+          captionEl.focus();
+          // Place cursor at end
+          const range = document.createRange();
+          range.selectNodeContents(captionEl);
+          range.collapse(false);
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+      });
+    }
+
+    // Publish controls
+    const cancelBtn = document.getElementById('result-publish-cancel');
+    const nowBtn    = document.getElementById('result-publish-now');
+    if (cancelBtn) cancelBtn.addEventListener('click', markCancelled);
+    if (nowBtn)    nowBtn.addEventListener('click', () => { cancelPublishCountdown(); markPublished(); });
+
+    // Enhance CTA (v0.8.1 MVP single paid SKU, persistent in both winner/non-winner states)
+    const enhCta = document.getElementById('result-enhance-cta');
+    if (enhCta) {
+      enhCta.addEventListener('click', () => {
+        const gate = document.getElementById('result-enhance-gate');
+        const isGated = gate && !gate.hidden;
+        if (isGated) {
+          // gift-gate ON: simulate "sent gift, now unlocked" → swap to buy state
+          enhCta.querySelector('.head').textContent = 'Enhance unlocked';
+          enhCta.querySelector('.sub').textContent = 'Tap again to apply to next round';
+          gate.hidden = true;
+        } else {
+          enhCta.querySelector('.head').textContent = '✓ Enhance applied';
+          enhCta.querySelector('.sub').textContent = '🔥 Fire bullets · ❤️ Double HP next round';
+          enhCta.querySelector('.price').textContent = 'BUY';
+          enhCta.style.pointerEvents = 'none';
+        }
+      });
+    }
+
+    // Clip play / sound / regenerate — UI-only mocks for demo
+    const playOverlay = document.getElementById('result-clip-play');
+    if (playOverlay) {
+      playOverlay.addEventListener('click', () => {
+        playOverlay.style.opacity = '0';
+        // In real impl: trigger <video>.play()
+      });
+    }
+    const soundBtn = document.getElementById('result-clip-sound');
+    if (soundBtn) {
+      soundBtn.addEventListener('click', () => {
+        const muted = soundBtn.textContent.startsWith('🔇');
+        soundBtn.textContent = muted ? '🔊 sound on' : '🔇 muted';
+      });
+    }
+    const regenBtn = document.getElementById('result-clip-regen');
+    if (regenBtn) {
+      regenBtn.addEventListener('click', () => {
+        regenBtn.textContent = '↻ regenerated';
+        regenBtn.disabled = true;
+        setTimeout(() => { regenBtn.textContent = '↻ regenerate'; regenBtn.disabled = false; }, 1500);
+      });
+    }
+  }
+
   function showResult({ won, score, max }) {
     setPhase('result');
     const wrap = document.getElementById('phase-result');
-    wrap.classList.toggle('lost', !won);
 
-    document.getElementById('result-label').textContent    = won ? 'Encore complete' : 'Run ended';
-    document.getElementById('result-headline').textContent = won ? 'Nice run!'        : 'So close.';
-    document.getElementById('result-score').textContent    = score;
-    document.getElementById('result-max').textContent      = max;
-    document.getElementById('host-score').textContent      = Math.max(1, max - 2);
-    document.getElementById('host-max').textContent        = max;
-    document.getElementById('rank-num').textContent        = won ? 234 : 1872;
+    const rinfo = rankFromResult({ won, score, max });
+    wrap.classList.toggle('lost', !rinfo.isWinner);
+
+    // v0.8 big RANK chip
+    const medalEl = document.getElementById('result-rank-medal');
+    const numEl   = document.getElementById('result-rank-num-big');
+    if (medalEl) medalEl.textContent = rinfo.medal;
+    if (numEl)   numEl.textContent   = rinfo.rank;
+
+    // Score / host columns (kept from v0.7 for compact summary)
+    document.getElementById('result-score').textContent = score;
+    document.getElementById('result-max').textContent   = max;
+    document.getElementById('host-score').textContent   = Math.max(1, max - 2);
+    document.getElementById('host-max').textContent     = max;
+
+    // Legacy secondary rank pill (still opens ranking sub-phase);
+    // v0.8.1 uses the same rank as the big chip so numbers are consistent
+    document.getElementById('rank-num').textContent = rinfo.rank;
+
+    // Update viewer score on bottom-half of clip preview
+    const vscore = document.getElementById('result-clip-vscore');
+    if (vscore) vscore.textContent = score.toLocaleString();
+
+    wireResultPageOnce();
+
+    // Reset publish state + auto-start countdown (winner only)
+    cancelPublishCountdown();
+    const publishMsg = document.querySelector('#result-publish-wrap .sheet-result-publish-msg');
+    if (publishMsg) {
+      publishMsg.classList.remove('cancelled', 'published');
+      publishMsg.innerHTML = 'Auto-publishing to TikTok in <span id="result-publish-countdown">3</span>…';
+    }
+    if (rinfo.isWinner) {
+      startPublishCountdown();
+      // Kick the simulated viewer-half pixel encore animation
+      startClipCanvasAnimation();
+    } else {
+      // Non-winner shows Retry card instead of clip → stop the canvas
+      stopClipCanvasAnimation();
+      // Compute spots-from-#3 gap for the Retry card stats
+      const gapEl = document.getElementById('result-retry-gap');
+      if (gapEl) {
+        const youRank = rinfo.rank; // already a faux rank like 15 / 1872
+        gapEl.textContent = Math.max(1, youRank - 3);
+      }
+    }
+
+    // Reset Enhance CTA to default state (works in both winner + non-winner)
+    const enhCta = document.getElementById('result-enhance-cta');
+    if (enhCta) {
+      enhCta.style.pointerEvents = '';
+      const head = enhCta.querySelector('.head');
+      const sub  = enhCta.querySelector('.sub');
+      const pric = enhCta.querySelector('.price');
+      if (head) head.textContent = 'Enhance · next round';
+      if (sub)  sub.textContent  = '🔥 Fire bullets · ❤️ Double HP · ➕ Extra life';
+      if (pric) pric.textContent = '$0.5';
+    }
   }
 
   function playAgain() {
@@ -500,11 +870,13 @@
     });
 
     // Extension pills
-    document.getElementById('rank-pill').addEventListener('click', showRanking);
-    document.getElementById('share-pill').addEventListener('click', () => {
+    // Note: v0.8 removed share-pill and gift-remix from HTML (replaced by
+    // split-screen clip flow); guard for null in case they come back.
+    document.getElementById('rank-pill')?.addEventListener('click', showRanking);
+    document.getElementById('share-pill')?.addEventListener('click', () => {
       cfg.onAck && cfg.onAck('Share — coming soon');
     });
-    document.querySelector('#phase-result .gift-remix .send').addEventListener('click', () => {
+    document.querySelector('#phase-result .gift-remix .send')?.addEventListener('click', () => {
       cfg.onAck && cfg.onAck('Gift Remix · M11+');
     });
 
@@ -518,5 +890,15 @@
     });
   }
 
-  window.EncoreSheet = { init, open, close };
+  // Expose showResult + a "force-open into a specific phase" helper for
+  // URL-hash demo driver (e.g. ?#result-winner) and integration tests.
+  function forceResult({ won, score, max }) {
+    if (!cfg) return; // not initialised yet
+    cfg.sheet.classList.remove('hidden');
+    cfg.backdrop && cfg.backdrop.classList.remove('hidden');
+    setPhase('result');
+    showResult({ won, score, max });
+  }
+
+  window.EncoreSheet = { init, open, close, forceResult, showResult };
 })();

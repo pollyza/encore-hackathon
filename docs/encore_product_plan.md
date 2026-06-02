@@ -3,7 +3,8 @@
 > 本地 staging 文档,与飞书 [Product Brief v0.8](https://bytedance.larkoffice.com/docx/PzXnd27k8oWMRYxJIx4mgw4uy8c) 同步。**设计真理在飞书**,本地是实现试探。
 > 配套资源:[Demo Dev Plan v0.2 (飞书)](https://bytedance.larkoffice.com/docx/LfbydvhwCopawvx6UthmmOcoyNf) · [LIVE 交互模块 sub-doc (飞书 wiki)](https://www.feishu.cn/wiki/DqOXwN2hzig5cUkX6zxcCFmGnXd) · [GitHub](https://github.com/pollyza/encore-hackathon) · [Live demo](https://encore-deploy.vercel.app) · [D-module 状态卡](./polly_d_module_status.md)
 > 维护者:Encore PM。
-> **v0.8 vs v0.7 主要变化**:删除未验证数据(`5 秒高光黑洞` / `3.5s 弹幕延迟` / 各种百分比预测) · 新增 non-interference 第一原则 · 礼物经济从 4 层(Enhance/Spotlight/Sponsor/Loot)砍到 2 层 + Phase 2 一层(Enhance/Spotlight + Remix) · 新增 §4 机制设计 / §5 商业价值 / §6 创新性 / §7 可落地性 / §8 MVP 局限 / §9 护城河 / §10 风险共 7 章诚实评估。
+> **v0.8 vs v0.7 主要变化**:删除未验证数据(`5 秒高光黑洞` / `3.5s 弹幕延迟` / 各种百分比预测) · 新增 non-interference 第一原则 · 礼物经济从 4 层(Enhance/Spotlight/Sponsor/Loot)砍到 1 层 + Phase 2 拓展 · 新增 §4 机制设计 / §5 商业价值 / §6 创新性 / §7 可落地性 / §8 MVP 局限 / §9 护城河 / §10 风险共 7 章诚实评估。
+> **v0.8.1 patch(2026-05-30)**:基于"用户失败后没动机付费发布失败 clip"的反思,**砍掉 Spotlight SKU**,MVP 唯一付费点 = Enhance;§5 加未来变现拓展矩阵(9 条 SKU 按阶段排序)。
 
 ---
 
@@ -105,8 +106,7 @@ AI 仍然在产品里、是必需基建,但**它不是定位句**。定位句是
   · ON = winner clip 自动以 Collab Post 形式发布(主播侧无操作)
   · OFF = winner clip 仅以 @tag 形式发布,主播可后续手动决定每条是否 Duet
 
-[付费功能 gift-gate]
-  · Enhance / Spotlight / Remix 三档分别配置
+[Enhance gift-gate](MVP 唯一付费功能 gate;Spotlight 已砍,Remix 是 Phase 2)
   · 候选:OFF(推荐)/ 50 / 200 / 500 金币
   · 超过 500 金币 dashboard 出软警告"该 gate 转化率比同档主播低 X%"(数据出来后才显示)
 ```
@@ -126,11 +126,12 @@ skip → 该高光不进入 Encore 流程
 主播继续打 ranked, 不再被 Encore 流程打扰
 ```
 
-**直播后(异步)**:
+**直播后(异步,主播零操作)**:
 
-- 30 min 内主播可逐条 review winner clip 决定是否 veto
-- 不 veto → 自动发布到 viewer profile + @tag 主播 + 可选 Collab
-- 全局可一键关闭 Encore 后续直播默认配置
+- Top 3 winner clip 渲染完成后(~3-5 min)自动发布到 viewer profile + @tag 主播,主播侧无任何 review/审阅环节
+- 不喜欢某条 clip → 走 TikTok 既有"举报 / 请求删除"通道(与任何被 @tag 内容一样,跟 Encore 解耦)
+- 全局想关闭 Encore → dashboard Encore 开关一键关
+- **为什么不设主播 review 窗口**:跟 non-interference 第一原则自相矛盾——任何"主播必须 review N 条 clip"都是操作题,主播打 ranked 不会专门盯着审 winner clip。删除该机制,把信任放在"viewer consent + 质量门槛 + TikTok 既有内容治理"三道防线上
 
 ### 3.2 观众侧
 
@@ -139,10 +140,9 @@ skip → 该高光不进入 Encore 流程
 ```
 弹窗:
   「玩 Encore 即同意:
-   · 你的玩法记录可能被生成为 split-screen 短视频
-   · 进入 Top 3 winner 时自动 publish 到你的 TikTok profile, @tag 主播
-   · 失败或非 winner 局不自动 publish, 你可付费选择发布
-   · 同意条款可随时在设置中撤回」
+   · 进入 Top 3 winner 时,你的玩法会被生成 split-screen 短视频,自动 publish 到你的 TikTok profile,@tag 主播
+   · 仅 Top 3 winner 会生成 clip,其他名次不生成 / 不发布,**不会有任何失败录像被发布**
+   · 同意条款可随时在设置中撤回(已发布的 clip 走 TikTok 普通删除流程)」
   [同意才能继续玩]
 ```
 
@@ -165,8 +165,9 @@ Result Page:
   · 个人分数 + Encore Rank pill
   · 实时排名 "目前 #N / 共 X 人完成 (还有 Y 人进行中)"
   · 付费功能入口:
-    · 主播 gate OFF → 直接付费购买 Enhance / Spotlight
-    · 主播 gate ON → 先送 N 金币给主播 → 解锁购买入口
+    · 主播 gate OFF → 直接付费购买 Enhance
+    · 主播 gate ON → 先送 N 金币给主播 → 解锁 Enhance 购买入口
+  · 非 winner 状态:不弹付费(v0.8.1 砍 Spotlight),改强 Play again CTA
    ↓
 高光场结束 (~3-5 min 后异步):
   · 进入 Top 3 → push 通知 "恭喜进入 winner #N, 短视频已生成"
@@ -180,13 +181,13 @@ bottom sheet 自动滑下 → fatigue cooldown → 继续看 LIVE
 
 | 维度 | 规则 |
 |---|---|
-| **资格** | Top 3 winner 免费自动生成 + 其他 viewer $0.5 付费 Spotlight 生成 |
+| **资格** | **仅 Top 3 winner 免费自动生成**(MVP);非 winner 不弹付费 clip(v0.8.1 砍 Spotlight,见 §3.4) |
 | **排名** | 分数降序 → 完成时间升序 → 进入 Encore 时间升序 |
 | **post owner** | viewer 自己(profile + 双方粉丝 feed) |
 | **主播绑定** | 自动 @tag;主播 30 min 内决定是否升级为 Duet/Collab Post |
 | **视觉格式** | 默认上下 split:主播 15s 上 + viewer 15s 下,总长 15s 同步播放<br>backup A/B:mirror 前后接续(主播 → viewer 重放) |
 | **viewer 视频长度** | 服务端自动剪 30s 玩法的 score 峰值 ±7.5s = 15s 高光段 |
-| **失败 clip** | 不自动生成;viewer 可付费手动生成 |
+| **失败 clip** | 不自动生成,不可手动付费生成(v0.8.1 砍 Spotlight) |
 | **质量门槛** | 完成 + 最低分数(具体阈值待 MVP 后调)→ 否则 winner 资格作废 + 不弹付费选项 |
 | **分发链路** | 等同 TikTok 普通 UGC,进 profile + 双方粉丝 feed;自动加 `#Encore` hashtag |
 | **算法保护** | server-side quality gate(防 spam);后续阶段跟算法团队对齐"stitched native content"标识 |
@@ -196,31 +197,50 @@ bottom sheet 自动滑下 → fatigue cooldown → 继续看 LIVE
 
 **铁律**:Encore 玩本身 / 看 winner clip / 被动 collab,任何时候都不能 gate。Gift-gate 只能加在**付费功能入口**前。
 
-**免费层**(绝对不可 gate):
+**免费层**(绝对不可 gate,也是 viewer 大部分时候的实际体验):
 
-- 玩 Encore 30s
-- 看 winner clip / 自己出 winner clip
-- 被动 Collab(主播 Duet)
-- Result Page 实时排名显示
-- 失败局手动选择是否付费生成 clip
+- 玩 Encore 30s(无限次)
+- 进 Top 3 自动免费生成 split-screen 短视频回流 TikTok profile
+- 看任何 winner clip
+- 被动 Collab(主播 Duet 自动 @tag)
+- Result page 实时排名显示
 
-**付费层**(可主播 gift-gate):
+**付费层(MVP 仅 Enhance 一项,可主播 gift-gate)**:
 
-| SKU | 价位(待定,需 A/B) | 阶段 | 说明 |
+| SKU | 价位 | 阶段 | 心智 |
 |---|---|---|---|
-| **Enhance** | $0.5-1 | MVP | 改自己下一局(火焰子弹 / 双倍 HP / 额外一条命);唯一接近"功能性付费"心智 |
-| **Spotlight** | $0.5 | MVP | 非 winner 但想发自己 clip;**和 v0.7 不同的是不再卖"加曝光"**,改卖"生成自己的 clip",心智更具体 |
-| **Remix** | $2-5 | Phase 2(M11+) | LLM 生成自定义参数("slower, shotgun, pink enemies");**这是 AI 真正不可替代的地方** |
+| **Enhance** | $0.5-1 | MVP | **功能性续币**:改自己下一局(火焰子弹 / 双倍 HP / 额外一条命) → 想再赢一把的不甘 |
 
-**主播分成**:
+**为什么 MVP 只有 Enhance 一个 SKU**(v0.8.1 拍板):
+
+- Enhance 触发时机 = result page 看到自己没进 Top 3 / 进了 Top 3 想刷更好成绩 → **viewer 心理动机最强**(街机续币心智)
+- Enhance 的目标人群 = 已经在 LIVE 间送礼的高活跃用户 → **自然衔接 gift-gate**,转化路径短
+- 一句话评委叙事:**"想再赢一把?Enhance 续命"** — 无需解释,可信度高
+
+**v0.8.1 砍掉的 SKU(及为什么)**:
+
+| 砍掉 | 原因 |
+|---|---|
+| **Spotlight**(原 v0.8 设计:非 winner 付费生成 clip) | 失败局没人愿意花钱发布自己的失败录像;双重摩擦(gift-gate + $0.5)套在最低动机用户上 |
+| **Sponsor**(送主播下一局加 buff) | 违反 non-interference 第一原则 |
+| **Loot**(概率宝箱) | 赌博机制 + 监管风险 |
+
+**Phase 2 重新引入的 SKU(详见 §5.4)**:
+
+- **Remix**($2-5)— Phase 2(M11+),LLM 生成自定义参数;真生成式 AI 唯一用例
+- **Spotlight v2** — Phase 3,reframe 为"挑战朋友 social SKU"(不是发布失败,是 @ 朋友 challenge),需 TikTok 朋友 tag 基建
+
+**主播 dashboard gift-gate**(简化):
+
+- 单一开关:`Encore Enhance gift-gate · OFF(推荐) / 50 / 200 / 500 金币`
+- ON = viewer 购买 Enhance 前先送 N 金币给主播
+- OFF = viewer 直接付费购买,无礼物分成给主播
+
+**主播分成边界**:
 
 - gift-gate 触发的礼物 → 走 TikTok LIVE 正常礼物分成(主播主要收益)
-- 付费功能本身的收入 → 平台 / Encore 标准分成(主播不分)
-- **这是关键边界**:主播不分付费功能直接收入,防止"主播为催付费降低 gate"产生反激励
-
-> **从 v0.7 删除的 SKU**:
-> - **Sponsor**(送主播下一局加 buff):违反 non-interference 第一原则
-> - **Loot**(概率宝箱):赌博机制,监管风险
+- Enhance 付费本身的收入 → 平台 / Encore 标准分成(主播不分)
+- **关键**:主播不分付费功能直接收入,防止"主播为催付费降低 gate"产生反激励
 
 ### 3.5 8 状态有限状态机(保留 v0.7 设计)
 
@@ -238,7 +258,7 @@ bottom sheet 自动滑下 → fatigue cooldown → 继续看 LIVE
 
 - Top 1 = 单点稀缺,viewer 没希望就不玩
 - Top 3 = 3 个槽位,玩的动机 + 上榜可能性平衡
-- 数学上 50 高光 × 3 = 150 winner clip/场,加付费 Spotlight 200-500 条,总量级可管理
+- 数学上 50 高光 × 3 = 150 winner clip/场(v0.8.1 后无 Spotlight 付费 clip,总量级更可管理)
 
 **winner 资格 + 防作弊**:
 
@@ -273,14 +293,23 @@ Encore 服务端 (asynchronous worker)
 - 7.5M × 1s = ~2000 CPU·h/日 ≈ **$50-200/日 全量级别**(云上 spot 实例)
 - 相比 Vision 检测成本(见 §7.2)可忽略
 
-### 4.3 Vision 检测 + 主播 promote/skip 流程
+### 4.3 Vision 检测 + 主播 promote 策略
 
-主播侧的 5s 倒计时 promote/skip 是**整个机制的关键设计**:
+**默认 auto-promote**——主播在 FPS 交火 / MOBA 团战中根本不需要看屏幕角落,5s 静默倒计时结束自动放出 bottom sheet。这是 non-interference 第一原则的落地形式:**默认无操作就工作**,主播完全零干预,不强迫主播做"director 决策"。
 
-- 让主播作为高光质量过滤器,减少误触发对观众体验的伤害
-- 给主播 control 感("我是 Encore 的 director,不是被动接受者")
-- 砍掉 ~30-50% 的低质 Encore 触发,降低观众 fatigue
-- 但不能砍太多 → 默认 promote、5s 倒计时、一键操作降低主播认知负担
+主播可选的 opt-out 三档(全为可选,不开任何也不影响产品成立):
+
+| 档位 | 触发 | 工作量 |
+|---|---|---|
+| 实时 skip | 5s 倒计时窗口内单点 skip | ≤ 1 次操作, 可全程不用 |
+| Pre-set 规则 | dashboard 配置(如"仅 ace/clutch auto-promote"/"比赛模式静音 Encore"/特定 game mode 关闭) | 一次设定, 长期生效 |
+| 赛后 batch unpublish | 当场结束后看 promoted 列表, 批量取消不要的 | 异步, 不打断游戏 |
+
+这三档存在的意义不是"让主播做质量过滤器",而是**给主播兜底权**——在 non-interference 前提下保留 escape hatch。预期数据:绝大多数主播只用 pre-set 规则一次,实时 skip 使用率 < 5%。
+
+Vision 单次检测成本($6.75/直播间·h)在 skip 时**不浪费**——已经花了, 只是 bottom sheet 不弹给观众, 主播 / 平台关系不受影响。
+
+> **历史说明**: v0.7 版本把 5s 倒计时定位为"主播是 director, 作为质量过滤器砍 30-50% 低质触发"。v0.8 重写后这个定位被否决——理由是与 non-interference 第一原则不自洽 (FPS 主播交火中没空看倒计时, 任何"主播必须 director"的设计都会塌方)。新定位: 5s 是 silent opt-out window, 默认不操作 = 默认 promote。
 
 ### 4.4 法律 / 隐私 consent
 
@@ -301,7 +330,7 @@ Encore 服务端 (asynchronous worker)
 
 | 收入项 | 来源 | 主播分成 | 平台分成 |
 |---|---|---|---|
-| Enhance / Spotlight 购买 | viewer 直接付费 | 0%(除非走 gift-gate) | 100% 走平台 / Encore 标准比例 |
+| **Enhance 购买**($0.5-1) | viewer 直接付费 | 0%(除非走 gift-gate) | 100% 走平台 / Encore 标准比例 |
 | Gift-gate 礼物 | viewer 送礼解锁付费功能入口 | 走 TikTok LIVE 礼物正常分成 | 同上 |
 
 **Phase 2 可选扩展**:
@@ -334,6 +363,63 @@ v0.7 中"5-10% ARPU lift"、"$87/直播"等数字**全部撤回**,原因:
 - **主播粘性**:接入 Encore 的主播多一条被动内容产出线,迁移到竞品时这部分内容直接归零
 
 这些是**叙事价值**不是数字承诺,但是给平台高层讲 Encore 时必须讲清楚的。
+
+### 5.4 未来变现 · 3 大类权益矩阵(v0.8.1)
+
+MVP 单一 Enhance 是起点。后续 SKU 按**3 大类权益**展开,每类对应明确用户心智:
+
+#### 🅰 付费改变游戏体验(C2C · 个体增益)
+
+> **心智**:"我想玩得不一样 / 玩得更爽 / 玩得更好"
+
+| SKU | 描述 | 阶段 |
+|---|---|---|
+| **Enhance** | 改自己下一局:火焰子弹 / 双倍 HP / 额外一条命 · $0.5-1 | **MVP** |
+| **Skin / Theme** | 角色 / 武器 / 场景皮肤(单购 + 累积解锁) | Phase 2 (M11+) |
+| **Remix** | LLM 生成自定义参数("slower, shotgun, pink enemies")· $2-5 · AI 真不可替代用例 | Phase 2 (M11+) |
+| **Upgrade 道具** | 永久属性微提升(命中辅助 / 反应窗口 / 视野范围) | Phase 3 (M14+) |
+| **Battle Pass / VIP 月卡** | 月费解锁皮肤库 + 累积 Enhance 包 + priority 上 Top 3 | Phase 3 (M14+) |
+
+🅰 类是 LTV 长尾,Enhance → Skin → Battle Pass 是经典手游变现阶梯。
+
+#### 🅱 厂商合作(B2B · 品牌 / 游戏发行)
+
+> **心智**:"游戏 LIVE 是 game 的自然发行漏斗,厂商付费买 organic 流量"
+
+| SKU | 描述 | 阶段 |
+|---|---|---|
+| **Game publisher install CPI 漏斗** | clip 内嵌 "Play [Game] →" CTA,厂商按归因 install 付费 | Phase 2 (M11+,clip 量 ≥ 100K/日 + 厂商主动洽谈) |
+| **Brand collab Encore** | 品牌方 sponsor 特定 Encore 模板(类比 TikTok Branded Effect) | Phase 2 (M12+,跟 TikTok ad sales 中台对接) |
+| **联运资源位** | 厂商在 #Encore tag 下投放主推游戏专属模板 | Phase 3 (M14+) |
+
+🅱 类**是 Phase 2 启动重点 + 长期主增长引擎** — 单条规模潜力 > 所有 🅰 之和(参考 TikTok 现有 game ads 体量)。
+
+#### 🅲 多人 / 跟主播一起玩(社交杠杆 · 平台抽成)
+
+> **心智**:"我想跟别人一起玩(主播 / 朋友 / 全场观众)"
+
+| SKU | 描述 | 阶段 |
+|---|---|---|
+| **Friend Challenge**(Spotlight v2) | $1-2 = 自动 @ 3 朋友"打过我看看",viral 杠杆 | Phase 3 (M14+,需 TikTok 朋友 tag 基建) |
+| **Encore Tournament** | 主播开 Encore 联赛 + 奖金池,viewer 参赛费,平台抽成 | Phase 3 (M14+,头部主播运营 + 反作弊) |
+| **Gift Constellation** | 全场观众集体送礼达 threshold → 解锁主播专属 Encore 模板 | Phase 3 (M14+,派对玩法生态) |
+| **主播 co-play 时段** | 主播开放 Encore co-play,viewer 跟主播同框打 | Phase 4+ (探索) |
+
+🅲 类转化率最低但**viral 系数最高**,适合 Phase 3+ 扩大盘 + 跨品类延伸(派对、卡牌、IRL 也能用)。
+
+---
+
+**3 大类的设计原则**:
+
+1. **每类一个心智,不混淆** — 个体爽(A) / 厂商投放(B) / 社交一起玩(C)
+2. **A 是 LTV 阶梯,B 是规模主引擎,C 是社交杠杆** — 各打各的位置
+3. **任何"赌博 / Loot box / Sponsor 主播下一局"永不进入** — 监管 + non-interference 红线
+
+**收入结构演化预期**(定性,非数字):
+
+- M9-M10:仅 A 类 Enhance 单核,验证 unit economics
+- M11-M14:**A(Enhance + Skin + Remix)+ B(CPI + Brand)双轮**,B 大概率成主增长引擎
+- M14+:加 C 类社交层,提升 viral 系数 + LTV;A 类升级到 Battle Pass / VIP 分层
 
 ---
 
@@ -590,7 +676,7 @@ Hackathon 阶段和 Phase 1 上线**不解决**的三件事:
 |---|---|---|
 | **M9(NOW)** | 真 AI 美术批量切入(MJ / SD / DALL-E)| 视觉接近 Astrocade 级,可上 PRD |
 | **M10** | TikTok feed shell + 真 SDK 接入 | 完整看→玩→播闭环, clip 自动回流 |
-| **M11** | 礼物经济实装(**Enhance + Spotlight,gift-gate 机制**)| 商业化验证,**已删 Sponsor / Loot** |
+| **M11** | 礼物经济实装(**Enhance 单 SKU + gift-gate**)| 商业化验证;v0.8.1 砍 Spotlight,Sponsor / Loot 不做 |
 | **M11+ (Phase 2)** | **AI Remix 付费功能**($2-5/次,LLM 生成式 DSL) | 唯一真生成式 AI 用例,差异化护城河 |
 | **M12** | 第 4 个模板家族(塔防 / 自走棋 / Survivors 三选一)| 模板覆盖率 60% → 75% |
 | **M12 spike** | 试做 1 个新模板用 Godot Engine 替代 hand-written Canvas(2-3 天小成本验证)| 评估 Godot 在非 LIVE 嵌入形态下的 dev velocity / 美术 polish |
@@ -808,13 +894,13 @@ Demo 之前必须有的:
 | **UX 形态** | TikTok 原生 bottom sheet 上滑,永不挤压 LIVE,8 状态 FSM |
 | **模板覆盖** | 必须做 3 套(FPS + MOBA + BR),覆盖 60-70% gaming LIVE 内容 |
 | **AI 定位** | AI 是 enabler 不是 hero;Phase 1 模板路由可被规则替代;Phase 2 Remix 是 AI 真不可替代用例 |
-| **二次分发** | Top 3 winner 自动 clip 免费 + 其他 viewer 付费 Spotlight 生成;post 主体永远是 viewer,主播 @tag + 可选 Duet |
+| **二次分发** | 仅 Top 3 winner 自动 clip 免费(v0.8.1);post 主体永远是 viewer,主播 @tag + 可选 Duet |
 | **视觉格式** | 默认上下 split,前后 mirror 为 backup |
-| **付费 SKU** | MVP 仅 Enhance + Spotlight;Phase 2 加 Remix;**Sponsor / Loot 不做** |
+| **付费 SKU** | **MVP 仅 Enhance**(v0.8.1 砍 Spotlight);Phase 2 加 Remix;**Sponsor / Loot 不做** |
 | **gift-gate** | 主播可设付费功能 gift-gate(OFF / 50 / 200 / 500 金币);免费 Encore 玩 / 看 clip / 被动 collab 永远不能 gate |
 | **主播分成** | 礼物收入走 TikTok LIVE 正常分成;付费功能直接收入主播不分(防反激励) |
 | **主播开关默认** | 灰度 ON / 全量 OFF;Duet 默认 ON(已开 Encore 主播) |
-| **失败 clip** | 不自动生成,viewer 可付费手动 |
+| **失败 clip** | 不自动生成,不可手动付费生成(v0.8.1 砍 Spotlight) |
 | **法律 consent** | viewer 首次玩弹窗;主播首次开 Encore 弹窗;撤回路径清晰 |
 
 ---
