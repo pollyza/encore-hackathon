@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 
 <link rel="stylesheet" href="css/live-shell.css">
-<link rel="stylesheet" href="css/ai-panel.css?v=2">
+<link rel="stylesheet" href="css/ai-panel.css?v=3">
 <link rel="stylesheet" href="css/mini-games.css">
 </head>
 <body>
@@ -204,40 +204,119 @@
       <div class="phase" id="phase-game"></div>
 
       <!-- PHASE: RESULT -->
+      <!-- v0.8 split-screen second-distribution mock:
+           - winner state (won=true && rank<=3):  big rank chip + clip preview + caption + auto-publish countdown
+           - non-winner state (rank>3 or lost):   ghost rank chip + Spotlight "Make my clip" card -->
       <div class="phase" id="phase-result">
-        <div class="label-top" id="result-label">Encore complete</div>
-        <div class="headline" id="result-headline">Nice run!</div>
-        <div class="score-chip">
-          <div class="col you">
-            <div class="key">YOUR SCORE</div>
-            <div class="val"><span id="result-score">0</span><span class="of">/<span id="result-max">0</span></span></div>
+        <!-- BIG rank chip (replaces v0.7 label-top + headline) -->
+        <div class="sheet-result-rank-chip" id="result-rank-chip">
+          <div class="sheet-result-rank-medal" id="result-rank-medal">🥈</div>
+          <div class="sheet-result-rank-body">
+            <div class="sheet-result-rank-label">RANK</div>
+            <div class="sheet-result-rank-num">#<span id="result-rank-num-big">2</span></div>
           </div>
-          <div class="divider"></div>
-          <div class="col host">
-            <div class="key">HOST</div>
-            <div class="val">TK Sói</div>
-            <div class="sub"><span id="host-score">0</span>/<span id="host-max">0</span></div>
+          <div class="sheet-result-rank-meta">
+            <div class="row"><span class="k">Score</span><span class="v"><span id="result-score">0</span>/<span id="result-max">0</span></span></div>
+            <div class="row"><span class="k">Host</span><span class="v">TK Sói <span id="host-score">0</span>/<span id="host-max">0</span></span></div>
           </div>
         </div>
-        <div class="pills">
+
+        <!-- WINNER ONLY: split-screen clip preview -->
+        <div class="sheet-result-clip-wrap" id="result-clip-wrap">
+          <div class="sheet-result-section-label">Your Split-Screen Clip</div>
+          <div class="sheet-result-clip" id="result-clip-preview">
+            <!-- top: real LIVE footage (reuses the same reference video as the background stream) -->
+            <div class="sheet-result-clip-half host">
+              <video class="sheet-result-clip-video"
+                     src="/reference/videos/encore_test2.mp4"
+                     muted autoplay loop playsinline preload="auto"></video>
+              <div class="sheet-result-clip-tag tl">⏵ LIVE</div>
+              <div class="sheet-result-clip-tag tr">@TK_Soi</div>
+              <div class="sheet-result-clip-caption">1v3 retake</div>
+            </div>
+            <!-- middle divider: ⚡ ENCORE -->
+            <div class="sheet-result-clip-divider"><span>⚡ ENCORE</span></div>
+            <!-- bottom: Canvas 2D simulated pixel encore (animated by JS in encore-sheet.js) -->
+            <div class="sheet-result-clip-half viewer">
+              <canvas class="sheet-result-clip-canvas" id="result-clip-canvas"></canvas>
+              <div class="sheet-result-clip-tag tl">⊕ FPS</div>
+              <div class="sheet-result-clip-tag tr">@you · 🥈 #2</div>
+              <div class="sheet-result-clip-caption" id="result-clip-vscore">2,840</div>
+            </div>
+            <!-- brand corner -->
+            <div class="sheet-result-clip-brand">⚡ Encore</div>
+            <!-- play overlay (autoplay muted in real impl) -->
+            <div class="sheet-result-clip-play" id="result-clip-play"><span>▶</span></div>
+          </div>
+          <div class="sheet-result-clip-actions">
+            <button class="sheet-result-clip-action" id="result-clip-sound">🔇 muted</button>
+            <button class="sheet-result-clip-action" id="result-clip-regen">↻ regenerate</button>
+          </div>
+        </div>
+
+        <!-- WINNER ONLY: caption (AI-generated, editable) -->
+        <div class="sheet-result-caption-wrap" id="result-caption-wrap">
+          <div class="sheet-result-section-label">Caption <button class="sheet-result-caption-edit" id="result-caption-edit">edit</button></div>
+          <div class="sheet-result-caption" id="result-caption-text">Played @TK_Soi's 1v3 clutch in CS — ranked #2 🎮 ▶ Play CS → #Encore #CSgaming</div>
+        </div>
+
+        <!-- WINNER ONLY: auto-publish countdown -->
+        <div class="sheet-result-publish-wrap" id="result-publish-wrap">
+          <div class="sheet-result-publish-bar">
+            <div class="sheet-result-publish-msg">
+              Auto-publishing to TikTok in <span id="result-publish-countdown">3</span>…
+            </div>
+            <div class="sheet-result-publish-buttons">
+              <button class="sheet-result-publish-cancel" id="result-publish-cancel">Cancel</button>
+              <button class="sheet-result-publish-now" id="result-publish-now">Publish now ⚡</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- NON-WINNER ONLY: "Almost there" retry card (replaces v0.8 Spotlight per v0.8.1) -->
+        <div class="sheet-result-retry-wrap" id="result-retry-wrap">
+          <div class="sheet-result-retry">
+            <div class="sheet-result-retry-head">
+              <div class="sheet-result-retry-icon">🎯</div>
+              <div class="sheet-result-retry-titles">
+                <div class="title">Almost there</div>
+                <div class="sub">Top 3 auto-publishes a clip. Play again to claim a slot.</div>
+              </div>
+            </div>
+            <div class="sheet-result-retry-stats" id="result-retry-stats">
+              <span class="k">You're</span>
+              <span class="v"><strong id="result-retry-gap">12</strong> spots from #3</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- PERSISTENT (both states): Enhance upsell card -->
+        <div class="sheet-result-enhance-wrap" id="result-enhance-wrap">
+          <button class="sheet-result-enhance" id="result-enhance-cta">
+            <span class="ico">⚡</span>
+            <div class="body">
+              <div class="head">Enhance · next round</div>
+              <div class="sub">🔥 Fire bullets · ❤️ Double HP · ➕ Extra life</div>
+            </div>
+            <span class="price">$0.5</span>
+          </button>
+          <div class="sheet-result-enhance-gate" id="result-enhance-gate" hidden>
+            <span>Host requires</span>
+            <button class="gift-btn">🪙 50 gift</button>
+            <span>to unlock</span>
+          </div>
+        </div>
+
+        <!-- SECONDARY actions (kept from v0.7) -->
+        <div class="pills sheet-result-secondary">
           <button class="ext-pill" id="rank-pill">
             <span class="ico">🏆</span> Encore Rank
             <span class="num">#<span id="rank-num">234</span></span>
             <span class="qual">· in this LIVE</span>
             <span class="chev">›</span>
           </button>
-          <button class="ext-pill" id="share-pill">
-            <span>↗</span> Share clip
-          </button>
         </div>
-        <div class="gift-remix" id="gift-boost">
-          <div class="ico" id="gift-boost-ico">🎁</div>
-          <div class="body">
-            <div class="head" id="gift-boost-head">Send as Gift Remix</div>
-            <div class="sub" id="gift-boost-sub">Send TK Sói your run + a Rose · 5 coins</div>
-          </div>
-          <button class="send" id="gift-boost-send">Send</button>
-        </div>
+
         <div class="feedback-block">
           <div class="label">How was it?</div>
           <div class="row">
@@ -325,7 +404,7 @@
      no longer loaded — the game phase now renders Mario's iframe templates
      (GTA/Roblox/Free Fire BR) via the V2G postMessage protocol. -->
 <script src="js/observer-client.js?v=8"></script>
-<script src="js/encore-sheet.js?v=12"></script>
+<script src="js/encore-sheet.js?v=13"></script>
 <script src="js/live-room.js?v=8"></script>
 <script>
 (() => {
@@ -396,6 +475,38 @@
   // Observer (background V2G sampling — pre-fetches highlight detection
   // but does NOT auto-open. The user opens via highlight popup / Encore btn)
   // Currently dormant unless explicitly resumed by future code.
+
+  // ── v0.8 URL-hash demo driver ────────────────────────────────────────
+  // Allows direct preview of the split-screen result page without playing
+  // a full game. Used for design review, judge demo backup, and screenshot
+  // generation. Strips after applying so a refresh doesn't re-trigger.
+  //
+  //   streamer.html#result-winner  → Top-3 winner state (clip + caption + countdown)
+  //   streamer.html#result-lost    → Non-winner state (💎 Spotlight pay card)
+  //   streamer.html#result-gate    → Any state + Enhance gift-gate ON (host requires gift)
+  function applyHashDriver() {
+    const h = (location.hash || '').toLowerCase();
+    if (!h.startsWith('#result-')) return;
+    // Dismiss autoplay shim so the sheet is visible
+    if (dom.shim) dom.shim.style.display = 'none';
+    // Make chrome visible enough for context (without full live-room init flow)
+    if (dom.chat) dom.chat.classList.remove('hidden');
+    // Stamp result via public API
+    requestAnimationFrame(() => {
+      if (h === '#result-winner') {
+        EncoreSheet.forceResult({ won: true, score: 7, max: 8 });
+      } else if (h === '#result-lost') {
+        EncoreSheet.forceResult({ won: false, score: 4, max: 8 });
+      } else if (h === '#result-gate') {
+        EncoreSheet.forceResult({ won: false, score: 4, max: 8 });
+        const gate = document.getElementById('result-enhance-gate');
+        if (gate) gate.hidden = false;
+      }
+    });
+  }
+  // Run on initial load + on hash change (live preview iteration)
+  applyHashDriver();
+  window.addEventListener('hashchange', applyHashDriver);
 })();
 </script>
 
