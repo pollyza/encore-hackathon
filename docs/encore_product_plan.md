@@ -900,7 +900,7 @@ Demo 之前必须有的:
 | **gift-gate** | 主播可设付费功能 gift-gate(OFF / 50 / 200 / 500 金币);免费 Encore 玩 / 看 clip / 被动 collab 永远不能 gate |
 | **主播分成** | 礼物收入走 TikTok LIVE 正常分成;付费功能直接收入主播不分(防反激励) |
 | **主播开关默认** | 灰度 ON / 全量 OFF;Duet 默认 ON(已开 Encore 主播) |
-| **失败 clip** | 不自动生成,viewer 可付费手动 |
+| **失败 clip** | 不自动生成,不可手动付费生成(v0.8.1 砍 Spotlight) |
 | **法律 consent** | viewer 首次玩弹窗;主播首次开 Encore 弹窗;撤回路径清晰 |
 
 ---

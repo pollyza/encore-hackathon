@@ -177,8 +177,9 @@ Result Page:
   · 个人分数 + Encore Rank pill
   · 实时排名 "目前 #N / 共 X 人完成 (还有 Y 人进行中)"
   · 付费功能入口:
-    · 主播 gate OFF → 直接付费购买 Enhance / Spotlight
-    · 主播 gate ON → 先送 N 金币给主播 → 解锁购买入口
+    · 主播 gate OFF → 直接付费购买 Enhance
+    · 主播 gate ON → 先送 N 金币给主播 → 解锁 Enhance 购买入口
+  · 非 winner 状态:不弹付费 clip(v0.8.1 砍 Spotlight),改"Almost there + Play again"激励
    ↓
 高光场结束 (~3-5 min 后异步):
   · 进入 Top 3 → push 通知 "恭喜进入 winner #N, 短视频已生成"
@@ -269,7 +270,7 @@ bottom sheet 自动滑下 → fatigue cooldown → 继续看 LIVE
 
 - Top 1 = 单点稀缺，viewer 没希望就不玩
 - Top 3 = 3 个槽位，玩的动机 + 上榜可能性平衡
-- 数学上 50 高光 × 3 = 150 winner clip/场，加付费 Spotlight 200-500 条，总量级可管理
+- 数学上 50 高光 × 3 = 150 winner clip/场(v0.8.1 后无 Spotlight 付费 clip,总量级更可管理)
 
 **winner 资格 + 防作弊**:
 
@@ -658,13 +659,13 @@ Hackathon 阶段和 Phase 1 上线**不解决**的三件事:
 | **UX 形态** | TikTok 原生 bottom sheet 上滑，永不挤压 LIVE，8 状态 FSM |
 | **模板覆盖** | 必须做 3 套（FPS + MOBA + BR），覆盖 60-70% gaming LIVE 内容 |
 | **AI 定位** | AI 是 enabler 不是 hero;Phase 1 模板路由可被规则替代;Phase 2 Remix 是 AI 真不可替代用例 |
-| **二次分发** | Top 3 winner 自动 clip 免费 + 其他 viewer 付费 Spotlight 生成;post 主体永远是 viewer，主播 @tag + 可选 Duet |
+| **二次分发** | **仅 Top 3 winner 自动 clip 免费**(v0.8.1);非 winner 无付费生成路径;post 主体永远是 viewer，主播 @tag + 可选 Duet |
 | **视觉格式** | 默认上下 split，前后 mirror 为 backup |
-| **付费 SKU** | MVP 仅 Enhance + Spotlight;Phase 2 加 Remix;**Sponsor / Loot 不做** |
+| **付费 SKU** | **MVP 仅 Enhance**(v0.8.1 砍 Spotlight);Phase 2 加 Remix + B2B(CPI/Brand);**Sponsor / Loot 不做** |
 | **gift-gate** | 主播可设付费功能 gift-gate（OFF / 50 / 200 / 500 金币）;免费 Encore 玩 / 看 clip / 被动 collab 永远不能 gate |
 | **主播分成** | 礼物收入走 TikTok LIVE 正常分成;付费功能直接收入主播不分（防反激励） |
 | **主播开关默认** | 灰度 ON / 全量 OFF;Duet 默认 ON（已开 Encore 主播） |
-| **失败 clip** | 不自动生成，viewer 可付费手动 |
+| **失败 clip** | 不自动生成,不可手动付费生成(v0.8.1 砍 Spotlight) |
 | **法律 consent** | viewer 首次玩弹窗;主播首次开 Encore 弹窗;撤回路径清晰 |
 
 ---
