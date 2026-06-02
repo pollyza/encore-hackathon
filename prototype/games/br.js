@@ -1810,11 +1810,8 @@
       if (p.spdBuff > 0) p.spdBuff -= dt;
       if (p.fireCd > 0) p.fireCd -= dt;
 
-      // Idle HP regen (only outside damage) — gentle drip to keep player alive on lucky play
-      p.idleT += dt;
-      if (p.idleT > 4 && p.hp < p.maxHp && p.hp > 0) {
-        p.hp = Math.min(p.maxHp, p.hp + 4 * dt);
-      }
+      // No passive HP regen — Free Fire / PUBG don't auto-heal you for standing
+      // still. Recover only via the heal kit (W) or a gift. Keeps the tension real.
 
       // ── R3 纯自动锁敌(去掉拖动瞄准, 消除"两套瞄准"冲突) ──────────────────────
       // 按住右下角开火键(右侧触摸)/空格 = 开火; 枪永远自动打最近"可见"敌人, 玩家不用瞄准。
