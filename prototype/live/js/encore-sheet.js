@@ -198,7 +198,7 @@
     clearLoading();
     clearAck();
     destroyIframe();
-    stopClipCanvasAnimation();
+    stopAllClipAnimations();
     cancelPublishCountdown();
     cfg.sheet.classList.add('closing');
     cfg.backdrop.classList.add('closing');
@@ -345,7 +345,21 @@
         } catch (_) {}
         pendingLaunch = null;
       }
+      // Start capturing the game canvas so we can use the recording as
+      // the bottom half of the winner clip. Canvas may take a beat to
+      // appear after launch — PlayerRecorder polls for it.
+      if (window.PlayerRecorder && iframe) {
+        window.PlayerRecorder.findCanvasInIframe(iframe, {
+          onFound: (canvas) => { window.PlayerRecorder.start(canvas); },
+          onTimeout: () => {
+            console.warn('[encore-sheet] game canvas not found within timeout — winner clip will use viewer-half mock');
+          },
+        });
+      }
     } else if (data.type === 'encore_done') {
+      // Stop the gameplay recording — the finalized blob URL becomes
+      // available via PlayerRecorder.getLastUrl() shortly after.
+      if (window.PlayerRecorder) window.PlayerRecorder.stop();
       // Map the iframe's stats payload onto our internal {score, max, won}.
       // Mario's payload: { won, kills, time, duration, template }
       const s = data.stats || {};
@@ -433,40 +447,221 @@
 
   // ── Canvas 2D simulated pixel encore for the clip preview viewer half ──
   // Pure visual mock — NOT the real game. Auto-bot character + crosshair
-  // tracking + enemies popping + score floats. Replace with real <video>
-  // when P1 hero asset (server-side rendered) lands.
+  // tracking + enemies popping + score floats. Future: swap to a playback
+  // of the actual player's gameplay (MediaRecorder on the game canvas
+  // during play → blob → <video> source here).
   let clipCanvasRAF = null;
   let clipCanvasStart = 0;
+  let clipHostCanvasRAF = null;       // host (top half) drawing loop
+  let clipHostCanvasStart = 0;
+  let clipOutputBlobUrl = null;        // last finished ClipComposer URL
+
+  // Fits a canvas's backing store to its CSS box. Returns true on success;
+  // false when the container hasn't laid out yet (0×0).
+  function fitCanvas(cv) {
+    const r = cv.getBoundingClientRect();
+    if (r.width === 0) return false;
+    cv.width  = Math.round(r.width);
+    cv.height = Math.round(r.height);
+    return true;
+  }
+
+  // Hidden <video> element backed by the most recent gameplay recording.
+  // When present + playing, the viewer-half canvas drawImages from it
+  // instead of running drawMockEncoreScene. Reused across rounds; lazily
+  // built the first time a real recording is available.
+  let playbackVideoEl = null;
+  function ensurePlaybackVideo() {
+    if (playbackVideoEl) return playbackVideoEl;
+    const v = document.createElement('video');
+    v.muted = true;
+    v.loop  = true;
+    v.playsInline = true;
+    v.autoplay    = true;
+    v.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;pointer-events:none;';
+    v.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(v);
+    playbackVideoEl = v;
+    return v;
+  }
+
   function startClipCanvasAnimation() {
     stopClipCanvasAnimation();
     const cv = document.getElementById('result-clip-canvas');
     if (!cv) return;
-    // Size canvas backing store to its display box for crisp pixels
-    const fit = () => {
-      const r = cv.getBoundingClientRect();
-      if (r.width === 0) return false;
-      cv.width  = Math.round(r.width);
-      cv.height = Math.round(r.height);
-      return true;
-    };
-    if (!fit()) {
-      // Container may still be laying out — retry next frame
-      requestAnimationFrame(() => startClipCanvasAnimation());
+    if (!fitCanvas(cv)) {
+      // setTimeout (not rAF) for retry — rAF gets throttled to ~1Hz on
+      // backgrounded tabs, which delays fit by seconds and would let the
+      // winner-clip recorder capture an empty canvas.
+      setTimeout(startClipCanvasAnimation, 33);
       return;
     }
     const ctx = cv.getContext('2d');
+
+    // If we recorded real player gameplay, prefer that as the viewer-half
+    // source. Otherwise fall back to the mock scene.
+    const playerUrl = window.PlayerRecorder && window.PlayerRecorder.getLastUrl();
+    let usingPlayback = false;
+    if (playerUrl) {
+      const v = ensurePlaybackVideo();
+      if (v.src !== playerUrl) {
+        v.src = playerUrl;
+        v.load();
+      }
+      v.play().catch(() => { /* user gesture needed — won't affect drawImage */ });
+      usingPlayback = true;
+    }
+
     clipCanvasStart = performance.now();
-    const draw = (now) => {
-      const t = now - clipCanvasStart;
-      drawMockEncoreScene(ctx, cv.width, cv.height, t);
-      clipCanvasRAF = requestAnimationFrame(draw);
+    const draw = () => {
+      const t = performance.now() - clipCanvasStart;
+      if (usingPlayback && playbackVideoEl && playbackVideoEl.readyState >= 2) {
+        // drawImage scaled to cover the viewer canvas (CSS object-fit:cover).
+        const v = playbackVideoEl, dw = cv.width, dh = cv.height;
+        const sw = v.videoWidth || 1, sh = v.videoHeight || 1;
+        const dr = dw / dh, sr = sw / sh;
+        let sx = 0, sy = 0, cropW = sw, cropH = sh;
+        if (sr > dr) { cropW = sh * dr; sx = (sw - cropW) / 2; }
+        else         { cropH = sw / dr; sy = (sh - cropH) / 2; }
+        ctx.drawImage(v, sx, sy, cropW, cropH, 0, 0, dw, dh);
+      } else {
+        drawMockEncoreScene(ctx, cv.width, cv.height, t);
+      }
     };
-    clipCanvasRAF = requestAnimationFrame(draw);
+    // setInterval (not rAF) — see comment above. We want this loop to keep
+    // running during the 12s recording window even if the tab is idle.
+    clipCanvasRAF = setInterval(draw, 1000 / 30);
   }
   function stopClipCanvasAnimation() {
-    if (clipCanvasRAF) {
-      cancelAnimationFrame(clipCanvasRAF);
-      clipCanvasRAF = null;
+    if (clipCanvasRAF) { clearInterval(clipCanvasRAF); clipCanvasRAF = null; }
+    if (playbackVideoEl) {
+      try { playbackVideoEl.pause(); } catch (_) {}
+    }
+  }
+
+  // Host (top) half: paints the matching LIVE scene (fps/gta/roblox) from
+  // window.LiveScenes (exported by streamer.html). Genre-consistent with
+  // whatever the streamer was playing when the highlight triggered.
+  function startClipHostCanvasAnimation() {
+    stopClipHostCanvasAnimation();
+    const cv = document.getElementById('result-clip-host-canvas');
+    if (!cv) return;
+    if (!fitCanvas(cv)) {
+      setTimeout(startClipHostCanvasAnimation, 33);
+      return;
+    }
+    const ctx = cv.getContext('2d');
+    const mode = (window.LiveMode || 'fps');
+    const sceneFn = (window.LiveScenes && window.LiveScenes[mode]) || null;
+    if (!sceneFn) return;     // streamer.html scenes not loaded — degrade gracefully
+    clipHostCanvasStart = performance.now();
+    const draw = () => {
+      const t = performance.now() - clipHostCanvasStart;
+      sceneFn(ctx, cv.width, cv.height, t);
+    };
+    // setInterval — keep drawing through backgrounded tabs so the recorder
+    // doesn't see an empty canvas. See same comment on viewer-half above.
+    clipHostCanvasRAF = setInterval(draw, 1000 / 30);
+  }
+  function stopClipHostCanvasAnimation() {
+    if (clipHostCanvasRAF) { clearInterval(clipHostCanvasRAF); clipHostCanvasRAF = null; }
+  }
+
+  // Tear down everything related to the winner clip preview (used when
+  // switching to non-winner state or closing the sheet).
+  function stopAllClipAnimations() {
+    stopClipCanvasAnimation();
+    stopClipHostCanvasAnimation();
+    if (window.ClipComposer) window.ClipComposer.stop();
+    // Reset action buttons + revoke stale blob URL
+    if (clipOutputBlobUrl) { URL.revokeObjectURL(clipOutputBlobUrl); clipOutputBlobUrl = null; }
+    const out = document.getElementById('result-clip-output');
+    if (out) { out.hidden = true; out.removeAttribute('src'); }
+    const dl = document.getElementById('result-clip-download');
+    const sh = document.getElementById('result-clip-share');
+    if (dl) { dl.disabled = true; dl.textContent = '⬇ recording…'; }
+    if (sh) { sh.disabled = true; sh.textContent = '↗ share'; }
+  }
+
+  // Kicks the on-screen split-screen draw + the offscreen composite
+  // recorder. When ClipComposer fires onReady, swap the preview canvases
+  // for a real <video> playback of the recorded blob and enable
+  // Download / Share buttons.
+  function startWinnerClipComposition() {
+    startClipHostCanvasAnimation();
+    startClipCanvasAnimation();
+    if (!window.ClipComposer) return;   // graceful degrade if script missing
+
+    const hostCv   = document.getElementById('result-clip-host-canvas');
+    const viewerCv = document.getElementById('result-clip-canvas');
+    const compCv   = document.getElementById('result-clip-composite');
+    if (!hostCv || !viewerCv || !compCv) return;
+
+    window.ClipComposer.start({
+      hostCanvas:      hostCv,
+      viewerCanvas:    viewerCv,
+      compositeCanvas: compCv,
+      mode:            (window.LiveMode || 'fps'),
+      onReady: ({ url, mime }) => {
+        clipOutputBlobUrl = url;
+        const out  = document.getElementById('result-clip-output');
+        const prev = document.getElementById('result-clip-preview');
+        if (out) {
+          out.src = url;
+          out.hidden = false;
+          out.play().catch(() => { /* user gesture required — controls handle it */ });
+        }
+        if (prev) prev.style.display = 'none';     // hide the live split-screen
+        const dl = document.getElementById('result-clip-download');
+        const sh = document.getElementById('result-clip-share');
+        if (dl) {
+          dl.disabled = false;
+          dl.textContent = '⬇ Download';
+          dl.onclick = () => downloadBlobUrl(url, suggestedFileName(mime));
+        }
+        if (sh) {
+          sh.disabled = false;
+          sh.textContent = '↗ Share';
+          sh.onclick = () => shareBlobUrl(url, mime);
+        }
+      },
+      onError: (err) => {
+        console.warn('[ClipComposer] recording failed:', err && err.message);
+        // Disable share, keep download as "preview only" fallback
+        const dl = document.getElementById('result-clip-download');
+        const sh = document.getElementById('result-clip-share');
+        if (dl) { dl.disabled = true; dl.textContent = '⚠ rec unsupported'; }
+        if (sh) { sh.disabled = true; }
+      },
+    });
+  }
+
+  function suggestedFileName(mime) {
+    const ext = mime && mime.startsWith('video/mp4') ? 'mp4' : 'webm';
+    return `encore-clip.${ext}`;
+  }
+  function downloadBlobUrl(url, filename) {
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+  async function shareBlobUrl(url, mime) {
+    try {
+      const resp = await fetch(url);
+      const blob = await resp.blob();
+      const file = new File([blob], suggestedFileName(mime), { type: mime || 'video/webm' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'My Encore clip',
+          text:  "Played @TK_Soi's highlight — ranked top-3 on Encore ⚡",
+        });
+      } else {
+        // No Web Share — fall back to download
+        downloadBlobUrl(url, suggestedFileName(mime));
+      }
+    } catch (e) {
+      console.warn('[ClipComposer] share failed:', e && e.message);
     }
   }
 
@@ -712,12 +907,27 @@
       publishMsg.innerHTML = 'Auto-publishing to TikTok in <span id="result-publish-countdown">3</span>…';
     }
     if (rinfo.isWinner) {
+      // Reset clip state from any prior round (output blob / buttons /
+      // hidden preview), then start a fresh recording.
+      stopAllClipAnimations();
       startPublishCountdown();
-      // Kick the simulated viewer-half pixel encore animation
-      startClipCanvasAnimation();
+      const prev = document.getElementById('result-clip-preview');
+      if (prev) prev.style.display = '';
+      // Genre-match viewer tag emoji to current LIVE mode.
+      const viewerTag = document.getElementById('result-clip-viewer-tag');
+      if (viewerTag) {
+        const mode = (window.LiveMode || 'fps');
+        viewerTag.textContent =
+          mode === 'gta'    ? '⊕ GTA'
+        : mode === 'roblox' ? '⊕ OBBY'
+        : '⊕ FPS';
+      }
+      // Kick the offscreen composite + MediaRecorder. After ~12s a real
+      // .webm/.mp4 Blob is ready and Download / Share buttons enable.
+      startWinnerClipComposition();
     } else {
-      // Non-winner shows Retry card instead of clip → stop the canvas
-      stopClipCanvasAnimation();
+      // Non-winner shows Retry card instead of clip → tear down everything
+      stopAllClipAnimations();
       // Compute spots-from-#3 gap for the Retry card stats
       const gapEl = document.getElementById('result-retry-gap');
       if (gapEl) {

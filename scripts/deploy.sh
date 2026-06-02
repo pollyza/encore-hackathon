@@ -110,21 +110,27 @@ if [[ -f "$REPO_ROOT/docs/qr-encore.svg" ]]; then
 fi
 
 # LIVE streamer host — now under prototype/live/ (was prototype/) as of v0.6.1
-if [[ -f "$REPO_ROOT/prototype/live/streamer.html" && -d "$DEPLOY_DIR/prototype" ]]; then
-    mkdir -p "$DEPLOY_DIR/prototype/live" "$PREVIEW_DIR/live"
-    sync_file "$REPO_ROOT/prototype/live/streamer.html" "$DEPLOY_DIR/prototype/live/streamer.html"
-    sync_file "$REPO_ROOT/prototype/live/streamer.html" "$PREVIEW_DIR/live/streamer.html"
-    for sub in css js; do
-        if [[ -d "$REPO_ROOT/prototype/live/$sub" ]]; then
-            mkdir -p "$DEPLOY_DIR/prototype/live/$sub" "$PREVIEW_DIR/live/$sub"
-            for f in "$REPO_ROOT/prototype/live/$sub"/*; do
-                [[ -f "$f" ]] || continue
-                base="$(basename "$f")"
-                sync_file "$f" "$DEPLOY_DIR/prototype/live/$sub/$base"
-                sync_file "$f" "$PREVIEW_DIR/live/$sub/$base"
-            done
-        fi
-    done
+# Sync to BOTH mirrors. The earlier version only synced to DEPLOY_DIR, which
+# left /tmp/encore-preview/prototype/live/streamer.html stale and produced
+# "I verified the old code" false-positives in local preview checks.
+if [[ -f "$REPO_ROOT/prototype/live/streamer.html" ]]; then
+    if [[ -d "$DEPLOY_DIR/prototype" ]]; then
+        mkdir -p "$DEPLOY_DIR/prototype/live"
+        sync_file "$REPO_ROOT/prototype/live/streamer.html" "$DEPLOY_DIR/prototype/live/streamer.html"
+    fi
+    if [[ -d "$PREVIEW_DIR/prototype/live" ]]; then
+        sync_file "$REPO_ROOT/prototype/live/streamer.html" "$PREVIEW_DIR/prototype/live/streamer.html"
+        # Sync every css/*.css and js/*.js that lives under prototype/live/.
+        # Glob over the source so newly-added files (clip-composer.js etc.)
+        # don't get silently dropped.
+        for src in "$REPO_ROOT/prototype/live/css/"*.css "$REPO_ROOT/prototype/live/js/"*.js; do
+            [[ -f "$src" ]] || continue
+            rel="${src#$REPO_ROOT/prototype/live/}"
+            dst="$PREVIEW_DIR/prototype/live/$rel"
+            mkdir -p "$(dirname "$dst")"
+            sync_file "$src" "$dst"
+        done
+    fi
 fi
 
 # Note: prototype/v2g/observer.py is intentionally NOT synced to the deploy
