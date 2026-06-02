@@ -309,7 +309,21 @@
         } catch (_) {}
         pendingLaunch = null;
       }
+      // Start capturing the game canvas so we can use the recording as
+      // the bottom half of the winner clip. Canvas may take a beat to
+      // appear after launch — PlayerRecorder polls for it.
+      if (window.PlayerRecorder && iframe) {
+        window.PlayerRecorder.findCanvasInIframe(iframe, {
+          onFound: (canvas) => { window.PlayerRecorder.start(canvas); },
+          onTimeout: () => {
+            console.warn('[encore-sheet] game canvas not found within timeout — winner clip will use viewer-half mock');
+          },
+        });
+      }
     } else if (data.type === 'encore_done') {
+      // Stop the gameplay recording — the finalized blob URL becomes
+      // available via PlayerRecorder.getLastUrl() shortly after.
+      if (window.PlayerRecorder) window.PlayerRecorder.stop();
       // Map the iframe's stats payload onto our internal {score, max, won}.
       // Mario's payload: { won, kills, time, duration, template }
       const s = data.stats || {};
@@ -416,25 +430,77 @@
     return true;
   }
 
+  // Hidden <video> element backed by the most recent gameplay recording.
+  // When present + playing, the viewer-half canvas drawImages from it
+  // instead of running drawMockEncoreScene. Reused across rounds; lazily
+  // built the first time a real recording is available.
+  let playbackVideoEl = null;
+  function ensurePlaybackVideo() {
+    if (playbackVideoEl) return playbackVideoEl;
+    const v = document.createElement('video');
+    v.muted = true;
+    v.loop  = true;
+    v.playsInline = true;
+    v.autoplay    = true;
+    v.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;pointer-events:none;';
+    v.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(v);
+    playbackVideoEl = v;
+    return v;
+  }
+
   function startClipCanvasAnimation() {
     stopClipCanvasAnimation();
     const cv = document.getElementById('result-clip-canvas');
     if (!cv) return;
     if (!fitCanvas(cv)) {
-      requestAnimationFrame(() => startClipCanvasAnimation());
+      // setTimeout (not rAF) for retry — rAF gets throttled to ~1Hz on
+      // backgrounded tabs, which delays fit by seconds and would let the
+      // winner-clip recorder capture an empty canvas.
+      setTimeout(startClipCanvasAnimation, 33);
       return;
     }
     const ctx = cv.getContext('2d');
+
+    // If we recorded real player gameplay, prefer that as the viewer-half
+    // source. Otherwise fall back to the mock scene.
+    const playerUrl = window.PlayerRecorder && window.PlayerRecorder.getLastUrl();
+    let usingPlayback = false;
+    if (playerUrl) {
+      const v = ensurePlaybackVideo();
+      if (v.src !== playerUrl) {
+        v.src = playerUrl;
+        v.load();
+      }
+      v.play().catch(() => { /* user gesture needed — won't affect drawImage */ });
+      usingPlayback = true;
+    }
+
     clipCanvasStart = performance.now();
-    const draw = (now) => {
-      const t = now - clipCanvasStart;
-      drawMockEncoreScene(ctx, cv.width, cv.height, t);
-      clipCanvasRAF = requestAnimationFrame(draw);
+    const draw = () => {
+      const t = performance.now() - clipCanvasStart;
+      if (usingPlayback && playbackVideoEl && playbackVideoEl.readyState >= 2) {
+        // drawImage scaled to cover the viewer canvas (CSS object-fit:cover).
+        const v = playbackVideoEl, dw = cv.width, dh = cv.height;
+        const sw = v.videoWidth || 1, sh = v.videoHeight || 1;
+        const dr = dw / dh, sr = sw / sh;
+        let sx = 0, sy = 0, cropW = sw, cropH = sh;
+        if (sr > dr) { cropW = sh * dr; sx = (sw - cropW) / 2; }
+        else         { cropH = sw / dr; sy = (sh - cropH) / 2; }
+        ctx.drawImage(v, sx, sy, cropW, cropH, 0, 0, dw, dh);
+      } else {
+        drawMockEncoreScene(ctx, cv.width, cv.height, t);
+      }
     };
-    clipCanvasRAF = requestAnimationFrame(draw);
+    // setInterval (not rAF) — see comment above. We want this loop to keep
+    // running during the 12s recording window even if the tab is idle.
+    clipCanvasRAF = setInterval(draw, 1000 / 30);
   }
   function stopClipCanvasAnimation() {
-    if (clipCanvasRAF) { cancelAnimationFrame(clipCanvasRAF); clipCanvasRAF = null; }
+    if (clipCanvasRAF) { clearInterval(clipCanvasRAF); clipCanvasRAF = null; }
+    if (playbackVideoEl) {
+      try { playbackVideoEl.pause(); } catch (_) {}
+    }
   }
 
   // Host (top) half: paints the matching LIVE scene (fps/gta/roblox) from
@@ -445,7 +511,7 @@
     const cv = document.getElementById('result-clip-host-canvas');
     if (!cv) return;
     if (!fitCanvas(cv)) {
-      requestAnimationFrame(() => startClipHostCanvasAnimation());
+      setTimeout(startClipHostCanvasAnimation, 33);
       return;
     }
     const ctx = cv.getContext('2d');
@@ -453,15 +519,16 @@
     const sceneFn = (window.LiveScenes && window.LiveScenes[mode]) || null;
     if (!sceneFn) return;     // streamer.html scenes not loaded — degrade gracefully
     clipHostCanvasStart = performance.now();
-    const draw = (now) => {
-      const t = now - clipHostCanvasStart;
+    const draw = () => {
+      const t = performance.now() - clipHostCanvasStart;
       sceneFn(ctx, cv.width, cv.height, t);
-      clipHostCanvasRAF = requestAnimationFrame(draw);
     };
-    clipHostCanvasRAF = requestAnimationFrame(draw);
+    // setInterval — keep drawing through backgrounded tabs so the recorder
+    // doesn't see an empty canvas. See same comment on viewer-half above.
+    clipHostCanvasRAF = setInterval(draw, 1000 / 30);
   }
   function stopClipHostCanvasAnimation() {
-    if (clipHostCanvasRAF) { cancelAnimationFrame(clipHostCanvasRAF); clipHostCanvasRAF = null; }
+    if (clipHostCanvasRAF) { clearInterval(clipHostCanvasRAF); clipHostCanvasRAF = null; }
   }
 
   // Tear down everything related to the winner clip preview (used when
