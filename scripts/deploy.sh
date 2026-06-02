@@ -96,10 +96,35 @@ if [[ -f "$REPO_ROOT/docs/encore_slides.html" ]]; then
     [[ -d "$PREVIEW_DIR" ]] && sync_file "$REPO_ROOT/docs/encore_slides.html" "$PREVIEW_DIR/encore_slides.html"
 fi
 
+# Landing + QR — the Vercel root rewrite points at docs/landing.html. Keep the
+# local mirrors current so QR/link QA uses the same entry page as production.
+if [[ -f "$REPO_ROOT/docs/landing.html" ]]; then
+    mkdir -p "$DEPLOY_DIR/docs" "$PREVIEW_DIR/docs"
+    sync_file "$REPO_ROOT/docs/landing.html" "$DEPLOY_DIR/docs/landing.html"
+    sync_file "$REPO_ROOT/docs/landing.html" "$PREVIEW_DIR/docs/landing.html"
+fi
+if [[ -f "$REPO_ROOT/docs/qr-encore.svg" ]]; then
+    mkdir -p "$DEPLOY_DIR/docs" "$PREVIEW_DIR/docs"
+    sync_file "$REPO_ROOT/docs/qr-encore.svg" "$DEPLOY_DIR/docs/qr-encore.svg"
+    sync_file "$REPO_ROOT/docs/qr-encore.svg" "$PREVIEW_DIR/docs/qr-encore.svg"
+fi
+
 # LIVE streamer host — now under prototype/live/ (was prototype/) as of v0.6.1
 if [[ -f "$REPO_ROOT/prototype/live/streamer.html" && -d "$DEPLOY_DIR/prototype" ]]; then
-    mkdir -p "$DEPLOY_DIR/prototype/live"
+    mkdir -p "$DEPLOY_DIR/prototype/live" "$PREVIEW_DIR/live"
     sync_file "$REPO_ROOT/prototype/live/streamer.html" "$DEPLOY_DIR/prototype/live/streamer.html"
+    sync_file "$REPO_ROOT/prototype/live/streamer.html" "$PREVIEW_DIR/live/streamer.html"
+    for sub in css js; do
+        if [[ -d "$REPO_ROOT/prototype/live/$sub" ]]; then
+            mkdir -p "$DEPLOY_DIR/prototype/live/$sub" "$PREVIEW_DIR/live/$sub"
+            for f in "$REPO_ROOT/prototype/live/$sub"/*; do
+                [[ -f "$f" ]] || continue
+                base="$(basename "$f")"
+                sync_file "$f" "$DEPLOY_DIR/prototype/live/$sub/$base"
+                sync_file "$f" "$PREVIEW_DIR/live/$sub/$base"
+            done
+        fi
+    done
 fi
 
 # Note: prototype/v2g/observer.py is intentionally NOT synced to the deploy
