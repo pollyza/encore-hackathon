@@ -71,7 +71,7 @@ TikTok 游戏直播观众现在能做的事:送礼、刷弹幕、关注、点选
 **评委验证路径**:扫码 → 进 streamer.html → 点 ⚡ FORCE 触发高光 → 屏幕底部小窗滑出玩 30s → 看结果 + 排名 → 小窗自动滑下回直播。
 
 ```
-✅ 3 套真实可玩模板    GTA Heist / Roblox Obby / Free Fire BR (Mario v2)
+✅ 3 套真实可玩模板    GTA Heist / Obby Parkour / Free Fire BR (Mario v2)
 ✅ 12 套主题            每模板 4 套调色板,开局随机滚
 ✅ V2G Vision 链路      真接入 Claude Vision,已用 2 个真实 TikTok 直播视频跑通
 ✅ LIVE 高保真壳        iPhone 14 phone frame + 4-phase 状态机 + ack overlay

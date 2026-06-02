@@ -513,7 +513,7 @@ v0.7 写过"+20-35% dwell time"、"+15-25% ARPU lift"这些数字 — **全部�
 ### 7.1 技术路径(已锁定,不再讨论)
 
 - **第一版 = 套预制模板**,不真生成式 AI 造游戏
-- AI 从视频抽 JSON 参数 → 路由到 3 套预制模板:FPS / MOBA / 吃鸡
+- AI 从视频抽 JSON 参数 → 路由到 3 套预制模板:**GTA Heist / Obby Parkour / Free Fire BR**(Mario v2)
 - **抽象像素风**(Roblox / Minecraft 那种),不碰任何游戏 IP,千元机也能跑
 - Canvas 2D + 体素方块,不用 WebGL
 
@@ -591,7 +591,7 @@ Hackathon 阶段和第一版上线**不解决**的三件事:
 
 ### 8.3 单一品类、单一形态
 
-- 只做 FPS / MOBA / 吃鸡三套,覆盖 60-70% 游戏直播(基于 TikTok gaming 内部分布粗估,待验证)
+- 只做 **GTA Heist / Obby Parkour / Free Fire BR** 三套,对标 FPS / MOBA / 吃鸡三大主流品类,覆盖 60-70% 游戏直播(基于 TikTok gaming 内部分布粗估,待验证)
 - 只做直播形态,**不做短视频入口,要等到 M12+**(短视频缺同时在场,转化率会塌)
 
 这三件事不是 Phase 1 失败,是 Phase 1 范围。提前划清楚预期。
@@ -643,7 +643,7 @@ Twitch 大概 4 个月内能 clone。**Encore 必须用第 1 条 + 第 4 条赢,
 - LIVE 平台真集成(demo 用 OBS 模拟)
 - 真 AI 高光检测(demo 用主播侧按钮 force 触发)
 - 真礼物 / 支付(只摆拍 UI)
-- FPS / MOBA / 吃鸡之外的模板(M12+ 长尾再扩)
+- 当前 3 套模板(GTA Heist / Obby Parkour / Free Fire BR)之外的扩展(M12+ 长尾再扩)
 - 任何后端服务(Hackathon demo 完全 client-side)
 - 主播侧操作型功能(违反"不打扰主播"硬规则)
 - Sponsor 礼物 SKU(违反硬规则)
@@ -661,7 +661,7 @@ Twitch 大概 4 个月内能 clone。**Encore 必须用第 1 条 + 第 4 条赢,
 | 美术风格 | 抽象像素风(Roblox / Minecraft),不碰任何游戏 IP,千元机也能跑 |
 | 入口 | 直播间优先;M12 前不做短视频流入口 |
 | 界面 | TikTok 原生底部弹出,永远不挡 LIVE 主画面,8 状态有限状态机 |
-| 模板覆盖 | 必备 3 套(FPS + MOBA + 吃鸡),覆盖 60-70% 游戏直播内容 |
+| 模板覆盖 | 必备 3 套(**GTA Heist + Obby Parkour + Free Fire BR**,对标 FPS + MOBA + 吃鸡三大品类),覆盖 60-70% 游戏直播内容 |
 | AI 定位 | AI 是辅助不是主角;第一版模板路由可被规则替代;只有 Remix 是 AI 真不可替代 |
 | 短视频生成 | 仅前 3 名免费自动生成(v0.8.1 砍 Spotlight);玩家是发布者,主播 @ tag + 可选联名 |
 | 视觉格式 | 默认上下分屏,前后接续作备选 |
