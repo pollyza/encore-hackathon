@@ -423,8 +423,14 @@
           if (!p.onPlat) p._lastAirT = state.time;                      // remember when last airborne (LASER forgives a recent jump)
           if (p.onPlat && p.onPlat._dx) p.px += p.onPlat._dx;           // ride horizontally-moving platforms
 
+          // Reaching the finish line counts as a WIN even mid-air — so a gift flight
+          // (wings/coil/OOF) that sails OVER the obstacles to the end actually wins,
+          // instead of overshooting into the void and wasting the flight (白飞).
+          // Checked BEFORE the fall-death so flying past the last platform still wins.
+          if (!p.finished && p.px >= state.finishX) { p.finished = true; doFinish(true); }
+
           // fall → respawn at last safe ground (obby checkpoint), or game over if none
-          if (p.py < T.fall.deathY) killPlayer(state);
+          else if (p.py < T.fall.deathY) killPlayer(state);
 
           // coins — grab them mid-jump (爽点 + reward).
           for (const pl of state.platforms) {
