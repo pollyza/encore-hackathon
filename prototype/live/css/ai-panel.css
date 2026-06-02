@@ -804,6 +804,25 @@
   font-family: inherit;
 }
 .sheet-result-clip-action:hover { background: rgba(255,255,255,.14); }
+.sheet-result-clip-action:disabled {
+  opacity: .5;
+  cursor: progress;
+}
+.sheet-result-clip-action:disabled:hover { background: rgba(255,255,255,.08); }
+
+/* Recorded clip player — shown in place of the on-screen split-screen
+   preview once ClipComposer finalises the Blob. */
+#result-clip-output {
+  width: 100%;
+  aspect-ratio: 9 / 16;
+  max-height: 60vh;
+  border-radius: 12px;
+  background: #000;
+  border: 1px solid rgba(255,255,255,.1);
+  box-shadow: 0 8px 24px rgba(0,0,0,.4);
+  display: block;
+}
+#result-clip-output[hidden] { display: none; }
 
 /* --- Caption editable --- */
 .sheet-result-caption-wrap { margin: 6px 14px 10px; }
