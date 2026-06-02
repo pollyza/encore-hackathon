@@ -137,6 +137,18 @@
     aiLosRange:       335,
     aiFireInterval:   0.72,
 
+    // ── Difficulty curve (the "难度权"): a normal player beats the 6 REGULAR bots by
+    //    skill, but the last 3 are ELITE "高手" — accurate, aggressive, tougher, like
+    //    real players. You can ALMOST clear them solo → that "差一点" tension is what
+    //    nudges a gift purchase. Tough-but-beatable, never a cheap bullet-sponge.
+    eliteCount:       3,      // of botCount (9) → 6 regular + 3 elite
+    eliteHpMul:       1.65,   // survive your first burst (≈106hp), not a sponge
+    eliteAccMul:      0.42,   // MUCH tighter aim (they actually hit you)
+    eliteDmgMul:      1.45,   // shots sting
+    eliteFireMul:     1.55,   // fire faster (more pressure)
+    eliteSpeedMul:    1.12,   // rotate/kite a touch faster
+    eliteDodgeMul:    0.55,   // dodge-roll on a shorter cooldown (reads as "smart")
+
     // zone / round
     zoneStartR:       11,     // tiles
     zoneEndR:         3,
@@ -661,6 +673,8 @@
       dmg: TUNING.botDmg,
       accuracy: TUNING.botAccuracy,
       range: TUNING.botRange,
+      elite: false,           // the difficulty-curve "高手" tier (boosted in the spawn loop)
+      fireMul: 1,             // fire-rate multiplier (elites fire faster)
     };
   }
 
@@ -754,7 +768,7 @@
       b.state = 'DODGE';
       b.stateT = 0;
       b.dodgeDir = Math.random() < 0.5 ? -1 : 1;
-      b.dodgeCooldown = AI_DODGE_COOLDOWN;
+      b.dodgeCooldown = AI_DODGE_COOLDOWN * (b.elite ? TUNING.eliteDodgeMul : 1);   // elites juke more often (reads as "skilled")
       b.iframeT = 0.2;   // R13: brief dodge-ROLL i-frames — a quick juke, not a DPS shield (anti-恶心)
       b.lastHitT = 0;
       if ($particles()) $particles()(s.particles, b.wx, b.wy, '#9fefff', 6);   // roll dust
@@ -865,7 +879,7 @@
     // Fire — only when ENGAGE, LOS clear, in range, fireCd elapsed
     if (b.state === 'ENGAGE' && losClear && dist < b.range && b.fireCd <= 0 && !(b.treeT > 0) && !(b.iceT > 0) && !(b.duckT > 0) && !(b.floatT > 0)) {   // 变树/冰冻/变鸭/气球 不能开枪(null-safe)
       const aggro = brAggro(s.elapsed);   // R9: ease-in → escalate → finale
-      b.fireCd = (AI_FIRE_INTERVAL + Math.random() * 0.6) / (aggro * (s.berserkT > 0 ? 1.7 : 1));   // slower early, faster late
+      b.fireCd = (AI_FIRE_INTERVAL + Math.random() * 0.6) / (aggro * (s.berserkT > 0 ? 1.7 : 1) * (b.fireMul || 1));   // slower early, faster late; elites fire faster
       const ang = b.aimAng + (Math.random() - 0.5) * b.accuracy * (1.7 - aggro);                    // wide spread early → tight late
       if (s.waterGunT > 0) {   // watergun: 无害水花
         s.bullets.push({ wx: b.wx, wy: b.wy, vx: Math.cos(ang) * 360, vy: Math.sin(ang) * 360, life: 1.5, owner: 'b', ownerId: b.id, dmg: 0, color: '#7fd4ff', mode: 'water' });
@@ -1570,6 +1584,18 @@
         const b = makeBot(cx, cy, id, theme);
         b.personality = PERS[id % PERS.length];
         b.airdropMode = rollWeird(BOT_WEIRD);   // R2: 每个 bot 开局随机怪枪
+        // ── ELITE "高手" tier: the last `eliteCount` bots play like real players —
+        //    tougher, accurate, aggressive. The other 6 fall to skill; these 3 are
+        //    the "差一点打不过" wall that nudges a gift. (gold band tell in drawBot)
+        if (id >= N_BOTS - TUNING.eliteCount) {
+          b.elite = true;
+          b.maxHp = b.hp = Math.round(TUNING.botHp * TUNING.eliteHpMul);
+          b.accuracy = TUNING.botAccuracy * TUNING.eliteAccMul;
+          b.dmg = Math.round(TUNING.botDmg * TUNING.eliteDmgMul);
+          b.speed = Math.round(TUNING.botSpeed * TUNING.eliteSpeedMul);
+          b.fireMul = TUNING.eliteFireMul;
+          b.airdropMode = 'strong';   // elites carry the piercing power-gun, not a comedy gun
+        }
         bots.push(b);
       }
 
@@ -2441,6 +2467,17 @@
       c.beginPath(); c.ellipse(sx, sy, 15, 9, 0, 0, Math.PI * 2); c.fill();
       c.globalAlpha = 0.6 * k; c.strokeStyle = '#bff5ff'; c.lineWidth = 2;
       c.beginPath(); c.ellipse(sx, sy - 6, 13, 8, 0, 0, Math.PI * 2); c.stroke();
+      c.restore();
+    }
+    if (b.elite) {                                            // 高手 tell — gold pulsing ring + a small crown
+      const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 200 + b.id);
+      c.save();
+      c.globalAlpha = 0.4 + 0.35 * pulse; c.strokeStyle = '#ffd24a'; c.lineWidth = 2;
+      c.beginPath(); c.ellipse(sx, sy + 2, 14 + 2 * pulse, 8, 0, 0, Math.PI * 2); c.stroke();
+      c.globalAlpha = 1; c.fillStyle = '#ffd24a';
+      const hy = sy - 31;
+      c.beginPath(); c.moveTo(sx - 6, hy); c.lineTo(sx - 6, hy - 5); c.lineTo(sx - 2, hy - 2);
+      c.lineTo(sx, hy - 6); c.lineTo(sx + 2, hy - 2); c.lineTo(sx + 6, hy - 5); c.lineTo(sx + 6, hy); c.closePath(); c.fill();
       c.restore();
     }
     const hpBar = () => {

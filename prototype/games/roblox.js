@@ -478,42 +478,71 @@
   // by altitude above your launch platform — the payoff for the "fly to the moon"
   // moment a paid gift creates (made to be screenshot/shared). Normal jumps never
   // reach the threshold, so it only shows on a gift flight.
+  // ── Drawn (pixel-art) Roblox-culture icons — no emoji, instantly recognizable ──
+  function drawRobux(c, x, y, r) {                  // the currency coin (R$) — flex
+    c.save(); c.fillStyle = '#f5c542'; c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = '#c79a2e'; c.lineWidth = 2; c.stroke();
+    c.fillStyle = '#7a5a12'; c.font = `bold ${Math.round(r * 1.05)}px monospace`; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText('R$', x, y + 1); c.textBaseline = 'alphabetic'; c.restore();
+  }
+  function drawBaconNoob(c, x, y, s) {              // the iconic default avatar (Bacon Hair)
+    c.save(); c.translate(x, y); c.scale(s, s);
+    c.fillStyle = '#f3d22b'; c.fillRect(-12, -12, 24, 24); c.strokeStyle = '#b89a18'; c.lineWidth = 1.5; c.strokeRect(-12, -12, 24, 24);
+    for (let i = 0; i < 4; i++) { const bx = -12 + i * 7; c.fillStyle = i % 2 ? '#b8432a' : '#e07a4a';
+      c.beginPath(); c.moveTo(bx, -12); c.lineTo(bx + 7, -12); c.lineTo(bx + 5, -21); c.lineTo(bx - 2, -19); c.closePath(); c.fill(); }
+    c.fillStyle = '#2a2a2a'; c.fillRect(-7, -4, 4, 5); c.fillRect(3, -4, 4, 5);
+    c.strokeStyle = '#2a2a2a'; c.lineWidth = 2; c.lineCap = 'round'; c.beginPath(); c.moveTo(-7, 5); c.quadraticCurveTo(0, 11, 7, 5); c.stroke(); c.lineCap = 'butt';
+    c.restore();
+  }
+  function drawDominus(c, x, y, s) {                // the legendary status hat — the ultimate flex
+    c.save(); c.translate(x, y); c.scale(s, s);
+    c.fillStyle = '#e8b53a';                                                  // gold swept-back spikes
+    [[-14,-6,-32,-20],[-6,-13,-15,-37],[6,-13,15,-37],[14,-6,32,-20],[0,-15,0,-42]].forEach(([x1,y1,x2,y2]) => {
+      c.beginPath(); c.moveTo(x1 - 3, y1); c.lineTo(x1 + 3, y1); c.lineTo(x2, y2); c.closePath(); c.fill(); });
+    c.fillStyle = '#1b1530'; c.beginPath(); c.arc(0, -2, 16, Math.PI, 0); c.fill(); c.fillRect(-16, -2, 32, 11);  // dark helmet
+    c.fillStyle = '#6df0ff'; c.fillRect(-9, 1, 18, 5);                         // glowing face slot
+    c.restore();
+  }
+  function drawOofStone(c, x, y, s) {               // the OOF death meme as a tombstone
+    c.save(); c.translate(x, y); c.scale(s, s);
+    c.fillStyle = '#9aa3ad'; c.beginPath(); c.moveTo(-16, 20); c.lineTo(-16, -6); c.arc(0, -6, 16, Math.PI, 0); c.lineTo(16, 20); c.closePath(); c.fill();
+    c.strokeStyle = '#6e757e'; c.lineWidth = 2; c.stroke();
+    c.fillStyle = '#3a4047'; c.font = 'bold 13px monospace'; c.textAlign = 'center'; c.fillText('OOF', 0, 4); c.restore();
+  }
+
   function drawSkyEasterEggs(ctx, state, W, H) {
     const p = state.player; if (!p) return;
     const ground = (p._groundY != null ? p._groundY : p.py);
     const alt = p.py - ground;
     if (alt < 220) return;                                            // still in the normal play area
-    const sky   = Math.max(0, Math.min(1, (alt - 220) / 280));        // 220→500 : darken to space + stars
-    const moon  = Math.max(0, Math.min(1, (alt - 450) / 300));        // 450→750 : moon scene
-    const space = Math.max(0, Math.min(1, (alt - 850) / 350));        // 850→1200: deep space
+    const cl = v => Math.max(0, Math.min(1, v));
+    const sky   = cl((alt - 220) / 280);       // 220→500 : space + raining Robux
+    const flex  = cl((alt - 450) / 300);       // 450→750 : Dominus + Bacon-Hair noob
+    const top   = cl((alt - 850) / 350);       // 850→1200: OOF stone + THANKS FOR PLAYING
     const t = state.time || 0;
     ctx.save(); ctx.textAlign = 'center';
-    ctx.globalAlpha = 0.6 * sky; ctx.fillStyle = '#0a0a26'; ctx.fillRect(0, 0, W, H);   // space
-    ctx.fillStyle = '#ffffff';                                         // twinkling stars
-    for (let i = 0; i < 44; i++) { const sx = (i * 9973) % W, sy = (i * 6311) % Math.round(H * 0.72);
-      ctx.globalAlpha = sky * (0.25 + 0.6 * (0.5 + 0.5 * Math.sin(t * 3 + i))); ctx.fillRect(sx, sy, 2, 2); }
-    if (moon > 0.02) {                                                 // ── MOON: 玉兔 + 嫦娥 + 变形金刚 ──
-      ctx.globalAlpha = moon;
-      ctx.fillStyle = '#e9edf2'; ctx.beginPath(); ctx.arc(W * 0.73, H * 0.24, 50, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#d2d9e0'; [[8,-12,8],[-15,5,10],[18,14,6]].forEach(c => { ctx.beginPath(); ctx.arc(W*0.73+c[0], H*0.24+c[1], c[2], 0, Math.PI*2); ctx.fill(); });
-      ctx.font = '20px sans-serif'; ctx.fillText('🐰', W * 0.73, H * 0.24 + 4);
-      ctx.fillStyle = '#bfe0ff'; ctx.font = 'bold 12px sans-serif'; ctx.fillText('玉兔', W * 0.73, H * 0.24 + 40);
-      ctx.font = '20px sans-serif'; ctx.fillText('🧚', W * 0.57, H * 0.18 + 2 * Math.sin(t * 2));
-      ctx.fillStyle = '#ffd0e8'; ctx.font = 'bold 12px sans-serif'; ctx.fillText('嫦娥', W * 0.57, H * 0.18 + 20);
-      ctx.font = '22px sans-serif'; ctx.fillText('🤖', W * 0.87, H * 0.40);
-      ctx.fillStyle = '#9fd0ff'; ctx.font = 'bold 11px sans-serif'; ctx.fillText('变形金刚', W * 0.87, H * 0.40 + 18);
+    ctx.globalAlpha = 0.62 * sky; ctx.fillStyle = '#0a0a26'; ctx.fillRect(0, 0, W, H);          // darken to space
+    ctx.fillStyle = '#ffffff';
+    for (let i = 0; i < 44; i++) { const sxx = (i * 9973) % W, syy = (i * 6311) % Math.round(H * 0.72);
+      ctx.globalAlpha = sky * (0.25 + 0.6 * (0.5 + 0.5 * Math.sin(t * 3 + i))); ctx.fillRect(sxx, syy, 2, 2); }
+    if (sky > 0.05) {                                                  // raining Robux — "you're flying = flexing"
+      ctx.globalAlpha = sky;
+      for (let i = 0; i < 6; i++) { const cx = (i * 137 % W); const cy = ((t * 30 + i * 90) % (H * 0.6));
+        drawRobux(ctx, cx, cy, 9); }
+    }
+    if (flex > 0.02) {                                                 // ── the FLEX tier ──
+      ctx.globalAlpha = flex;
+      drawDominus(ctx, W * 0.72, H * 0.24 + 3 * Math.sin(t * 1.6), 1.5);
+      ctx.fillStyle = '#ffd86a'; ctx.font = 'bold 12px monospace'; ctx.fillText('DOMINUS', W * 0.72, H * 0.24 + 46);
+      drawBaconNoob(ctx, W * 0.28, H * 0.30 + 3 * Math.sin(t * 2 + 1), 1.4);
+      ctx.fillStyle = '#ffd0a0'; ctx.fillText('BACON', W * 0.28, H * 0.30 + 40);
       ctx.globalAlpha = 1;
     }
-    if (space > 0.02) {                                               // ── DEEP SPACE: 火星 + 🚀 + 马斯克 + 👽 ──
-      ctx.globalAlpha = space;
-      ctx.fillStyle = '#c1502e'; ctx.beginPath(); ctx.arc(W * 0.24, H * 0.20, 44, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#9b3c20'; ctx.beginPath(); ctx.arc(W * 0.24 - 12, H * 0.20 + 8, 12, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#ffcaa0'; ctx.font = 'bold 12px sans-serif'; ctx.fillText('火星', W * 0.24, H * 0.20 + 58);
-      ctx.font = '24px sans-serif'; ctx.fillText('🚀', W * 0.42, H * 0.34 - 4 * Math.sin(t * 3));
-      ctx.font = '20px sans-serif'; ctx.fillText('🧑‍🚀', W * 0.33, H * 0.42);
-      ctx.fillStyle = '#bfe0ff'; ctx.font = 'bold 11px sans-serif'; ctx.fillText('马斯克', W * 0.33, H * 0.42 + 18);
-      ctx.font = '24px sans-serif'; ctx.fillText('🛸', W * 0.64, H * 0.14 + 3 * Math.sin(t * 2.2));
-      ctx.font = '16px sans-serif'; ctx.fillText('👽', W * 0.64, H * 0.14 + 22);
+    if (top > 0.02) {                                                  // ── peak: OOF + obby finish meme ──
+      ctx.globalAlpha = top;
+      drawOofStone(ctx, W * 0.6, H * 0.16, 1.3);
+      drawRobux(ctx, W * 0.2, H * 0.2 + 4 * Math.sin(t * 2.4), 13);
+      ctx.fillStyle = '#9be7ff'; ctx.font = 'bold 13px monospace'; ctx.fillText('THANKS FOR PLAYING!', W * 0.5, H * 0.42);
       ctx.globalAlpha = 1;
     }
     ctx.restore();
