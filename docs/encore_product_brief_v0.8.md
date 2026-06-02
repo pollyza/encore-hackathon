@@ -307,6 +307,8 @@ Encore 服务端 (异步 worker)
 - 7.5M × 1秒 = ~2000 CPU·小时/天 ≈ **$50-200/天**(云上 spot)
 - 对比 Vision 检测(见 §7.2)成本可忽略
 
+**Demo 阶段已经端侧打通(M8 完成)**:hackathon demo 里我们用浏览器原生 Canvas + MediaRecorder 把整条链路真的跑出来了 —— 玩家玩 30 秒,游戏 canvas 直接被 MediaRecorder 抓帧成一段录屏,winner 时刻这段录屏再被 drawImage 到上下分屏合成 canvas 的下半屏,上半屏是跟主播 LIVE mode 匹配的程序化 Canvas 场景,合成 canvas 自己再被 MediaRecorder 抓帧出最终 9:16 的真 .webm 文件,观众能下载、能通过 Web Share API 分享。**这证明了技术可行性**;生产环境会换到 §4.2 描述的服务端 ffmpeg 路径,主要为了规模 + 玩家流量 / 电量友好,不为了"是不是能做出来"。
+
 ### 4.3 Vision 检测 + 主播 5 秒选择
 
 主播这边的 5 秒倒计时设计是**整个机制最关键**的一步:
