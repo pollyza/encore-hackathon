@@ -31,18 +31,27 @@
     </span>
   </div>
 
-  <!-- ── Stream background ───────────────────────────────────────────── -->
+  <!-- ── Stream background ───────────────────────────────────────────────
+       3 game modes, randomly picked on load via data-game-mode:
+       · fps    → real game footage (encore_test2.mp4) + FPS HUD
+       · gta    → Canvas2D top-down city scene + driving HUD (TODO: 真录屏)
+       · roblox → Canvas2D side-view platforms + parkour HUD (TODO: 真录屏)
+       Picked mode also drives Encore template selection (gta/roblox/br)
+       so the highlight → mini-game flow is genre-consistent.
+       ──────────────────────────────────────────────────────────────────── -->
   <div id="stream-bg">
-    <video id="live-video" muted playsinline loop preload="metadata">
-      <!-- Absolute path so both /tmp/encore-preview/live/ and
-           /Users/.../prototype/live/ resolve correctly (servers run from
-           their own repo root or mirror root). -->
+    <!-- FPS mode: real video footage (existing) -->
+    <video id="live-video" muted playsinline loop preload="metadata"
+           style="display:none;">
       <source src="/reference/videos/encore_test2.mp4" type="video/mp4">
     </video>
+    <!-- GTA / Roblox mode: Canvas2D procedural scene -->
+    <canvas id="live-canvas" style="display:none;"></canvas>
     <div class="atmosphere"></div>
 
-    <!-- Stylised in-game HUD (purely decorative on top of the video) -->
-    <div class="stream-minimap">
+    <!-- Stylised in-game HUD — each block .visible-in shows in matching modes -->
+    <!-- FPS HUD: minimap + compass + weapon + joystick + fire button -->
+    <div class="stream-minimap" data-show-in="fps">
       <svg viewBox="0 0 78 78" width="78" height="78" xmlns="http://www.w3.org/2000/svg">
         <path d="M0 40 Q20 30 40 36 T78 32 L78 78 L0 78Z" fill="#3d4f2a"/>
         <circle cx="40" cy="40" r="3" fill="#ff3535"/>
@@ -53,23 +62,23 @@
       <div class="label">CẢNH BÁO</div>
     </div>
 
-    <div class="stream-compass">
+    <div class="stream-compass" data-show-in="fps">
       <span>NE</span><span>60</span><span>75</span><span>E</span><span>105</span>
       <span class="active">125</span><span>150</span><span>S</span><span>195</span>
     </div>
 
-    <div class="stream-weapon">
+    <div class="stream-weapon" data-show-in="fps">
       <div class="ammo">8<span class="of">/167</span></div>
       <div class="reload">Thay đạn</div>
       <div class="row"><div>61</div><div>0%</div><div>∞</div></div>
     </div>
 
-    <div class="stream-joystick"></div>
-    <div class="stream-fire">✊</div>
-    <div class="stream-hp"><div></div></div>
+    <div class="stream-joystick" data-show-in="fps gta"></div>
+    <div class="stream-fire" data-show-in="fps">✊</div>
+    <div class="stream-hp" data-show-in="fps gta"><div></div></div>
 
-    <!-- Character silhouette -->
-    <div class="character">
+    <!-- FPS character silhouette -->
+    <div class="character" data-show-in="fps">
       <svg viewBox="0 0 56 88" width="56" height="88" xmlns="http://www.w3.org/2000/svg">
         <ellipse cx="28" cy="84" rx="22" ry="5" fill="#ff9d3a" opacity=".55"/>
         <path d="M22 18 Q28 10 34 18 L36 38 L40 60 L34 78 L22 78 L16 60 L20 38 Z" fill="#e8e3d6"/>
@@ -79,6 +88,24 @@
         <circle cx="22" cy="78" r="2" fill="#ffce6a"/>
         <circle cx="34" cy="78" r="1.5" fill="#fff1c0"/>
       </svg>
+    </div>
+
+    <!-- GTA HUD: speedometer + wanted level + nitro button -->
+    <div class="stream-speedo" data-show-in="gta">
+      <div class="speed-num">87<span class="of">mph</span></div>
+      <div class="wanted">
+        <span class="star on">★</span><span class="star on">★</span><span class="star">★</span>
+      </div>
+    </div>
+    <div class="stream-nitro" data-show-in="gta">N₂O</div>
+
+    <!-- Roblox HUD: jump counter + checkpoint indicator -->
+    <div class="stream-jumps" data-show-in="roblox">
+      <div class="jumps-num">12<span class="of">/18</span></div>
+      <div class="jumps-label">PLATFORMS</div>
+    </div>
+    <div class="stream-checkpoint" data-show-in="roblox">
+      <span class="flag">⛳</span> NEXT: 4
     </div>
   </div>
 
@@ -429,11 +456,45 @@
     sheetClose: document.getElementById('sheet-close'),
   };
 
+  // ── LIVE game-mode selection ────────────────────────────────────────
+  // 3 modes, picked once on load (fps/gta/roblox). Drives:
+  //  · which background renders (video for fps, Canvas for gta/roblox)
+  //  · which HUD blocks show (data-show-in attribute)
+  //  · which Encore template launches when highlight triggers (genre match)
+  const GAME_MODES = ['fps', 'gta', 'roblox'];
+  // FPS LIVE → Mario 'br' (Free Fire BR) template (closest shooter feel)
+  // GTA / Roblox LIVE → matching Encore template
+  const TEMPLATE_FOR_MODE = { fps: 'br', gta: 'gta', roblox: 'roblox' };
+  const currentMode = GAME_MODES[Math.floor(Math.random() * GAME_MODES.length)];
+
+  // Set data attribute for CSS hooks (HUD blocks visibility, etc.)
+  document.getElementById('host').dataset.gameMode = currentMode;
+
+  // Pick which background to show.
+  // Note: liveCanvasRAF is hoisted up here (was a `let` lower down) so
+  // that startLiveCanvasScene's cancelAnimationFrame(liveCanvasRAF) doesn't
+  // throw a TDZ ReferenceError when called below.
+  const liveCanvas = document.getElementById('live-canvas');
+  let liveCanvasRAF = null;
+  if (currentMode === 'fps') {
+    dom.video.style.display = '';
+    liveCanvas.style.display = 'none';
+  } else {
+    dom.video.style.display = 'none';
+    liveCanvas.style.display = '';
+    startLiveCanvasScene(currentMode);
+  }
+
+  // Show only HUD blocks matching this mode (via data-show-in attribute)
+  document.querySelectorAll('#stream-bg [data-show-in]').forEach(el => {
+    const modes = el.dataset.showIn.split(/\s+/);
+    el.style.display = modes.includes(currentMode) ? '' : 'none';
+  });
+
   // Vision detection cache — observer-client populates this when a real
   // V2G highlight is detected. encore-sheet calls pickConfig() to decide
   // which Mario template to launch; if no cached detection is available
-  // it falls back to a random GTA/Roblox/Free Fire BR config (handled internally).
-  // This is the seam where real Vision will plug in later.
+  // we now FORCE a template match with the current LIVE game-mode (v2 — was random).
   let cachedDetection = null;
   const pickConfig = () => {
     if (cachedDetection) {
@@ -441,8 +502,215 @@
       cachedDetection = null;
       return c;
     }
-    return null; // null → encore-sheet generates a random one
+    // Genre-match: LIVE 在播什么 → Encore 也开什么
+    return buildConfigForTemplate(TEMPLATE_FOR_MODE[currentMode]);
   };
+
+  // Build a V2GResponse config for a specific template
+  // (mirrors encore-sheet.js makeRandomConfig logic but with template forced)
+  function buildConfigForTemplate(template) {
+    const THEMES = {
+      fps:    ['desert', 'snow', 'cyber',  'jungle'],
+      moba:   ['grass',  'lava', 'ice',    'twilight'],
+      br:     ['forest', 'desert', 'island','wasteland'],
+      roblox: ['grass',  'snow', 'lava',   'space'],
+      gta:    ['night',  'rain', 'sunset', 'snownight'],
+    };
+    const DESC = {
+      fps: '1vN clutch', moba: 'dragon pit fight', br: 'free fire final circle',
+      roblox: 'platform parkour', gta: 'shop heist run',
+    };
+    const themes = THEMES[template] || THEMES.br;
+    const theme = themes[Math.floor(Math.random() * themes.length)];
+    let scenario;
+    if (template === 'roblox') {
+      scenario = { platform_count: 18, gap_range_min: 80, gap_range_max: 220,
+                   seed: Math.floor(Math.random()*100000), description: DESC[template] };
+    } else if (template === 'gta') {
+      scenario = { shop_count: 4, cop_spawn_rate: 0.2, map_size: 1500, description: DESC[template] };
+    } else {
+      const weapons = ['pistol','smg','rifle','sniper'];
+      scenario = { enemy_count: 2 + Math.floor(Math.random()*3),
+                   hp_start: [60,80,100][Math.floor(Math.random()*3)],
+                   description: DESC[template] };
+      if (template === 'fps' || template === 'br') scenario.weapon = weapons[Math.floor(Math.random()*4)];
+    }
+    return {
+      highlight: true, confidence: 1.0, template, theme, scenario,
+      _meta: { tokens_in: 0, tokens_out: 0, model: 'live-mode-match' }
+    };
+  }
+
+  // ── Canvas2D LIVE scene renderers (procedural placeholder until real
+  //    game footage is sourced for gta + roblox). Each scene runs at 60fps
+  //    via requestAnimationFrame, designed to fill #live-canvas.
+  //    Note: liveCanvasRAF is declared earlier (above the if-else that calls
+  //    startLiveCanvasScene) to avoid a TDZ ReferenceError.
+  function startLiveCanvasScene(mode) {
+    if (liveCanvasRAF) cancelAnimationFrame(liveCanvasRAF);
+    const cv = liveCanvas;
+    const fit = () => {
+      const r = cv.getBoundingClientRect();
+      if (r.width === 0) return false;
+      cv.width  = Math.round(r.width);
+      cv.height = Math.round(r.height);
+      return true;
+    };
+    if (!fit()) { requestAnimationFrame(() => startLiveCanvasScene(mode)); return; }
+    const ctx = cv.getContext('2d');
+    const start = performance.now();
+    const draw = (now) => {
+      const t = now - start;
+      if (mode === 'gta')    drawGtaScene(ctx, cv.width, cv.height, t);
+      if (mode === 'roblox') drawRobloxScene(ctx, cv.width, cv.height, t);
+      liveCanvasRAF = requestAnimationFrame(draw);
+    };
+    liveCanvasRAF = requestAnimationFrame(draw);
+  }
+
+  // GTA mode: top-down city night scene with cars + neon
+  function drawGtaScene(ctx, w, h, t) {
+    // Asphalt + sky
+    const sky = ctx.createLinearGradient(0, 0, 0, h);
+    sky.addColorStop(0,    '#1a0e1f');
+    sky.addColorStop(0.4,  '#2c1840');
+    sky.addColorStop(1,    '#0a060f');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, w, h);
+    // Distant city skyline
+    const horizonY = h * 0.45;
+    ctx.fillStyle = '#0e0820';
+    for (let i = 0; i < 10; i++) {
+      const bx = i * (w/10);
+      const bh = 30 + Math.sin(i * 1.3) * 20;
+      ctx.fillRect(bx, horizonY - bh, w/10 - 2, bh);
+      // Lit windows
+      ctx.fillStyle = (i % 2 === 0) ? '#ffd23f' : '#25F4EE';
+      for (let y = horizonY - bh + 4; y < horizonY - 4; y += 6) {
+        if ((y + i) % 12 < 4) ctx.fillRect(bx + 2, y, 2, 2);
+      }
+      ctx.fillStyle = '#0e0820';
+    }
+    // Road
+    const roadTop = h * 0.55;
+    ctx.fillStyle = '#1a1820';
+    ctx.fillRect(0, roadTop, w, h - roadTop);
+    // Lane stripes scrolling
+    const stripeSpeed = (t * 0.4) % 60;
+    ctx.fillStyle = '#ffd23f';
+    for (let i = -1; i < 10; i++) {
+      const y = roadTop + 20 + i * 60 + stripeSpeed;
+      if (y > roadTop && y < h - 10) ctx.fillRect(w/2 - 3, y, 6, 24);
+    }
+    // Cars passing (2 lanes)
+    const carY1 = roadTop + 80 + Math.sin(t * 0.001) * 30;
+    const carY2 = roadTop + 180 + Math.cos(t * 0.0008) * 30;
+    drawPixelCar(ctx, w * 0.3, carY1, '#FE2C55');
+    drawPixelCar(ctx, w * 0.65, carY2, '#25F4EE');
+    // Player car (center)
+    drawPixelCar(ctx, w * 0.48, h * 0.78, '#ffd23f', true);
+    // Neon glow overlay
+    const glow = ctx.createRadialGradient(w/2, h*0.8, 0, w/2, h*0.8, w*0.4);
+    glow.addColorStop(0, 'rgba(255,210,63,0.12)');
+    glow.addColorStop(1, 'rgba(255,210,63,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, w, h);
+    // Police flash (intermittent)
+    if ((t % 2000) < 200) {
+      ctx.fillStyle = 'rgba(254,44,85,0.25)';
+      ctx.fillRect(0, 0, w, h);
+    } else if ((t % 2000) > 1000 && (t % 2000) < 1200) {
+      ctx.fillStyle = 'rgba(37,244,238,0.25)';
+      ctx.fillRect(0, 0, w, h);
+    }
+  }
+  function drawPixelCar(ctx, x, y, color, isPlayer) {
+    const w = isPlayer ? 24 : 18;
+    const h = isPlayer ? 36 : 28;
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(x - w/2 + 2, y - h/2 + 4, w, h);
+    // Body
+    ctx.fillStyle = color;
+    ctx.fillRect(x - w/2, y - h/2, w, h);
+    // Roof
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.fillRect(x - w/2 + 3, y - h/4, w - 6, h/2);
+    // Headlights
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(x - w/2 + 2, y - h/2 + 1, 3, 2);
+    ctx.fillRect(x + w/2 - 5, y - h/2 + 1, 3, 2);
+  }
+
+  // Roblox mode: side-view chunky pixel platforms + jumping character
+  function drawRobloxScene(ctx, w, h, t) {
+    // Sky gradient (blue → pink, Roblox feel)
+    const sky = ctx.createLinearGradient(0, 0, 0, h);
+    sky.addColorStop(0, '#5cb3ff');
+    sky.addColorStop(0.5, '#ffb3d9');
+    sky.addColorStop(1, '#7ed957');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, w, h);
+    // Clouds (parallax)
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    for (let i = 0; i < 4; i++) {
+      const cx = ((t * 0.03 + i * 200) % (w + 100)) - 50;
+      const cy = 40 + (i % 2) * 30;
+      ctx.fillRect(cx, cy, 50, 16);
+      ctx.fillRect(cx + 10, cy - 8, 30, 8);
+    }
+    // Platforms scrolling left → right
+    const scrollX = (t * 0.08) % 150;
+    const platforms = [
+      { x: 100, y: h * 0.85, w: 80, c: '#8b4513' },
+      { x: 250, y: h * 0.72, w: 70, c: '#228b22' },
+      { x: 400, y: h * 0.82, w: 90, c: '#8b4513' },
+      { x: 550, y: h * 0.65, w: 70, c: '#228b22' },
+      { x: 700, y: h * 0.80, w: 80, c: '#8b4513' },
+    ];
+    platforms.forEach(p => {
+      const x = (p.x - scrollX);
+      const adjX = x < -100 ? x + 750 : x;
+      // Block
+      ctx.fillStyle = p.c;
+      ctx.fillRect(adjX, p.y, p.w, 30);
+      // Top grass/edge
+      ctx.fillStyle = p.c === '#228b22' ? '#4caf50' : '#a0522d';
+      ctx.fillRect(adjX, p.y, p.w, 4);
+    });
+    // Pixel character (Roblox blocky)
+    const charY = h * 0.6 + Math.sin(t * 0.004) * 30; // bouncing
+    const charX = w * 0.4;
+    // Body (blocky)
+    ctx.fillStyle = '#ff6b35';  // orange shirt
+    ctx.fillRect(charX - 8, charY - 4, 16, 16);
+    // Head
+    ctx.fillStyle = '#ffd9a5';
+    ctx.fillRect(charX - 7, charY - 18, 14, 14);
+    // Eyes
+    ctx.fillStyle = '#000';
+    ctx.fillRect(charX - 4, charY - 13, 2, 2);
+    ctx.fillRect(charX + 2, charY - 13, 2, 2);
+    // Legs
+    ctx.fillStyle = '#1565c0';  // blue pants
+    ctx.fillRect(charX - 6, charY + 12, 5, 10);
+    ctx.fillRect(charX + 1, charY + 12, 5, 10);
+    // Trail particles
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    for (let i = 1; i < 5; i++) {
+      ctx.fillRect(charX - 8 - i * 4, charY + 20, 3, 3);
+    }
+    // Checkpoint flag in distance
+    const flagX = w * 0.85 - (scrollX * 0.3) % 100 + 50;
+    ctx.fillStyle = '#888';
+    ctx.fillRect(flagX, h * 0.55, 2, 60);
+    ctx.fillStyle = '#FE2C55';
+    ctx.beginPath();
+    ctx.moveTo(flagX, h * 0.55);
+    ctx.lineTo(flagX + 20, h * 0.6);
+    ctx.lineTo(flagX, h * 0.65);
+    ctx.fill();
+  }
 
   // Initialize sheet first (so live-room can call into it)
   EncoreSheet.init({
