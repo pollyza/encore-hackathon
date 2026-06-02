@@ -304,8 +304,8 @@
         if (grounded) doJump(p);                                            // grounded (or coyote) → normal jump
         else if (!p.airJumped && p.stamina >= T.jump.stamCost) doDoubleJump(state, p);   // mid-air → DOUBLE JUMP if 耐力够
         else p.jumpBuffer = T.jump.buffer;                                  // can't jump now → buffer for landing
-        if (p._giftOofT > 0) {                                              // OOF spring: bouncier launch + the iconic meme
-          p.vy = Math.max(p.vy, T.jump.vy * 1.15);
+        if (p._giftOofT > 0) {                                              // OOF spring: BIG bouncy launch + the iconic meme
+          p.vy = Math.max(p.vy, T.jump.vy * 1.5);
           try { if (window.Juice) window.Juice.popup('OOF!', wx2sx(p.px), wy2sy(p.py) - 30, { color: '#ffd24a', size: 20 }); } catch (_) {}
           $sfx('bigjump');
         }
@@ -353,12 +353,18 @@
           // ── vertical physics (fixed-height jump; double-jump fires on press) ──
           const coil = p._giftCoilT > 0, wings = p._giftWingsT > 0, oof = p._giftOofT > 0;
           const gift = coil || wings || oof;
-          const gMul = wings ? 0.5 : (coil ? 0.78 : (oof ? 0.62 : 1));        // GIFT: lighter gravity (wings = floatiest)
+          // 3 real Roblox-obby gear feels: Gravity Coil = MOON jump (very low grav,
+          // launch sky-high); Wings = floaty glide-fly; OOF Spring = bouncy.
+          // (vy>0 = rising, vy<0 = falling — never clamp the rise, that was the 便秘 bug.)
+          const gMul = coil ? 0.40 : wings ? 0.62 : oof ? 0.80 : 1;
           p.vy -= T.jump.gravity * (rm.gravK || 1) * gMul * dt;
-          // GIFT flight: keep the air-jump available + topped-up stamina → tap to
-          // keep climbing (wings = fly, OOF = mega-bounce). Wings also glide (cap fall).
-          if (gift) { p.airJumped = false; p.stamina = T.jump.stamMax; }
-          if (wings && p.vy > 135) p.vy = 135;
+          // Wings + OOF keep the air-jump primed → tap to FLAP/bounce and stay up.
+          // Coil rides one big moon-jump (low grav does the lifting). Stamina topped up.
+          if (wings || oof) p.airJumped = false;
+          if (gift) p.stamina = T.jump.stamMax;
+          // Wings GLIDE: cap only the DESCENT (vy<0) so you float down gently and
+          // clear gaps — the jump itself stays full-power and snappy.
+          if (wings && p.vy < -150) p.vy = -150;
           if (p.stamina < T.jump.stamMax) p.stamina = Math.min(T.jump.stamMax, p.stamina + T.jump.stamRegen * (gift ? 1.9 : 1) * dt);  // 耐力回充
           if (p.spinT > 0) p.spinT -= dt;                                    // double-jump flip anim
           p.py += p.vy * dt;
