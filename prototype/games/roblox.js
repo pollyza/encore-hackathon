@@ -249,8 +249,9 @@
         else if (key === 'oof') p._giftOofT = g.dur;
         else p._giftCoilT = g.dur;
         state.giftBoost = { key, name: g.name, ico: g.ico, tone: g.tone, t: g.dur, age: 0 };
+        // gift name shows ONCE via the top DOM banner (no duplicate canvas popup)
         try { if (window.showBanner) window.showBanner(g.ico + ' ' + g.name, g.tone, 2.0); } catch (_) {}
-        try { if (window.Juice) { window.Juice.flash(g.tone, 110); window.Juice.confetti($W()); window.Juice.popup(g.ico + ' ' + g.name, $W()/2, $H()*0.32, { color: g.tone, size: 25, dur: 1.4 }); window.Juice.addTrauma(0.4); } } catch (_) {}
+        try { if (window.Juice) { window.Juice.flash(g.tone, 110); window.Juice.confetti($W()); window.Juice.addTrauma(0.4); } } catch (_) {}
         return true;
       },
 

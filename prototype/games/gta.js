@@ -787,7 +787,8 @@
       gtaApplyGift(s, key);
       s.giftBoost = { key, name: g.name, ico: g.ico, tone: g.tone, t: g.dur, age: 0 };
       const P = gProj(s); pushSpark(s, P.sx(s.player.wx), P.sy(s.player.wy) + 10, g.tone, 30);
-      const J = $J(); if (J) { J.flash(g.tone, 110); if (J.confetti) J.confetti($W()); J.popup(g.ico + ' ' + g.name, $W() / 2, $H() * 0.34, { color: g.tone, size: 23, dur: 1.3 }); if (J.addTrauma) J.addTrauma(0.45); }
+      // gift name shows ONCE via the top DOM banner — no duplicate canvas popup
+      const J = $J(); if (J) { J.flash(g.tone, 110); if (J.confetti) J.confetti($W()); if (J.addTrauma) J.addTrauma(0.45); }
       if (window.showBanner) window.showBanner(g.ico + ' ' + g.name, g.tone, 2.0);
       return true;
     },

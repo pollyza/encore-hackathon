@@ -1383,8 +1383,10 @@
       if (s.skills && s.skills.q) { s.skills.q._cd = 0; }   // refresh dash → the comeback feels instant
       s.giftBoost = { key, name: g.name, ico: g.ico, tone: g.tone, t: g.dur, age: 0 };
       startGiftIntro(s, key, g);
+      // gift name shows ONCE, via the top DOM banner — no canvas popup of the same
+      // text (that double-printed it and collided with the coach/start-hint).
       if ($showBanner()) $showBanner()(g.ico + ' ' + g.name, g.tone, 2.2);
-      try { if (window.Juice) { window.Juice.flash(g.tone, 120); window.Juice.confetti($W()); window.Juice.popup(g.ico + ' ' + g.name, $W() / 2, $H() * 0.30, { color: g.tone, size: 25, dur: 1.5 }); jTrauma(0.45); } } catch (_) {}
+      try { if (window.Juice) { window.Juice.flash(g.tone, 120); window.Juice.confetti($W()); jTrauma(0.45); } } catch (_) {}
       return true;
     },
 
