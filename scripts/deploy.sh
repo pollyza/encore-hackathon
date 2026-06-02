@@ -101,23 +101,26 @@ fi
 # left /tmp/encore-preview/prototype/live/streamer.html stale and produced
 # "I verified the old code" false-positives in local preview checks.
 if [[ -f "$REPO_ROOT/prototype/live/streamer.html" ]]; then
-    if [[ -d "$DEPLOY_DIR/prototype" ]]; then
-        mkdir -p "$DEPLOY_DIR/prototype/live"
-        sync_file "$REPO_ROOT/prototype/live/streamer.html" "$DEPLOY_DIR/prototype/live/streamer.html"
-    fi
-    if [[ -d "$PREVIEW_DIR/prototype/live" ]]; then
-        sync_file "$REPO_ROOT/prototype/live/streamer.html" "$PREVIEW_DIR/prototype/live/streamer.html"
-        # Sync every css/*.css and js/*.js that lives under prototype/live/.
-        # Glob over the source so newly-added files (clip-composer.js etc.)
-        # don't get silently dropped.
+    # Mirror streamer.html + all css/js to BOTH the local preview AND the
+    # Vercel deploy bundle. Earlier passes had two gaps that broke prod:
+    #   1) Only streamer.html went to DEPLOY_DIR; the css/js glob only ran
+    #      against PREVIEW_DIR — so new files (clip-composer.js,
+    #      player-recorder.js) 404'd on Vercel after deploy.
+    #   2) The PREVIEW_DIR-side glob existed but DEPLOY_DIR-side did not,
+    #      so the gap was invisible during local testing.
+    # Now both sides run the same loop.
+    for target_dir in "$DEPLOY_DIR/prototype" "$PREVIEW_DIR/prototype"; do
+        [[ -d "$target_dir" ]] || continue
+        mkdir -p "$target_dir/live"
+        sync_file "$REPO_ROOT/prototype/live/streamer.html" "$target_dir/live/streamer.html"
         for src in "$REPO_ROOT/prototype/live/css/"*.css "$REPO_ROOT/prototype/live/js/"*.js; do
             [[ -f "$src" ]] || continue
             rel="${src#$REPO_ROOT/prototype/live/}"
-            dst="$PREVIEW_DIR/prototype/live/$rel"
+            dst="$target_dir/live/$rel"
             mkdir -p "$(dirname "$dst")"
             sync_file "$src" "$dst"
         done
-    fi
+    done
 fi
 
 # Note: prototype/v2g/observer.py is intentionally NOT synced to the deploy
