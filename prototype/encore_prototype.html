@@ -2,10 +2,10 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Encore v0.6 — Iso · FPS · MOBA · BR</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Encore v0.6 — GTA · Roblox · Free Fire BR</title>
 <!-- CSS extracted to styles.css for multi-dev work (Ticket M9-prep) -->
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css?v=entry-ui-v4">
 </head>
 <body>
 <div id="wrap">
@@ -31,6 +31,7 @@
 
   <div id="aimpad"></div>
   <div id="joy"><div id="joy-knob"></div></div>
+  <div id="jumpbtn"><span class="jb-arrow">▲</span><span class="jb-txt">JUMP</span></div>
 
   <div id="skills">
     <div class="skill" id="s-q"><span class="ico">Q</span><span class="lbl"></span><span class="cost"></span><span class="cdtxt"></span></div>
@@ -48,30 +49,33 @@
       <div class="tag">⚡ LIVE-NATIVE V2G ENGINE</div>
       <div class="sub">v0.6 · iso voxel · 30 秒一局</div>
 
-      <div class="template-card fps" data-game="fps">
-        <div class="ico-box">FPS</div>
-        <div>
-          <div class="t-name">COVER STRIKE</div>
-          <div class="t-desc">右手拖屏瞄准 · 后坐力曲线 · 弹匣 12 发</div>
-          <div class="t-feel">Valorant 节奏 · 谁先 peek 谁赢</div>
+      <div class="template-card gta" data-game="gta">
+        <div class="ico-box">GTA</div>
+        <div class="t-copy">
+          <div class="t-kicker">STREET HEIST</div>
+          <div class="t-name">GTA HEIST RUN</div>
+          <div class="t-desc">5 车道抢店 · 警车追逐 · 氮气冲刺</div>
+          <div class="t-feel">抢完跑路 · 警灯追逐 · 30s win</div>
         </div>
       </div>
 
-      <div class="template-card moba" data-game="moba">
-        <div class="ico-box">MOBA</div>
-        <div>
-          <div class="t-name">DRAGON PIT</div>
-          <div class="t-desc">技能预瞄拖拽 · 小兵线 · 草丛隐身 · 防御塔</div>
-          <div class="t-feel">LoL 节奏 · 补刀和草丛是决策</div>
+      <div class="template-card roblox" data-game="roblox">
+        <div class="ico-box">OBBY</div>
+        <div class="t-copy">
+          <div class="t-kicker">TOYBOX OBBY</div>
+          <div class="t-name">ROBLOX CHAOS OBBY</div>
+          <div class="t-desc">横版跑酷 · 二段跳跃 · 混沌事件预警</div>
+          <div class="t-feel">看预警起跳 · 存档点救命 · 30s clear</div>
         </div>
       </div>
 
       <div class="template-card br" data-game="br">
-        <div class="ico-box">BR</div>
-        <div>
-          <div class="t-name">FINAL CIRCLE</div>
-          <div class="t-desc">大地图跟随 · 武器稀有度 · 长按 E 开镜 · 小队 AI</div>
-          <div class="t-feel">PUBG 节奏 · 听见远处的枪声</div>
+        <div class="ico-box">FF</div>
+        <div class="t-copy">
+          <div class="t-kicker">FINAL CIRCLE</div>
+          <div class="t-name">FREE FIRE FINAL CIRCLE</div>
+          <div class="t-desc">决赛圈 · Gloo 墙 · 翻滚闪避 · BOOYAH</div>
+          <div class="t-feel">进圈拉枪 · Gloo 墙反打 · BOOYAH</div>
         </div>
       </div>
 
@@ -111,6 +115,15 @@
   // ============================================================
   const isEmbedded = new URLSearchParams(window.location.search).get('embedded') === '1';
   let pendingConfig = null;
+
+  // ─── Dev/test override: force a specific template + theme via URL params ─
+  // Use to deterministically test a game without going through the random
+  // sheet pick. Examples:
+  //   ?force_template=roblox
+  //   ?force_template=gta&force_theme=night
+  const _params       = new URLSearchParams(window.location.search);
+  const forceTemplate = _params.get('force_template');
+  const forceTheme    = _params.get('force_theme');
 
   // ============================================================
   //  CANVAS
@@ -448,9 +461,31 @@
         sky:'#100808',
       },
     },
+    // Roblox themes — pulled from games/roblox.js PALETTES. Mapped to engine
+    // theme schema: sky/sky2 (sky gradient), ground (platform base), accent
+    // (highlight + endZone), wall (player/ground shade).
+    roblox: {
+      grass: { sky:'#7ec0ff', sky2:'#3aa1ff', ground:'#4dbb44', accent:'#ffcc44', wall:'#2a7a26' },
+      snow:  { sky:'#cfeeff', sky2:'#88c4ee', ground:'#e8f4ff', accent:'#ff6633', wall:'#a0bcd0' },
+      lava:  { sky:'#3a1010', sky2:'#5a1414', ground:'#1a0808', accent:'#ff8822', wall:'#6a2a18' },
+      space: { sky:'#0a0428', sky2:'#1a0e44', ground:'#000010', accent:'#88eeff', wall:'#6644aa' },
+    },
+    // GTA themes — pulled from games/gta.js THEMES. Mapped to engine schema:
+    // sky (sky base), sky2 (building base), ground (road), accent (neon/cop
+    // light), wall (sidewalk).
+    gta: {
+      night:     { sky:'#0a0d1a', sky2:'#1a1d28', ground:'#1e2230', accent:'#ff2bd6', wall:'#2a2e3c' },
+      rain:      { sky:'#0f1419', sky2:'#1f2330', ground:'#252a36', accent:'#5ab8ff', wall:'#1a1e26' },
+      sunset:    { sky:'#3b1d2a', sky2:'#2e1d22', ground:'#3a2a2a', accent:'#ffb347', wall:'#4a2e2a' },
+      snownight: { sky:'#1a2030', sky2:'#252b3a', ground:'#2c3140', accent:'#7fcdff', wall:'#3a4055' },
+    },
   };
   function pickTheme(templateKey) {
     const themes = Themes[templateKey];
+    // Dev/test URL override (highest priority): ?force_theme=<key>
+    if (forceTheme && themes && themes[forceTheme]) {
+      return { name: forceTheme, theme: themes[forceTheme] };
+    }
     // V2G embedded mode: parent host may force a specific theme via launch config.
     const override = (pendingConfig && pendingConfig.theme) || null;
     if (override && themes[override]) {
@@ -622,115 +657,250 @@
     tower:  () => beep(330, 0.08, 'triangle', 0.1, -100),
     win:    () => { beep(523, 0.15, 'square', 0.18); setTimeout(()=>beep(659,0.15,'square',0.18),150); setTimeout(()=>beep(784,0.3,'square',0.18),300); },
     lose:   () => { beep(330, 0.3, 'sawtooth', 0.18, -150); setTimeout(()=>beep(220,0.5,'sawtooth',0.2,-100),250); },
+    cash:   () => { beep(880,0.05,'square',0.14); setTimeout(()=>beep(1320,0.05,'square',0.14),50); setTimeout(()=>beep(1760,0.12,'square',0.16),100); },
+    screech:() => { beep(1200,0.18,'sawtooth',0.10,-700); noise(0.12,0.06); },
+    siren:  () => beep(800,0.45,'sawtooth',0.0001), // one-shot fallback; loop via startSiren
+    jump:   () => beep(320,0.12,'square',0.16,420),
+    land:   () => beep(420,0.08,'square',0.12,-220),
+    bigjump:() => { beep(260,0.18,'square',0.18,520); setTimeout(()=>beep(540,0.12,'square',0.14,200),60); },
+    oof:    () => { beep(190,0.14,'square',0.22,-110); noise(0.06,0.12); },   // Roblox "oof" grunt
   };
+
+  // iOS/Safari start AudioContext suspended — MUST resume() on a user gesture
+  // or NOTHING plays (this was the "没有声音" root cause). Call on first touch.
+  let _audioResumed = false;
+  function resumeAudio() {
+    if (_audioResumed) return;
+    try { const a = audio(); if (a.state === 'suspended') a.resume(); _audioResumed = true; } catch (_) {}
+  }
+
+  // Looping siren (police) — two oscillators wailing 660↔880Hz. start/stop.
+  let _siren = null;
+  function startSiren() {
+    if (_siren) return;
+    try {
+      const a = audio(); const o = a.createOscillator(); const g = a.createGain();
+      o.type = 'sawtooth'; g.gain.value = 0.07;
+      o.connect(g); g.connect(a.destination); o.start();
+      const t0 = a.currentTime;
+      for (let i = 0; i < 40; i++) { o.frequency.setValueAtTime(660, t0+i*0.7); o.frequency.linearRampToValueAtTime(920, t0+i*0.7+0.35); o.frequency.linearRampToValueAtTime(660, t0+i*0.7+0.7); }
+      _siren = { o, g };
+    } catch (_) {}
+  }
+  function stopSiren() { if (_siren) { try { _siren.g.gain.exponentialRampToValueAtTime(0.0001, audio().currentTime+0.2); _siren.o.stop(audio().currentTime+0.25); } catch(_){} _siren = null; } }
+
+  // Looping engine rumble — filtered noise loop; raise cutoff with throttle.
+  let _engine = null;
+  function startEngine() {
+    if (_engine) return;
+    try {
+      const a = audio(); const bufSize = a.sampleRate * 1.0;
+      const buf = a.createBuffer(1, bufSize, a.sampleRate); const d = buf.getChannelData(0);
+      for (let i=0;i<bufSize;i++) d[i] = Math.random()*2-1;
+      const s = a.createBufferSource(); s.buffer = buf; s.loop = true;
+      const lp = a.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=90;
+      const g = a.createGain(); g.gain.value=0.10;
+      s.connect(lp); lp.connect(g); g.connect(a.destination); s.start();
+      _engine = { s, lp, g };
+    } catch (_) {}
+  }
+  function setEngineThrottle(x) { if (_engine) { try { _engine.lp.frequency.setTargetAtTime(80 + x*220, audio().currentTime, 0.1); } catch(_){} } }
+  function stopEngine() { if (_engine) { try { _engine.g.gain.exponentialRampToValueAtTime(0.0001, audio().currentTime+0.2); _engine.s.stop(audio().currentTime+0.3); } catch(_){} _engine = null; } }
+  // Expose audio controls for game modules
+  window.SFX = SFX;
+  window.startSiren = startSiren; window.stopSiren = stopSiren;
+  window.startEngine = startEngine; window.setEngineThrottle = setEngineThrottle; window.stopEngine = stopEngine;
+  window.resumeAudio = resumeAudio;
 
   // ============================================================
   //  INPUT
   // ============================================================
   const keys = {};
+  let _spaceT0 = 0;
   window.addEventListener('keydown', e => {
     const k = e.key.toLowerCase();
+    if (keys[k]) return;            // ignore auto-repeat
     keys[k] = true;
+    resumeAudio();
+    // Space/ArrowUp = jump. Press/release model (onActionDown/Up) drives the
+    // platformer's instant + variable-height jump; legacy onAction(heldMs) is the
+    // fallback for any game that still only exposes that.
+    if (k === ' ' || k === 'arrowup') {
+      if (window.current && current.onActionDown) { if (jumpBtn) jumpBtn.classList.add('held'); current.onActionDown(); return; }
+      if (window.current && current.onAction) { _spaceT0 = performance.now(); return; }
+    }
     if (['q','w','e','r'].includes(k)) trySkillPress(k);
   });
   window.addEventListener('keyup', e => {
     const k = e.key.toLowerCase();
     keys[k] = false;
+    if (k === ' ' || k === 'arrowup') {
+      if (window.current && current.onActionUp) { if (jumpBtn) jumpBtn.classList.remove('held'); current.onActionUp(); return; }
+      if (window.current && current.onAction) { current.onAction(performance.now() - _spaceT0); return; }
+    }
     if (['q','w','e','r'].includes(k)) trySkillRelease(k);
   });
 
+  // ============================================================
+  //  UNIFIED TOUCH INPUT (rebuilt 2026-05-29 for real mobile feel)
+  //  Per-game `current.touchMode`:
+  //    'platformer' (Roblox): LEFT half = floating move joystick;
+  //                 RIGHT half (or JUMP button) = tap→jump, hold→big jump.
+  //    'runner' (GTA): swipe L/R anywhere = change lane; tap = nitro.
+  //    'shooter' (BR/FPS/MOBA, default): LEFT = floating joystick;
+  //                 RIGHT = aim pad (drag aim, release fires).
+  //  The joystick is FLOATING — it spawns wherever the left thumb lands,
+  //  so there's no fixed spot to reach for (the #1 mobile-feel fix).
+  // ============================================================
+  const wrap = document.getElementById('wrap');
   const joy = document.getElementById('joy');
   const joyKnob = document.getElementById('joy-knob');
+  const aimpad = document.getElementById('aimpad');
+  const jumpBtn = document.getElementById('jumpbtn');
   const joyVec = { x: 0, y: 0 };
-  let joyActive = false, joyTouchId = null;
-  function joyStart(e) {
-    e.preventDefault();
-    const t = e.touches ? e.touches[0] : e;
-    joyTouchId = e.touches ? t.identifier : null;
-    joyActive = true; joyMove(e);
+  const JOY_R = 60;                 // px deflection for full tilt
+  const JOY_DEAD = 0.14;            // dead-zone fraction (default)
+  // Per-game override: a game module may expose `joyDead` to use a tighter (or
+  // looser) stick dead zone than the shared default. BR sets 0.06 for a snappy
+  // twin-stick; games that don't set it keep 0.14 (zero-regression).
+  function joyDeadZone() { return (window.current && window.current.joyDead != null) ? window.current.joyDead : JOY_DEAD; }
+  let joyId = null, joyOX = 0, joyOY = 0;
+  const aim = { active:false, vx:0, vy:0, touchId:null, ox:0, oy:0 };
+  let actId = null, actT0 = 0, actX0 = 0, actY0 = 0, actMoved = 0;
+
+  function ctrlMode() { return (window.current && window.current.touchMode) || 'shooter'; }
+  function inSkills(t) { const s = document.getElementById('skills'); return s && t && s.contains(t); }
+  function tutorialUp() {
+    const h = document.getElementById('howto'); const sp = document.getElementById('splash');
+    return (h && h.classList.contains('on')) || (sp && sp.classList.contains('on'));
   }
-  function joyMove(e) {
-    if (!joyActive) return;
-    e.preventDefault();
-    let t;
-    if (e.touches) {
-      for (const tch of e.touches) if (tch.identifier === joyTouchId) { t = tch; break; }
-      if (!t) return;
-    } else t = e;
-    const rect = joy.getBoundingClientRect();
-    const cx = rect.left + rect.width/2, cy = rect.top + rect.height/2;
-    let dx = t.clientX - cx, dy = t.clientY - cy;
-    const r = rect.width/2; const dist = Math.hypot(dx, dy);
-    if (dist > r) { dx = dx/dist*r; dy = dy/dist*r; }
-    joyKnob.style.transform = `translate(${dx}px, ${dy}px)`;
-    joyVec.x = dx / r; joyVec.y = dy / r;
-  }
-  function joyEnd(e) {
-    if (e.touches) {
-      let still = false;
-      for (const tch of e.touches) if (tch.identifier === joyTouchId) still = true;
-      if (still) return;
-    }
-    joyActive = false; joyTouchId = null;
-    joyVec.x = 0; joyVec.y = 0;
+  function showJoyAt(cx, cy) {
+    joy.style.left = (cx - JOY_R) + 'px';
+    joy.style.top  = (cy - JOY_R) + 'px';
+    joy.style.bottom = 'auto'; joy.style.right = 'auto';
+    joy.style.width = (JOY_R*2)+'px'; joy.style.height = (JOY_R*2)+'px';
+    joy.style.opacity = '0.9';
     joyKnob.style.transform = 'translate(0,0)';
   }
-  joy.addEventListener('touchstart', joyStart, {passive:false});
-  joy.addEventListener('touchmove', joyMove, {passive:false});
-  joy.addEventListener('touchend', joyEnd);
-  joy.addEventListener('touchcancel', joyEnd);
-  joy.addEventListener('mousedown', joyStart);
-  window.addEventListener('mousemove', joyMove);
-  window.addEventListener('mouseup', joyEnd);
+  function hideJoy() { joyVec.x = 0; joyVec.y = 0; joy.style.opacity = '0'; joyKnob.style.transform = 'translate(0,0)'; }
+  function aimUpdate(t) {
+    // Floating aim stick: direction is relative to where the finger first
+    // landed (aim.ox/oy), not a fixed pad centre — so the right side works as
+    // a proper twin-stick (touch anywhere, drag to aim+fire, release to stop).
+    aim.vx = t.clientX - aim.ox;
+    aim.vy = t.clientY - aim.oy;
+  }
 
-  // Right-side aim pad (FPS uses this; MOBA uses this for telegraph)
-  const aimpad = document.getElementById('aimpad');
-  const aim = { active: false, x: 0, y: 0, vx: 0, vy: 0, touchId: null };
-  function aimStart(e) {
-    e.preventDefault();
-    const t = e.touches ? e.touches[0] : e;
-    aim.touchId = e.touches ? t.identifier : null;
-    aim.active = true;
-    aimMove(e);
-  }
-  function aimMove(e) {
-    if (!aim.active) return;
-    e.preventDefault();
-    let t;
-    if (e.touches) {
-      for (const tch of e.touches) if (tch.identifier === aim.touchId) { t = tch; break; }
-      if (!t) return;
-    } else t = e;
-    const rect = aimpad.getBoundingClientRect();
-    const cx = rect.left + rect.width/2;
-    const cy = rect.top + rect.height/2;
-    aim.x = t.clientX; aim.y = t.clientY;
-    aim.vx = t.clientX - cx; aim.vy = t.clientY - cy;
-  }
-  function aimEnd(e) {
-    if (e.touches) {
-      let still = false;
-      for (const tch of e.touches) if (tch.identifier === aim.touchId) still = true;
-      if (still) return;
+  function onTouchStart(e) {
+    resumeAudio();                  // first gesture unlocks iOS audio
+    if (tutorialUp()) return;       // let the splash/howto overlay handle taps
+    if (gameOver) return;           // end card up — let taps reach REPLAY/MENU (the global preventDefault was eating them → replay dead on mobile)
+    for (const t of e.changedTouches) {
+      if (inSkills(t.target)) continue;     // skill buttons handle themselves
+      const left = t.clientX < window.innerWidth * 0.5;
+      const m = ctrlMode();
+      if (m === 'runner') {
+        // GTA driving stick: LEFT half = floating joystick (Y throttle, X steer),
+        // RIGHT half = tap nitro / swipe lane. (Was: any touch → tap-only, so the
+        // joystick was dead and there was no forward/escape control.)
+        if (left && joyId === null) {
+          joyId = t.identifier; joyOX = t.clientX; joyOY = t.clientY; joyVec.x = 0; joyVec.y = 0;
+          showJoyAt(t.clientX, t.clientY);
+        } else if (!left && actId === null) {
+          actId = t.identifier; actT0 = performance.now(); actX0 = t.clientX; actY0 = t.clientY; actMoved = 0;
+        }
+        e.preventDefault();
+      } else if (left && joyId === null) {
+        joyId = t.identifier; joyOX = t.clientX; joyOY = t.clientY; joyVec.x = 0; joyVec.y = 0;
+        showJoyAt(t.clientX, t.clientY); e.preventDefault();
+      } else if (!left) {
+        if (m === 'platformer') {
+          if (actId === null) {
+            actId = t.identifier; actT0 = performance.now(); actX0 = t.clientX; actY0 = t.clientY; actMoved = 0;
+            if (jumpBtn) jumpBtn.classList.add('held');
+            if (window.current && current.onActionDown) current.onActionDown();   // JUMP fires on PRESS (no release-lag, no drift cancel)
+          }
+        } else if (aim.touchId === null) {
+          aim.touchId = t.identifier; aim.active = true;
+          aim.ox = t.clientX; aim.oy = t.clientY; aim.vx = 0; aim.vy = 0;  // anchor floating aim stick
+        }
+        e.preventDefault();
+      }
     }
-    if (aim.active && current && current.onAimRelease) current.onAimRelease();
-    aim.active = false; aim.touchId = null;
-    aim.vx = 0; aim.vy = 0;
   }
-  aimpad.addEventListener('touchstart', aimStart, {passive:false});
-  aimpad.addEventListener('touchmove', aimMove, {passive:false});
-  aimpad.addEventListener('touchend', aimEnd);
-  aimpad.addEventListener('touchcancel', aimEnd);
-  aimpad.addEventListener('mousedown', aimStart);
-  aimpad.addEventListener('mousemove', e => { if (aim.active) aimMove(e); });
-  aimpad.addEventListener('mouseup', aimEnd);
-  aimpad.addEventListener('mouseleave', aimEnd);
+  function onTouchMove(e) {
+    for (const t of e.changedTouches) {
+      if (t.identifier === joyId) {
+        let dx = t.clientX - joyOX, dy = t.clientY - joyOY;
+        const d = Math.hypot(dx, dy); if (d > JOY_R) { dx = dx/d*JOY_R; dy = dy/d*JOY_R; }
+        joyKnob.style.transform = `translate(${dx}px,${dy}px)`;
+        let nx = dx/JOY_R, ny = dy/JOY_R;
+        const DZ = joyDeadZone();
+        joyVec.x = Math.abs(nx) < DZ ? 0 : nx;
+        joyVec.y = Math.abs(ny) < DZ ? 0 : ny;
+        e.preventDefault();
+      } else if (t.identifier === actId) {
+        actMoved = Math.max(actMoved, Math.hypot(t.clientX - actX0, t.clientY - actY0));
+        e.preventDefault();
+      } else if (t.identifier === aim.touchId) {
+        aimUpdate(t); e.preventDefault();
+      }
+    }
+  }
+  function onTouchEnd(e) {
+    for (const t of e.changedTouches) {
+      if (t.identifier === joyId) { joyId = null; hideJoy(); }
+      else if (t.identifier === actId) {
+        const held = performance.now() - actT0;
+        const dx = t.clientX - actX0, dy = t.clientY - actY0;
+        actId = null;
+        if (jumpBtn) jumpBtn.classList.remove('held');
+        if (window.current && current.onActionUp) {            // platformer: release ends the hold (variable height) — no swipe/drift filter
+          current.onActionUp();
+        } else if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+          if (window.current && current.onSwipe) current.onSwipe(dx > 0 ? 'right' : 'left');
+        } else if (actMoved < 26) {
+          if (window.current && current.onAction) current.onAction(held);
+        }
+      }
+      else if (t.identifier === aim.touchId) {
+        aim.touchId = null; aim.active = false; aim.vx = 0; aim.vy = 0;
+        if (window.current && current.onAimRelease) current.onAimRelease();
+      }
+    }
+  }
+  wrap.addEventListener('touchstart', onTouchStart, {passive:false});
+  wrap.addEventListener('touchmove',  onTouchMove,  {passive:false});
+  wrap.addEventListener('touchend',   onTouchEnd);
+  wrap.addEventListener('touchcancel',onTouchEnd);
+  // Desktop mouse: left-drag = joystick, right-side click = action (minimal; phone is the target)
+  wrap.addEventListener('mousedown', (e) => {
+    if (tutorialUp() || inSkills(e.target)) return;
+    if (e.clientX < window.innerWidth*0.5 && ctrlMode() !== 'runner') {
+      joyId = 'mouse'; joyOX = e.clientX; joyOY = e.clientY; showJoyAt(e.clientX, e.clientY);
+    } else { actId = 'mouse'; actT0 = performance.now(); actX0 = e.clientX; actY0 = e.clientY; actMoved = 0;
+      if (jumpBtn) jumpBtn.classList.add('held');
+      if (ctrlMode() === 'platformer' && window.current && current.onActionDown) current.onActionDown(); }
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (joyId === 'mouse') { let dx=e.clientX-joyOX, dy=e.clientY-joyOY; const d=Math.hypot(dx,dy); if(d>JOY_R){dx=dx/d*JOY_R;dy=dy/d*JOY_R;} joyKnob.style.transform=`translate(${dx}px,${dy}px)`; let nx=dx/JOY_R,ny=dy/JOY_R; const DZ=joyDeadZone(); joyVec.x=Math.abs(nx)<DZ?0:nx; joyVec.y=Math.abs(ny)<DZ?0:ny; }
+    else if (actId === 'mouse') { actMoved = Math.max(actMoved, Math.hypot(e.clientX-actX0, e.clientY-actY0)); }
+    else if (aim.touchId === 'mouse') aimUpdate(e);
+  });
+  window.addEventListener('mouseup', (e) => {
+    if (joyId === 'mouse') { joyId=null; hideJoy(); }
+    else if (actId === 'mouse') { const held=performance.now()-actT0; const dx=e.clientX-actX0,dy=e.clientY-actY0; actId=null; if(jumpBtn)jumpBtn.classList.remove('held'); if(window.current&&current.onActionUp){ current.onActionUp(); } else if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy)*1.2){ if(window.current&&current.onSwipe)current.onSwipe(dx>0?'right':'left'); } else if(actMoved<26){ if(window.current&&current.onAction)current.onAction(held); } }
+  });
 
   function aimAngle() {
     const m = Math.hypot(aim.vx, aim.vy);
     if (m < 8) return null;
     return Math.atan2(aim.vy, aim.vx);
   }
+  // [PR · shared engine] Right side held down? (true on touch, before any drag) —
+  // BR's FF-style fire button reads this: hold the right side = fire + auto-aim
+  // nearest enemy, no drag needed. Additive; other games ignore it.
+  window.aimActive = function () { return aim.active; };
 
   // Mouse-on-canvas aim source (desktop). The aimpad overlay covers the
   // bottom-right of the canvas with high z-index, so we listen on window —
@@ -749,12 +919,31 @@
     mouseWorld = Iso.s2w(sx, sy);
   });
 
-  // Skill button press/release
+  // Skill button press/release. For games that expose current.onAction
+  // (platformer/Roblox), the primary 'q' button measures press duration and
+  // calls onAction(heldMs) — so tap vs hold (big jump) is decided reliably at
+  // release, not via a frame-race on skillHeld. Other keys/games keep the
+  // classic castPress/castRelease path.
   const skillHeld = { q:false, w:false, e:false, r:false };
+  const skillPressT = { q:0, w:0, e:0, r:0 };
   ['q','w','e','r'].forEach(k => {
     const el = document.getElementById('s-'+k);
-    const onPress = (e) => { e.preventDefault(); e.stopPropagation(); skillHeld[k] = true; el.classList.add('held'); trySkillPress(k); };
-    const onRel   = (e) => { skillHeld[k] = false; el.classList.remove('held'); trySkillRelease(k); };
+    const usesAction = () => (window.current && current.onAction && k === 'q');
+    const onPress = (e) => {
+      e.preventDefault(); e.stopPropagation();
+      skillHeld[k] = true; el.classList.add('held'); skillPressT[k] = performance.now();
+      // [A] GTA nitro: fire on PRESS (onActionDown) so it triggers instantly even
+      // while the left thumb holds the steering joystick (user: "摇杆和加速不能同时触发").
+      // Games without onActionDown keep the release-timed onAction path (Roblox jump).
+      if (k === 'q' && window.current && current.onActionDown) { current.onActionDown(); el._firedDown = true; }
+      else if (!usesAction()) trySkillPress(k);
+    };
+    const onRel   = (e) => {
+      skillHeld[k] = false; el.classList.remove('held');
+      if (el._firedDown) { el._firedDown = false; return; }   // already fired on press → don't double-fire on release
+      if (usesAction()) current.onAction(performance.now() - skillPressT[k]);
+      else trySkillRelease(k);
+    };
     el.addEventListener('touchstart', onPress, {passive:false});
     el.addEventListener('touchend',   onRel);
     el.addEventListener('touchcancel',onRel);
@@ -762,6 +951,25 @@
     el.addEventListener('mouseup',    onRel);
     el.addEventListener('mouseleave', onRel);
   });
+
+  // Dedicated JUMP button — owns its OWN touches so pressing IT always jumps,
+  // reliably, even while the left thumb holds the joystick. (Was visual-only, so
+  // the #skills overlay made the router's inSkills() skip swallow button taps —
+  // the label said JUMP but only a right-half canvas tap worked. Top mobile
+  // platformers give the button its own handler; this is that.)
+  if (jumpBtn) {
+    let jbDown = false;
+    const jbPress = (e) => { if (gameOver || tutorialUp()) return; e.preventDefault(); e.stopPropagation();
+      if (jbDown) return; jbDown = true; jumpBtn.classList.add('held'); resumeAudio();
+      if (window.current && current.onActionDown) current.onActionDown(); };
+    const jbUp = (e) => { if (!jbDown) return; jbDown = false; if (e) e.stopPropagation();
+      jumpBtn.classList.remove('held'); if (window.current && current.onActionUp) current.onActionUp(); };
+    jumpBtn.addEventListener('touchstart', jbPress, { passive:false });
+    jumpBtn.addEventListener('touchend',   jbUp,   { passive:false });
+    jumpBtn.addEventListener('touchcancel',jbUp,   { passive:false });
+    jumpBtn.addEventListener('mousedown',  jbPress);
+    window.addEventListener('mouseup',     jbUp);
+  }
 
   function getMoveVec() {
     let mvx = joyVec.x, mvy = joyVec.y;
@@ -926,6 +1134,43 @@
   let current = null;
   let state = null;
   let gameOver = false, gameWon = false, started = false;
+
+  // ============================================================
+  //  EXPOSE ENGINE GLOBALS — so external game modules
+  //  (prototype/games/*.js) can register Games.X using the engine
+  //  helpers. Mutable bindings (state, W, H, pendingConfig, current)
+  //  use getters so external code sees the live value, not a stale
+  //  snapshot from boot time. Const helpers are assigned directly.
+  // ============================================================
+  window.Games = Games;
+  window.ctx = ctx;
+  window.canvas = canvas;
+  window.Iso = Iso;
+  window.SFX = SFX;
+  window.keys = keys;
+  window.skillHeld = skillHeld;
+  window.modeBadge = modeBadge;
+  window.scoreEl = scoreEl;
+  window.bakeGround = bakeGround;
+  window.spawnParticles = spawnParticles;
+  window.showBanner = showBanner;
+  // pickTheme / finishGame / pickTheme are defined later but are function
+  // declarations (hoisted) or referenced lazily by modules — expose now.
+  window.pickTheme = pickTheme;
+  window.finishGame = finishGame;
+  // Contract globals declared in prototype/games/_interface.md but not previously
+  // exposed. External modules (br.js etc.) rely on these — restoring per spec.
+  window.getMoveVec = getMoveVec;
+  window.aimAngle = aimAngle;
+  window.flashFCT = flashFCT;
+  window.updateParticles = updateParticles;
+  window.drawParticles = drawParticles;
+  Object.defineProperty(window, 'mouseWorld', { get: () => mouseWorld, configurable: true });
+  Object.defineProperty(window, 'W', { get: () => W, configurable: true });
+  Object.defineProperty(window, 'H', { get: () => H, configurable: true });
+  Object.defineProperty(window, 'state', { get: () => state, set: v => { state = v; }, configurable: true });
+  Object.defineProperty(window, 'pendingConfig', { get: () => pendingConfig, set: v => { pendingConfig = v; }, configurable: true });
+  Object.defineProperty(window, 'current', { get: () => current, set: v => { current = v; }, configurable: true });
 
   function trySkillPress(k) {
     if (!started || gameOver || !current) return;
@@ -2850,19 +3095,54 @@
       ],
     },
     br: {
-      title: 'FINAL CIRCLE',
-      rows: isTouch ? [
-        ['LEFT JOY',   '走位 · 躲毒圈 · 找掩体'],
-        ['RIGHT DRAG', '拖屏瞄准 · 自动开火'],
-        ['E 技能',     '长按开镜 · 减抖增伤'],
-        ['地上掉落',   '踩上去捡更高稀有度武器'],
-        ['WIN',        '活到最后 30 秒'],
+      title: 'FREE FIRE · BOOYAH 决赛圈',
+      rows: isTouch ? (isEmbedded ? [
+        ['🏆 目标',    '10 人乱斗 · 活到最后 = BOOYAH'],
+        ['🕹 左侧',    '拖着跑位 · 进安全圈躲毒'],
+        ['🔫 右下',    '按住开火 · 自动锁敌'],
+        ['🧱 技能',    'Q 冲刺 · W KIT · E Gloo 墙'],
       ] : [
-        ['WASD',   '走位 · 躲毒圈 · 找掩体'],
-        ['MOUSE',  '移动鼠标瞄准 · 自动开火'],
-        ['E 键',   '长按开镜 · 减抖增伤'],
-        ['地上掉落', '踩上去捡更高稀有度武器'],
-        ['WIN',    '活到最后 30 秒'],
+        ['🏆 目标',    '10 人乱斗 · 活到最后 = BOOYAH'],
+        ['🕹 左摇杆',  '拖着跑位 · 进安全圈躲毒'],
+        ['🔫 按住右侧', '自动锁敌开火 · 不用自己瞄'],
+        ['🎁 空投',    '捡发光补给箱 = 换搞怪强枪'],
+        ['🤸 技能',    'R 翻滚无敌 · Q 冲刺 · W 回血 · E Gloo 墙'],
+      ]) : [
+        ['🏆 目标',      '10 人乱斗 · 活到最后 = BOOYAH'],
+        ['WASD 移动',    '跑位 · 进安全圈躲毒'],
+        ['右键/空格 开火', '自动锁敌 · 不用自己瞄'],
+        ['🎁 空投',      '捡发光补给箱 = 换搞怪强枪'],
+        ['技能',         'R 翻滚无敌 · Q 冲刺 · W 回血 · E Gloo 墙'],
+      ],
+    },
+    roblox: {
+      title: 'ROBLOX · 混沌闯关',
+      rows: isTouch ? [
+        ['🏁 怎么赢',  '30 秒内跑到最右边的终点旗 = 通关!'],
+        ['🕹 左下拖',  '左右走 — 想走哪就往哪拖'],
+        ['🟩 右下点',  '跳;空中再点一下 = 二段跳(跳更远 / 救命)'],
+        ['⚠ 预警闪现', '危险来了!照字躲 — 跳开 / 反方向顶 / 起跳越过'],
+        ['🟥 红熔岩',  '别踩!掉下去 = 在最近存档点(青旗)重生,不用从头'],
+      ] : [
+        ['🏁 怎么赢',  '30 秒内跑到最右边的终点旗 = 通关!'],
+        ['← → / A D', '左右走'],
+        ['空格 / ↑',  '跳;空中再按一下 = 二段跳'],
+        ['⚠ 预警',    '照字躲 — 跳开 / 反方向顶 / 起跳越过'],
+        ['🟥 红熔岩',  '别踩!掉下去 = 最近存档点重生'],
+      ],
+    },
+    gta: {
+      title: '开车去抢钱 💰',
+      rows: isTouch ? [
+        ['目标',      '开车抢光所有发光的店'],
+        ['怎么抢',    '滑左摇杆,开进发光的店 → 自动打劫'],
+        ['怎么赢',    '抢光所有店 · 或 活到 30 秒'],
+        ['小心',      '别撞车 · 别被警察抓 · 右下氮气加速'],
+      ] : [
+        ['目标',      '开车抢光所有发光的店'],
+        ['怎么抢',    'A/D 开进发光的店 → 自动打劫'],
+        ['怎么赢',    '抢光所有店 · 或 活到 30 秒'],
+        ['小心',      '别撞车 · 别被抓 · SPACE 氮气加速'],
       ],
     },
   };
@@ -2901,6 +3181,31 @@
     last = 0;
   }
 
+  // ── QA harness (verification hooks) ────────────────────────────
+  // Game modules and external tooling drive input directly through these so
+  // we can prove the full update→render pipeline works in headless / programmatic
+  // playback (real touch events from JS-synthesized TouchEvent constructors do
+  // NOT deliver to passive:false listeners reliably across browsers).
+  window.dismissTutorial = dismissTutorial;
+  window.__qaSetJoy = (x, y) => {
+    joyVec.x = Math.max(-1, Math.min(1, x || 0));
+    joyVec.y = Math.max(-1, Math.min(1, y || 0));
+    if (joyKnob) joyKnob.style.transform = `translate(${joyVec.x * 40}px, ${joyVec.y * 40}px)`;
+  };
+  window.__qaSetAim = (angle) => {
+    if (angle == null) { aim.vx = 0; aim.vy = 0; aim.active = false; }
+    else { aim.active = true; aim.vx = Math.cos(angle) * 60; aim.vy = Math.sin(angle) * 60; }
+  };
+  window.__qaPressSkill = (key) => { trySkillPress(key); setTimeout(() => trySkillRelease(key), 120); };
+  // ?qa=1 or ?skipTutorial=1 auto-dismisses the tutorial 1s after launch so
+  // the deployed URL is verifiable without manual interaction.
+  (function() {
+    const u = new URLSearchParams(location.search);
+    if (u.get('qa') === '1' || u.get('skipTutorial') === '1') {
+      setTimeout(() => { try { dismissTutorial(); } catch(_){} }, 1100);
+    }
+  })();
+
   document.getElementById('howto-go').addEventListener('click', (e) => {
     e.stopPropagation();
     dismissTutorial();
@@ -2922,10 +3227,13 @@
 
   function startGame(key) {
     Iso.camX = 0; Iso.camY = 0;
+    if (window.Juice) Juice.reset();
     current = Games[key];
     modeBadge.textContent = current.badge;
     setBarsConfig({ showMP: current.showMP });
     setPills(current.pills || {});
+    document.body.classList.toggle('br-mode', key === 'br');   // [PR] BR-only: lift skills cluster to free the bottom-right FIRE button zone
+    document.body.classList.toggle('embedded-mode', isEmbedded);
     const cfg = current.skills();
     setSkillsConfig(cfg);
     current.init();
@@ -2936,6 +3244,13 @@
     timeLeft = current.duration;
     gameOver = false; gameWon = false; started = true;
     document.body.classList.add('playing');
+    // Platformer (Roblox) uses a dedicated right-side JUMP button; hide the aim pad
+    // for it and show the button. Other modes keep their CSS defaults (reset to '').
+    { const tm = current.touchMode || 'shooter';
+      if (jumpBtn) jumpBtn.style.display = (tm === 'platformer') ? 'flex' : 'none';
+      if (aimpad)  aimpad.style.display  = (tm === 'platformer') ? 'none' : '';
+      const barsEl = document.getElementById('bars'); if (barsEl) barsEl.style.display = (tm === 'platformer') ? 'none' : '';
+      const skillsEl = document.getElementById('skills'); if (skillsEl) skillsEl.style.display = (tm === 'platformer') ? 'none' : ''; }
     document.getElementById('splash').classList.remove('on');
     document.getElementById('end').classList.remove('on');
     showTutorial(key);
@@ -3043,7 +3358,13 @@
       return;
     }
 
-    if (!gameOver && !tutorialActive) {
+    // Juice layer advances every frame (even while frozen). Hit-stop gates
+    // the game sim: when frozen we skip update (freeze-frame) but keep drawing
+    // so particles/flash still animate — the trick that "sells" the impact.
+    const jFrozen = !!(window.Juice && Juice.frozen());
+    if (window.Juice) Juice.tick(dt);
+
+    if (!gameOver && !tutorialActive && !jFrozen) {
       current.update(dt);
       updateAmbient(dt, current.fxKey);
       timeLeft -= dt;
@@ -3069,6 +3390,7 @@
     current.draw();
     drawAmbient();
     drawColorGrading(current.fxKey);
+    if (window.Juice) Juice.draw(ctx, W, H);   // popups + particles + post-FX overlay
 
     const p = state.player;
     hpFill.style.width = Math.max(0, (p.hp/p.maxHp)*100) + '%';
@@ -3087,12 +3409,21 @@
     c.addEventListener('click', fire);
     c.addEventListener('touchstart', fire, {passive:false});
   });
-  document.getElementById('btn-retry').addEventListener('click', () => {
-    const key = current === Games.fps ? 'fps' : current === Games.moba ? 'moba' : 'br';
+  // Bind BOTH click + touchstart so the end-card buttons work on mobile (a
+  // click alone is unreliable here; preventDefault suppresses the synthesized
+  // click so we never restart twice).
+  const retryFn = (e) => {
+    if (e && e.cancelable) e.preventDefault();
+    const key = Object.keys(Games).find(k => Games[k] === current);
+    if (!key) return;
     document.getElementById('end').classList.remove('on');
     startGame(key);
-  });
-  document.getElementById('btn-menu').addEventListener('click', backToMenu);
+  };
+  document.getElementById('btn-retry').addEventListener('click', retryFn);
+  document.getElementById('btn-retry').addEventListener('touchstart', retryFn, { passive: false });
+  const menuFn = (e) => { if (e && e.cancelable) e.preventDefault(); backToMenu(); };
+  document.getElementById('btn-menu').addEventListener('click', menuFn);
+  document.getElementById('btn-menu').addEventListener('touchstart', menuFn, { passive: false });
 
   // B1: kick off atlas load non-blocking. If atlas.png/json are absent or
   // fail, Assets.ready stays false and procedural fallbacks render. When
@@ -3103,6 +3434,33 @@
   // ============================================================
   //  V2G — embedded boot + parent message listener
   // ============================================================
+  const EMBEDDED_EXTERNAL_TEMPLATES = new Set(['gta', 'roblox', 'br']);
+  let deferredEmbeddedLaunch = null;
+  function launchFromEmbeddedConfig(cfg) {
+    const tpl = cfg && cfg.template;
+    const needsExternalModule = isEmbedded && EMBEDDED_EXTERNAL_TEMPLATES.has(tpl);
+    if (!Games[tpl] || (needsExternalModule && !window.__encoreExternalGamesReady)) {
+      if (document.readyState !== 'loading') {
+        console.warn('Encore: template not ready in launch config:', tpl, cfg);
+      }
+      deferredEmbeddedLaunch = cfg;
+      return false;
+    }
+    deferredEmbeddedLaunch = null;
+    pendingConfig = cfg;
+    audio();  // unlock audio context (best-effort; may fail without user gesture)
+    document.getElementById('splash').classList.remove('on');
+    document.getElementById('end').classList.remove('on');
+    startGame(tpl);
+    return true;
+  }
+  function flushDeferredEmbeddedLaunch() {
+    if (!deferredEmbeddedLaunch) return;
+    launchFromEmbeddedConfig(deferredEmbeddedLaunch);
+  }
+  window.__encoreExternalGamesReady = false;
+  window.__encoreFlushDeferredLaunch = flushDeferredEmbeddedLaunch;
+
   if (isEmbedded) {
     // Don't show the splash in embedded mode — wait for a launch message.
     document.getElementById('splash').classList.remove('on');
@@ -3117,26 +3475,67 @@
     if (!data || typeof data !== 'object') return;
     if (data.type === 'launch') {
       const cfg = data.config || {};
-      const tpl = cfg.template;
-      if (!Games[tpl]) {
-        console.warn('Encore: unknown template in launch config:', tpl, cfg);
-        return;
-      }
-      pendingConfig = cfg;
-      audio();  // unlock audio context (best-effort; may fail without user gesture)
-      document.getElementById('splash').classList.remove('on');
-      document.getElementById('end').classList.remove('on');
-      startGame(tpl);
+      launchFromEmbeddedConfig(cfg);
     } else if (data.type === 'reset') {
       // host can recall to splash
       pendingConfig = null;
+      deferredEmbeddedLaunch = null;
       backToMenu();
       if (isEmbedded) document.getElementById('splash').classList.remove('on');
     }
   });
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', flushDeferredEmbeddedLaunch, { once: true });
+  } else {
+    setTimeout(flushDeferredEmbeddedLaunch, 0);
+  }
+
+  // ─── Dev/test override: ?force_template=<key> auto-starts that game ───
+  // Skips splash card UI entirely. Useful for iPhone testing without going
+  // through the streamer.html bottom sheet random pick. Polls Games registry
+  // because external scripts (games/roblox.js, games/gta.js) load AFTER this
+  // IIFE runs — so template may not be registered yet on first tick.
+  if (forceTemplate) {
+    // The external game modules (games/*.js, line ~3429) load AFTER this inline
+    // script and OVERWRITE the inline fallback definitions (e.g. the legacy inline
+    // Games.br). The old code started on a fixed 100ms timer — a gamble that the
+    // external file had landed. On a slow/CDN connection it hadn't, so the stale
+    // inline version booted (the live "7-bot, brActive:false, frozen" bug).
+    // DOMContentLoaded fires only after every parser-blocking <script src> has
+    // executed, so by then Games[forceTemplate] is guaranteed to be the external
+    // module — start then, regardless of connection speed.
+    const autoLaunch = () => {
+      if (!Games[forceTemplate]) {
+        console.warn('force_template=' + forceTemplate + ' not found in Games registry');
+        return;
+      }
+      document.getElementById('splash').classList.remove('on');
+      pendingConfig = {
+        template: forceTemplate,
+        theme:    forceTheme || null,
+        scenario: {},
+      };
+      startGame(forceTemplate);
+    };
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', autoLaunch, { once: true });
+    } else {
+      autoLaunch();
+    }
+  }
 
   requestAnimationFrame(tick);
 })();
+</script>
+<!-- External game modules — register on window.Games after main IIFE exposes engine globals.
+     ?v= version query busts stale browser cache of the game modules (bump on each ship). -->
+<script src="games/juice.js?v=r12a"></script>
+<script src="games/roblox.js?v=r12a"></script>
+<script src="games/gta.js?v=r12a"></script>
+<script src="games/br.js?v=r12b"></script>
+<script>
+  window.__encoreExternalGamesReady = true;
+  if (window.__encoreFlushDeferredLaunch) window.__encoreFlushDeferredLaunch();
 </script>
 </body>
 </html>

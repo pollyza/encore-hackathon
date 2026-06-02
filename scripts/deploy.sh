@@ -70,6 +70,26 @@ if [[ -f "$REPO_ROOT/prototype/styles.css" ]]; then
     sync_file "$REPO_ROOT/prototype/styles.css" "$DEPLOY_DIR/prototype/styles.css"
 fi
 
+# Game modules — encore_prototype.html loads these via <script src="games/*.js">.
+# BUG FIX (2026-05-29): these were never synced, so the deployed build shipped
+# stale/missing game logic while the local source had the real games. Sync all
+# game modules + the sprite atlas to both mirrors.
+for sub in games assets; do
+    if [[ -d "$REPO_ROOT/prototype/$sub" ]]; then
+        mkdir -p "$PREVIEW_DIR/$sub" "$DEPLOY_DIR/prototype/$sub"
+        for f in "$REPO_ROOT/prototype/$sub"/*; do
+            [[ -f "$f" ]] || continue
+            base="$(basename "$f")"
+            # skip dev-only python/markdown in assets; ship js/png/json only
+            case "$base" in
+                *.py|*.md) continue ;;
+            esac
+            sync_file "$f" "$PREVIEW_DIR/$sub/$base"
+            sync_file "$f" "$DEPLOY_DIR/prototype/$sub/$base"
+        done
+    fi
+done
+
 # Slides — used by the access-gated deck in the deploy bundle
 if [[ -f "$REPO_ROOT/docs/encore_slides.html" ]]; then
     [[ -d "$DEPLOY_DIR/docs" ]] && sync_file "$REPO_ROOT/docs/encore_slides.html" "$DEPLOY_DIR/docs/encore_slides.html"

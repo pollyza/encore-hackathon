@@ -3,7 +3,7 @@
  *
  * Phases:
  *   loading  → 2.7s AI-generation feel (thumbnail + scan + status cycle + progress)
- *   game     → loads Mario's template (FPS / MOBA / BR) in an iframe via the
+ *   game     → loads Mario's template (GTA / Roblox / Free Fire BR) in an iframe via the
  *              V2G postMessage protocol (schema v1.1):
  *                parent → iframe: { type: 'launch', config: V2GResponse }
  *                iframe → parent: { type: 'encore_ready' }  (after load)
@@ -41,29 +41,35 @@
   // ── Mario template catalogue (matches encore_prototype.html `Games.x`) ─
   // Loaded into the iframe via { type: 'launch', config } on encore_ready.
   // schema.md v1.1 documents the V2GResponse shape.
-  const TEMPLATES = ['fps', 'moba', 'br'];  // td WIP — add when Mario ships
+  const TEMPLATES = ['gta', 'roblox', 'br'];  // Mario final set: GTA + Roblox + Free Fire BR
   const THEMES = {
-    fps:  ['desert', 'snow', 'cyber', 'jungle'],
-    moba: ['grass',  'lava', 'ice',   'twilight'],
-    br:   ['forest', 'desert', 'island', 'wasteland'],
+    fps:    ['desert', 'snow', 'cyber',  'jungle'],
+    moba:   ['grass',  'lava', 'ice',    'twilight'],
+    br:     ['forest', 'desert', 'island','wasteland'],
+    roblox: ['grass',  'snow', 'lava',   'space'],         // Mario v2 5/28
+    gta:    ['night',  'rain', 'sunset', 'snownight'],     // Mario v2 5/28
   };
   const TEMPLATE_LABEL = {
-    fps:  'Cover Strike',
-    moba: 'Dragon Pit',
-    br:   'Final Circle',
-    td:   'Wave Defense',
+    fps:    'Cover Strike',
+    moba:   'Dragon Pit',
+    br:     'Free Fire BR',
+    td:     'Wave Defense',
+    roblox: 'Obby Parkour',   // Mario v2 5/28
+    gta:    'GTA Heist',      // Mario v2 5/28
   };
   const TEMPLATE_DESC = {
-    fps:  '1vN clutch',
-    moba: 'dragon pit fight',
-    br:   'final circle',
-    td:   'tower defense wave',
+    fps:    '1vN clutch',
+    moba:   'dragon pit fight',
+    br:     'free fire final circle',
+    td:     'tower defense wave',
+    roblox: 'platform parkour',   // Mario v2 5/28
+    gta:    'shop heist run',     // Mario v2 5/28
   };
   const WEAPONS = ['pistol', 'smg', 'rifle', 'sniper'];
 
   // IFRAME URL — relative to /live/streamer.html, hits /prototype/encore_prototype.html
   // (which the deploy mirror flattens to /encore_prototype.html). Both work.
-  const IFRAME_URL = '../encore_prototype.html?embedded=1';
+  const IFRAME_URL = '../encore_prototype.html?embedded=1&v=v2g-ready-r2';
 
   // Random V2GResponse — used when no real Vision detection is available.
   // Each open() pulls a fresh config so demo rounds feel varied.
@@ -71,13 +77,33 @@
   function makeRandomConfig() {
     const template = pickRandom(TEMPLATES);
     const theme    = pickRandom(THEMES[template]);
-    const scenario = {
-      enemy_count: 2 + Math.floor(Math.random() * 3),     // 2..4
-      hp_start:    pickRandom([60, 80, 100]),
-      description: TEMPLATE_DESC[template],
-    };
-    if (template === 'fps' || template === 'br') {
-      scenario.weapon = pickRandom(WEAPONS);
+    let scenario;
+    // Per-template scenario fields (Mario v2 5/28)
+    if (template === 'roblox') {
+      scenario = {
+        platform_count: 18,
+        gap_range_min:  80,
+        gap_range_max:  220,
+        seed:           Math.floor(Math.random() * 100000),
+        description:    TEMPLATE_DESC[template],
+      };
+    } else if (template === 'gta') {
+      scenario = {
+        shop_count:     4,
+        cop_spawn_rate: 0.2,
+        map_size:       1500,
+        description:    TEMPLATE_DESC[template],
+      };
+    } else {
+      // fps / moba / br / td legacy fields
+      scenario = {
+        enemy_count: 2 + Math.floor(Math.random() * 3),     // 2..4
+        hp_start:    pickRandom([60, 80, 100]),
+        description: TEMPLATE_DESC[template],
+      };
+      if (template === 'fps' || template === 'br') {
+        scenario.weapon = pickRandom(WEAPONS);
+      }
     }
     return {
       highlight:  true,
