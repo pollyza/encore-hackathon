@@ -930,6 +930,32 @@ h2.section-title .red { color: var(--c-red); }
     border-radius: 0 6px 6px 0;
 }
 .demo-side-block:last-child { border-left-color: var(--c-teal); }
+/* QR block — leftmost block on demo-side, red accent so it stands out
+   against the gold / teal of CONTROLS / FYI. White background on the QR
+   itself so the scanner always reads it cleanly against the dark deck. */
+.demo-side-qr { border-left-color: var(--c-red); }
+.demo-side-qr .demo-side-label { color: var(--c-red); }
+.qr-wrap {
+    display: flex;
+    align-items: center;
+    gap: clamp(0.7rem, 1.6vw, 1.2rem);
+}
+.qr-img {
+    width: clamp(96px, 12vw, 140px);
+    height: clamp(96px, 12vw, 140px);
+    background: #fff;
+    padding: clamp(6px, 0.8vw, 10px);
+    border-radius: 6px;
+    box-shadow: 0 4px 14px rgba(255, 70, 85, 0.25);
+    flex-shrink: 0;
+    image-rendering: pixelated;
+}
+.qr-url {
+    font-family: var(--font-mono);
+    font-size: var(--small-size);
+    color: var(--text-secondary);
+    word-break: break-all;
+}
 .demo-side-label {
     font-family: var(--font-pixel);
     font-size: clamp(0.5rem, 0.8vw, 0.7rem);
@@ -1563,6 +1589,13 @@ h2.section-title .red { color: var(--c-red); }
                 </div>
             </div>
             <div class="demo-side reveal-right" style="--delay:0.55s">
+                <div class="demo-side-block demo-side-qr">
+                    <div class="demo-side-label">SCAN ME · 扫码玩</div>
+                    <div class="qr-wrap">
+                        <img src="qr-encore.svg" alt="QR · encore-deploy.vercel.app" class="qr-img">
+                        <div class="qr-url">encore-deploy.vercel.app</div>
+                    </div>
+                </div>
                 <div class="demo-side-block">
                     <div class="demo-side-label">CONTROLS</div>
                     <ul class="demo-side-list">
