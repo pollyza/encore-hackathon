@@ -19,3 +19,8 @@ obligation — which is exactly why CC0 was chosen (GitHub-clean, zero license r
   · `oof`←low_down · `warn`←low_three_tone
 
 CC0 deed: https://creativecommons.org/publicdomain/zero/1.0/
+
+## Audio — Kenney "Sci-Fi Sounds" (CC0)  ->  assets/kenney/audio/{gta,ff}/
+- Official: https://kenney.nl/assets/sci-fi-sounds  ·  mirror: https://github.com/Boyquotes/kenney-sci-fi-sounds-for-godot
+- GTA: qDash from engine_circular · hit from explosion_crunch · shot from laser_large (cash/win/lose from Digital pep/power_up/low_down; tire screech stays synth)
+- FF: shot/shotLow from laser_small/large · hit/rBlast/death from explosion_crunch · wHit/qDash from force_field · zone from Digital high_down · pickup/pickupRare/win/lose from Digital pep/power_up/low_down

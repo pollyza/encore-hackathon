@@ -242,7 +242,22 @@
   function $scoreEl()  { return document.getElementById('score'); }
   function $Iso()      { return window.Iso; }
   function $keys()     { return window.keys || {}; }
-  function $SFX()      { return window.SFX || {}; }
+  // ── Kenney CC0 audio (GTA) — sci-fi/digital samples (CC0; assets/kenney/CREDITS.md)
+  //    mapped to the game's sfx names. Overriding $SFX() routes every existing SFX.x()
+  //    call through here: a real sample if mapped+loaded, else the shared synth SFX
+  //    (e.g. tire screech stays synth — no tonally-right CC0 clip). GTA-local.
+  const GTA_AUDIO = {
+    base: 'assets/kenney/audio/gta/',
+    files: { qDash:'qDash.ogg', cash:'cash.ogg', hit:'hit.ogg', shot:'shot.ogg', win:'win.ogg', lose:'lose.ogg' },
+    vol:   { qDash:0.42, cash:0.5, hit:0.5, shot:0.3, win:0.55, lose:0.5 },
+    pool: {}, ok: {},
+    load() { try { for (const k in this.files) { const kk=k, arr=[]; for (let i=0;i<3;i++){ const a=new Audio(this.base+this.files[k]); a.preload='auto'; a.volume=this.vol[k]||0.4; if(i===0){ a.addEventListener('canplaythrough',()=>{this.ok[kk]=true;},{once:true}); a.addEventListener('error',()=>{this.ok[kk]=false;},{once:true}); } arr.push(a); } this.pool[kk]=arr; } } catch(_){} },
+    play(n){ if(!this.ok[n]||!this.pool[n])return false; try { const arr=this.pool[n]; let a=arr.find(x=>x.paused||x.ended); if(!a){ a=arr[0].cloneNode(); a.volume=this.vol[n]||0.4; } a.currentTime=0; const pr=a.play(); if(pr&&pr.catch)pr.catch(()=>{}); return true; } catch(_){ return false; } },
+  };
+  try { GTA_AUDIO.load(); window.__gtaAudioOk = () => GTA_AUDIO.ok; } catch (_) {}
+  const GTA_SFX_PROXY = (typeof Proxy !== 'undefined') ? new Proxy({}, { get(_, name) { if (typeof name !== 'string') return undefined;
+    return function () { if (GTA_AUDIO.play(name)) return; const s = window.SFX; if (s && typeof s[name] === 'function') { try { s[name](); } catch (_) {} } }; } }) : null;
+  function $SFX()      { return GTA_SFX_PROXY || window.SFX || {}; }
   function $J()        { return window.Juice || null; }
 
   // ─── color helpers ──────────────────────────────────────────
