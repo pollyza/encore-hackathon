@@ -24,3 +24,9 @@ CC0 deed: https://creativecommons.org/publicdomain/zero/1.0/
 - Official: https://kenney.nl/assets/sci-fi-sounds  ·  mirror: https://github.com/Boyquotes/kenney-sci-fi-sounds-for-godot
 - GTA: qDash from engine_circular · hit from explosion_crunch · shot from laser_large (cash/win/lose from Digital pep/power_up/low_down; tire screech stays synth)
 - FF: shot/shotLow from laser_small/large · hit/rBlast/death from explosion_crunch · wHit/qDash from force_field · zone from Digital high_down · pickup/pickupRare/win/lose from Digital pep/power_up/low_down
+
+## Audio realism pass (v2) — replaced sci-fi/arcade clips for GTA + FF
+- OGA "The Free Firearm Sound Library" (CC0): real guns, trimmed to ~0.5s mono. GTA shot=1911 pistol; FF shot=AR-15, shotLow=Mossberg shotgun, rBlast=AK-47. https://opengameart.org/content/the-free-firearm-sound-library
+- OGA "Car Sound Effects Pack" (CC0): GTA nitro = real car acceleration. https://opengameart.org/content/car-sound-effects-pack-low-quality
+- Kenney "Impact Sounds" (CC0): GTA crash + FF hit = metal clang, FF wHit = wood, FF qDash/death = impacts. https://github.com/Boyquotes/kenney-impact-sounds-for-godot
+- Kept (neutral, not sci-fi): cash/win/lose/pickup/zone from Kenney Digital. Roblox audio unchanged (user OK).

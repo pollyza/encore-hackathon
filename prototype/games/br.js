@@ -73,7 +73,7 @@
   //    else the shared synth SFX. BR-local — GTA/Roblox untouched.
   const FF_AUDIO = {
     base: 'assets/kenney/audio/ff/',
-    files: { shot:'shot.ogg', shotLow:'shotLow.ogg', hit:'hit.ogg', wHit:'wHit.ogg', rBlast:'rBlast.ogg', death:'death.ogg',
+    files: { shot:'shot.wav', shotLow:'shotLow.wav', hit:'hit.ogg', wHit:'wHit.ogg', rBlast:'rBlast.wav', death:'death.ogg',
              lose:'lose.ogg', win:'win.ogg', pickup:'pickup.ogg', pickupRare:'pickupRare.ogg', qDash:'qDash.ogg', zone:'zone.ogg' },
     vol:   { shot:0.3, shotLow:0.34, hit:0.4, wHit:0.4, rBlast:0.5, death:0.5, lose:0.5, win:0.55, pickup:0.42, pickupRare:0.5, qDash:0.4, zone:0.4 },
     pool: {}, ok: {},

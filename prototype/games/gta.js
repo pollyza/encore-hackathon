@@ -248,7 +248,7 @@
   //    (e.g. tire screech stays synth — no tonally-right CC0 clip). GTA-local.
   const GTA_AUDIO = {
     base: 'assets/kenney/audio/gta/',
-    files: { qDash:'qDash.ogg', cash:'cash.ogg', hit:'hit.ogg', shot:'shot.ogg', win:'win.ogg', lose:'lose.ogg' },
+    files: { qDash:'qDash.ogg', cash:'cash.ogg', hit:'hit.ogg', shot:'shot.wav', win:'win.ogg', lose:'lose.ogg' },
     vol:   { qDash:0.42, cash:0.5, hit:0.5, shot:0.3, win:0.55, lose:0.5 },
     pool: {}, ok: {},
     load() { try { for (const k in this.files) { const kk=k, arr=[]; for (let i=0;i<3;i++){ const a=new Audio(this.base+this.files[k]); a.preload='auto'; a.volume=this.vol[k]||0.4; if(i===0){ a.addEventListener('canplaythrough',()=>{this.ok[kk]=true;},{once:true}); a.addEventListener('error',()=>{this.ok[kk]=false;},{once:true}); } arr.push(a); } this.pool[kk]=arr; } } catch(_){} },
