@@ -1662,33 +1662,30 @@ h2.section-title .red { color: var(--c-red); }
 <section class="slide">
     <div class="slide-content">
         <div class="eyebrow reveal" style="--delay:0.05s">07 · 成本 + 风险</div>
-        <h2 class="section-title reveal" style="--delay:0.15s">不自己跑 Vision,<span class="accent">两阶段成本路径都算得清。</span></h2>
-        <p class="lead reveal" style="--delay:0.22s">复用平台已有的 <strong>高光识别 + 游戏识别</strong> 管道(主播侧标签 / 推荐 / 审核已经在跑), Encore 直接消费信号 —— 我们这边不需要再跑一遍 Vision。</p>
+        <h2 class="section-title reveal" style="--delay:0.15s">不自己跑 Vision,<span class="accent">两阶段成本都算得清。</span></h2>
+        <p class="lead reveal" style="--delay:0.22s">复用平台已有的<strong>高光识别 + 游戏识别</strong>信号, Encore 不需要自跑 Vision。</p>
         <div class="vision-grid">
             <div class="v-step reveal-scale" style="--delay:0.32s">
-                <div class="step-num">A · 阶段 1 · M9 上线</div>
+                <div class="step-num">A · 阶段 1 · M9</div>
                 <div class="ico">📦</div>
                 <h3>预制模板匹配<br>~$0 增量</h3>
-                <p>检测到 (高光 + 游戏 X) → 直接匹配跟游戏 title 绑定的预制 Encore 模板。 核心投入 = <strong>多预生成模板</strong>(品类 × 主题组合)。</p>
-                <p><em>优势: 上线快, 单位成本 ≈ 0, 行为可预测, 不依赖 LLM 实时延迟。</em></p>
+                <p>(高光 + 游戏 X) → 匹配预制模板。 核心投入 = <strong>预生成模板</strong>(品类 × 主题, 一次性)。 上线快、可预测、不依赖 LLM。</p>
             </div>
             <div class="v-step reveal-scale" style="--delay:0.47s">
-                <div class="step-num">B · 阶段 2 · M14+ 长期</div>
+                <div class="step-num">B · 阶段 2 · M14+</div>
                 <div class="ico">🧠</div>
                 <h3>LLM 实时生成<br>~$1M / 月全量</h3>
-                <p>同样的输入信号 + Sonnet / Gemini 理解高光的具体玩法(1v3 retake vs sniper headshot 是 3 个不同子场景)→ 实时生成定制 Encore。</p>
-                <p><em>优势: 玩法跟高光紧密契合, 不再是粗粒度模板。 单条 ~$0.017, 50K 直播间同时在播 ≈ $1M/月。</em></p>
+                <p>Sonnet / Gemini 理解高光具体玩法 → 实时生成定制 Encore, 跟主播这一波紧密契合。 单条 ~$0.017。</p>
             </div>
             <div class="v-step reveal-scale" style="--delay:0.62s">
                 <div class="step-num">C · 风险诚实承认</div>
                 <div class="ico">⚠️</div>
-                <h3>3 件没解决的事</h3>
-                <p><strong>(1)</strong> 30 秒小游戏好不好玩 — 需要 6-12 个月调优</p>
-                <p><strong>(2)</strong> Phase 2 实时生成的延迟 + 质量 — 待工程验证(高光出现到 Encore 弹出 &lt; 5s 是硬约束)</p>
-                <p><strong>(3)</strong> 单品类切入 — 先 FPS / MOBA / BR, 长尾扩展靠 Phase 2</p>
+                <h3>3 件没解决</h3>
+                <p><strong>(1)</strong> 30s 游戏好不好玩 — 6-12 月调优</p>
+                <p><strong>(2)</strong> Phase 2 LLM 延迟 / 质量 — 待工程验证</p>
+                <p><strong>(3)</strong> 单品类切入 — 先 FPS / MOBA / BR</p>
             </div>
         </div>
-        <p class="lead reveal" style="--delay:0.88s; margin-top:0.6rem;">法务: 抽象像素美术不碰任何游戏 IP, 不 OCR 游戏 UI 文字。 没有合规黑洞。</p>
     </div>
 </section>
 
