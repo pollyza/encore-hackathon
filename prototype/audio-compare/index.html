@@ -1,0 +1,47 @@
+<!doctype html><html lang="zh"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Encore · 枪声 4 选 1</title>
+<style>
+  :root{color-scheme:dark}
+  *{box-sizing:border-box}
+  body{margin:0;background:#0e1014;color:#e8edf2;font:16px/1.5 -apple-system,system-ui,"PingFang SC",sans-serif;padding:18px 16px 60px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:#9aa3ad;font-size:13px;margin:0 0 18px}
+  .tip{background:#1a2733;border:1px solid #28425a;border-radius:10px;padding:12px 14px;font-size:13px;color:#bcd4e6;margin-bottom:20px}
+  .tip b{color:#7ad0ff}
+  .card{background:#161a20;border:1px solid #262c35;border-radius:14px;padding:16px;margin-bottom:14px}
+  .lbl{font-size:18px;font-weight:700;margin:0 0 2px}
+  .lbl span{display:inline-block;min-width:30px;color:#ffd24a}
+  .desc{color:#9aa3ad;font-size:13px;margin:0 0 12px}
+  .row{display:flex;gap:10px}
+  button{flex:1;border:0;border-radius:10px;padding:14px 8px;font-size:15px;font-weight:700;color:#06120a;cursor:pointer}
+  .b1{background:#5ad1a0}.b2{background:#ff9d3a}
+  button:active{transform:scale(.97)}
+  .foot{margin-top:24px;background:#13211a;border:1px solid #245a3f;border-radius:10px;padding:14px;font-size:14px;color:#bfe9cf}
+  .foot b{color:#7ef5b0}
+</style></head>
+<body>
+<h1>枪声 4 选 1 — 用你的耳朵定</h1>
+<p class="sub">我听不到声音,所以做了这个让你挑。同一把步枪,4 种不同"质感"。</p>
+<div class="tip">重点听 <b>连发(自动)</b> 那个键 —— 那就是游戏里疯狂开枪的样子,直接验证"是不是像键盘敲击"。挑一个你觉得最像真枪/最爽的,告诉我 <b>A / B / C / D</b>,我就把这个质感套到三款游戏所有枪上(GTA 手枪 + FF 步枪/霰弹/AK)。</div>
+
+<div class="card"><p class="lbl"><span>A</span>原声(真实录音,不加工)</p><p class="desc">最"真",但可能发闷——CC0 真枪录音本身偏沉。</p>
+<div class="row"><button class="b1" onclick="one('A')">▶ 单发</button><button class="b2" onclick="burst('A')">▶▶ 连发(自动)</button></div></div>
+
+<div class="card"><p class="lbl"><span>B</span>均衡(枪身+炸裂+低频+尾音)</p><p class="desc">分层,低中高都有,比较"标准"的游戏枪声。</p>
+<div class="row"><button class="b1" onclick="one('B')">▶ 单发</button><button class="b2" onclick="burst('B')">▶▶ 连发(自动)</button></div></div>
+
+<div class="card"><p class="lbl"><span>C</span>厚重(深低频 + 长尾音)</p><p class="desc">电影感大 BANG,低频猛、有回响。偏"重"。</p>
+<div class="row"><button class="b1" onclick="one('C')">▶ 单发</button><button class="b2" onclick="burst('C')">▶▶ 连发(自动)</button></div></div>
+
+<div class="card"><p class="lbl"><span>D</span>凌厉(炸裂感强 + 紧)</p><p class="desc">脆、利、短促,攻击性强。偏"快"。</p>
+<div class="row"><button class="b1" onclick="one('D')">▶ 单发</button><button class="b2" onclick="burst('D')">▶▶ 连发(自动)</button></div></div>
+
+<div class="foot">听完回我一个字母(<b>A/B/C/D</b>)。觉得都不对也直接说,我换思路。<br>背景音乐我已经按你给的参考定了方向(GTA=圣安地列斯主题感 / Roblox=Ahrix Nova 旋律电子 / FF=战斗 hype),挑完枪声一起加。</div>
+
+<script>
+const map={A:'gun_A_raw.wav',B:'gun_B_balanced.wav',C:'gun_C_boom.wav',D:'gun_D_punch.wav'};
+function one(k){const a=new Audio(map[k]);a.volume=0.95;a.play().catch(()=>{});}
+function burst(k){for(let i=0;i<7;i++){setTimeout(()=>{const a=new Audio(map[k]);a.volume=0.92;a.play().catch(()=>{});},i*110);}}
+</script>
+</body></html>
