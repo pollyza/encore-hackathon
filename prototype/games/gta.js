@@ -350,8 +350,24 @@
   // Low-angle 2.5D car: a ground shadow + a raised body with a lit roof, darker
   // flanks, and a rounded shell — reads as a solid vehicle from a GTA-ish low
   // camera instead of a flat tile. Pure local draw (no projection change).
-  function drawCarTopDown(c, sx, sy, w, body, glass) {
+  // ── Kenney CC0 car sprites (GTA pilot) — top-down "Racing Pack" cars (CC0 / public
+  //    domain; see assets/kenney/CREDITS.md). Same pattern as Roblox: loose-image loader,
+  //    procedural fallback on every call so a missing/slow asset never breaks the game or
+  //    QA gates. GTA-local — Roblox/BR + the shared Assets atlas are untouched.
+  const GTA_SPR = {
+    base: 'assets/kenney/gta/',
+    files: { player:'car_player.png', cop:'car_cop.png', t1:'car_t1.png', t2:'car_t2.png', t3:'car_t3.png', t4:'car_t4.png', t5:'car_t5.png' },
+    img: {}, ok: {},
+    load() { try { for (const k in this.files) { const kk = k, im = new Image(); im.onload = () => { this.ok[kk] = true; }; im.onerror = () => { this.ok[kk] = false; }; im.src = this.base + this.files[k]; this.img[kk] = im; } } catch (_) {} },
+    has(k) { const im = this.img[k]; return !!(this.ok[k] && im && im.complete && im.naturalWidth > 0); },
+    car(c, kind, sx, sy, w) { const k = this.has(kind) ? kind : (this.has('t1') ? 't1' : null); if (!k) return false;   // top-down car, front=up, native aspect
+      const im = this.img[k], h = w * im.naturalHeight / im.naturalWidth; c.drawImage(im, sx - w/2, sy - h/2, w, h); return true; },
+  };
+  try { GTA_SPR.load(); } catch (_) {}
+
+  function drawCarTopDown(c, sx, sy, w, body, glass, kind) {
     sx = Math.round(sx); sy = Math.round(sy);
+    if (kind && GTA_SPR.car(c, kind, sx, sy, w)) return;             // Kenney car sprite (cop siren bar is drawn separately) → procedural fallback below
     const h = w * 1.7, rx = w*0.16;
     const rrect = (x,y,ww,hh,r) => { c.beginPath(); c.moveTo(x+r,y); c.arcTo(x+ww,y,x+ww,y+hh,r); c.arcTo(x+ww,y+hh,x,y+hh,r); c.arcTo(x,y+hh,x,y,r); c.arcTo(x,y,x+ww,y,r); c.closePath(); };
     // ground shadow (offset down-right → implies a low sun / height)
@@ -1591,9 +1607,9 @@
           for (let i = -2; i <= 2; i++) { ctx.fillStyle = (i & 1) ? '#f4c430' : '#222'; ctx.fillRect(sx - bw/2 + (i+2)*bw/5, sy - 10, bw/5, 20); }
           ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.strokeRect(sx - bw/2, sy - 10, bw, 20);
         } else if (o.smashed) {
-          ctx.save(); ctx.translate(sx, sy); ctx.rotate(o.spin || 0); drawCarTopDown(ctx, 0, 0, laneW * o.w, o.color, '#11151f'); ctx.restore();
+          ctx.save(); ctx.translate(sx, sy); ctx.rotate(o.spin || 0); drawCarTopDown(ctx, 0, 0, laneW * o.w, o.color, '#11151f', (o._spr || (o._spr = 't' + (1 + Math.abs((o.wx|0)+(o.wy|0)) % 5)))); ctx.restore();
         } else {
-          drawCarTopDown(ctx, sx, sy, laneW * o.w, o.color, '#11151f');
+          drawCarTopDown(ctx, sx, sy, laneW * o.w, o.color, '#11151f', (o._spr || (o._spr = 't' + (1 + Math.abs((o.wx|0)+(o.wy|0)) % 5))));
         }
       }
 
@@ -1602,8 +1618,8 @@
         const sy = g2sy(cop.wy); if (sy < -80 || sy > H + 80) continue;
         const sx = g2sx(cop.wx);
         if (cop._hitFlash > 0) { cop._hitFlash -= 0.016; }                  // white flash when shot
-        if (cop._wipe > 0) { ctx.save(); ctx.translate(sx, sy); ctx.rotate(cop._spin || 0); drawCarTopDown(ctx, 0, 0, laneW * 0.62, t.cop, t.copGlass); ctx.restore(); }
-        else drawCarTopDown(ctx, sx, sy, laneW * 0.62, cop._hitFlash > 0 ? '#ffffff' : t.cop, t.copGlass);
+        if (cop._wipe > 0) { ctx.save(); ctx.translate(sx, sy); ctx.rotate(cop._spin || 0); drawCarTopDown(ctx, 0, 0, laneW * 0.62, t.cop, t.copGlass, 'cop'); ctx.restore(); }
+        else drawCarTopDown(ctx, sx, sy, laneW * 0.62, cop._hitFlash > 0 ? '#ffffff' : t.cop, t.copGlass, cop._hitFlash > 0 ? null : 'cop');
         const fl = Math.sin(s.elapsed * 16 + cop.sirenPhase) > 0;
         const cl = t.copLight || ['#ff2b2b', '#2b6bff'];
         ctx.fillStyle = fl ? cl[0] : cl[1]; ctx.fillRect(sx - 8, sy - 4, 16, 4);
@@ -1653,7 +1669,7 @@
         if (p._tireT > 0) { const ws2 = p._tireDir*laneW*0.30; for (let i=0;i<5;i++){ const k=(s.elapsed*3+i*0.2)%1; ctx.globalAlpha=0.5-0.45*k; ctx.fillStyle='#9aa0aa'; ctx.beginPath(); ctx.arc(sx+ws2 - p._tireDir*k*22, sy+laneW*0.40+k*10, 3+k*8, 0, Math.PI*2); ctx.fill(); } ctx.globalAlpha=1; }
         const inv = (p.invulnT||0) > 0 && Math.floor(s.elapsed*12)%2===0;
         if (p._tankT > 0) { ctx.save(); ctx.shadowColor = '#ff3bd6'; ctx.shadowBlur = 18; drawCarTopDown(ctx, sx, sy, laneW*0.80, '#ff3bd6', '#ffd0f5'); ctx.restore(); }
-        else drawCarTopDown(ctx, sx, sy, laneW*0.66, inv ? '#ffffff' : t.car, t.carGlass);
+        else drawCarTopDown(ctx, sx, sy, laneW*0.66, inv ? '#ffffff' : t.car, t.carGlass, inv ? null : 'player');
         drawGangster(ctx, sx, sy, laneW, p._robSide, p._robberPop, s.elapsed);   // always-on driver head; leans out w/ gun on rob
         // drive-by muzzle flash (firing backward at the cops behind)
         if (p._muzzleT > 0) { const gs = p._gunSide || 1, mx = sx + gs*laneW*0.34, my = sy + laneW*0.42;
