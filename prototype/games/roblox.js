@@ -29,7 +29,24 @@
   function $setState(s) { window.state = s; }
   function $finish(won, sub) { if (typeof window.finishGame === 'function') window.finishGame(won, sub); }
   function $pickTheme(k) { if (typeof window.pickTheme === 'function') return window.pickTheme(k); return null; }
-  function $sfx(n) { try { if (window.SFX && typeof window.SFX[n] === 'function') window.SFX[n](); } catch (_) {} }
+  // Kenney CC0 sound layer (Digital Audio, public domain — see ASSETS_CREDITS.md).
+  // Plays a real sample per sfx; falls back to the shared synth SFX if a clip is
+  // missing/blocked. Isolated to Roblox via this local $sfx — BR/GTA keep the synth.
+  const RBX_AUDIO = {
+    base: 'assets/kenney/audio/',
+    files: { jump:'jump.ogg', bigjump:'bigjump.ogg', pickup:'pickup.ogg', oof:'oof.ogg', warn:'warn.ogg' },
+    vol:   { jump:0.32, bigjump:0.42, pickup:0.40, oof:0.5, warn:0.42 },
+    pool: {}, ok: {},
+    load() { try { for (const k in this.files) { const kk = k, arr = [];
+      for (let i = 0; i < 3; i++) { const a = new Audio(this.base + this.files[k]); a.preload = 'auto'; a.volume = this.vol[k] || 0.4;
+        if (i === 0) { a.addEventListener('canplaythrough', () => { this.ok[kk] = true; }, { once: true }); a.addEventListener('error', () => { this.ok[kk] = false; }, { once: true }); }
+        arr.push(a); } this.pool[kk] = arr; } } catch (_) {} },
+    play(n) { if (!this.ok[n] || !this.pool[n]) return false;
+      try { const arr = this.pool[n]; let a = arr.find(x => x.paused || x.ended); if (!a) { a = arr[0].cloneNode(); a.volume = this.vol[n] || 0.4; }
+        a.currentTime = 0; const pr = a.play(); if (pr && pr.catch) pr.catch(() => {}); return true; } catch (_) { return false; } },
+  };
+  try { RBX_AUDIO.load(); window.__rbxAudioOk = () => RBX_AUDIO.ok; } catch (_) {}
+  function $sfx(n) { try { if (RBX_AUDIO.play(n)) return; if (window.SFX && typeof window.SFX[n] === 'function') window.SFX[n](); } catch (_) {} }
 
   // ── Color helpers ──
   function mix(hex, w_, t) { const h = hex.replace('#',''), w = w_.replace('#','');
@@ -497,6 +514,45 @@
   // moment a paid gift creates (made to be screenshot/shared). Normal jumps never
   // reach the threshold, so it only shows on a gift flight.
   // ── Drawn (pixel-art) Roblox-culture icons — no emoji, instantly recognizable ──
+  // ── Kenney CC0 sprite layer (Roblox art pilot) ──────────────────────────────
+  // Loads loose PNGs (Kenney "Platformer Pack Deluxe", CC0 / public domain — see
+  // ASSETS_CREDITS.md) and draws them scaled. EVERY call site keeps its procedural
+  // draw as a fallback, so a missing/slow/failed asset never breaks the game or the
+  // QA gates — the art simply swaps in once loaded. Self-contained to Roblox (the
+  // shared Assets atlas + other games are untouched); promote to shared when BR/GTA
+  // get the same treatment.
+  const RBX = {
+    base: 'assets/kenney/',
+    files: { stand:'p1_stand.png', jump:'p1_jump.png', walk1:'p1_walk01.png', walk2:'p1_walk02.png', walk3:'p1_walk03.png', hurt:'p1_hurt.png',
+      grassMid:'grassMid.png', snowMid:'snowMid.png', stoneMid:'stoneMid.png', castleMid:'castleMid.png',
+      dirtCenter:'dirtCenter.png', grassCenter:'grassCenter.png', snowCenter:'snowCenter.png', stoneCenter:'stoneCenter.png', castleCenter:'castleCenter.png',
+      coinGold:'coinGold.png', gemBlue:'gemBlue.png', gemYellow:'gemYellow.png', star:'star.png',
+      springboardUp:'springboardUp.png', spikes:'spikes.png', flagGreen:'flagGreen.png', flagGreen2:'flagGreen2.png', flagRed:'flagRed.png',
+      cloud1:'cloud1.png', cloud2:'cloud2.png', cloud3:'cloud3.png', bush:'bush.png', plant:'plant.png' },
+    img:{}, ok:{},
+    load(){ try { for (const k in this.files){ const kk=k, im=new Image(); im.onload=()=>{this.ok[kk]=true;}; im.onerror=()=>{this.ok[kk]=false;}; im.src=this.base+this.files[k]; this.img[kk]=im; } } catch(_){} },
+    has(k){ const im=this.img[k]; return !!(this.ok[k] && im && im.complete && im.naturalWidth>0); },
+    tile(c,k,dx,dy,dw,dh){ if(!this.has(k))return false; c.drawImage(this.img[k],dx,dy,dw,dh); return true; },             // top-left rect
+    foot(c,k,x,y,h,flip){ if(!this.has(k))return false; const im=this.img[k], w=h*im.naturalWidth/im.naturalHeight;        // bottom-center anchor (standing)
+      c.save(); c.translate(x,y); if(flip)c.scale(-1,1); c.drawImage(im,-w/2,-h,w,h); c.restore(); return true; },
+    ctr(c,k,x,y,h){ if(!this.has(k))return false; const im=this.img[k], w=h*im.naturalWidth/im.naturalHeight;              // center anchor
+      c.drawImage(im,x-w/2,y-h/2,w,h); return true; },
+    ready(){ return this.has('grassMid') && this.has('stand'); },
+  };
+  RBX.load();
+  const THEME_TILE = { grass:['grassMid','dirtCenter'], snow:['snowMid','snowCenter'], lava:['stoneMid','stoneCenter'], space:['castleMid','castleCenter'] };
+  let rbxTheme = 'grass';                                          // set per-frame from state.themeKey in drawScene
+  function rbxTiles(){ return THEME_TILE[rbxTheme] || THEME_TILE.grass; }
+  // tiled ground: one soil row + one grass/theme top row, tiled to fit the platform width.
+  function drawTiledBase(c, x, topY, w){
+    const tk = rbxTiles(), topK = tk[0], fillK = tk[1];
+    const n = Math.max(1, Math.round(w / 46)), ts = w / n, gy = topY - 10;   // grass crown ~ the standing line
+    for (let i = 0; i < n; i++){ const tx = Math.floor(x + i*ts), tw = Math.ceil(ts) + 1;   // +1 overlap kills sub-pixel seams
+      RBX.tile(c, fillK, tx, gy + ts - 1, tw, ts + 2);            // soil body
+      RBX.tile(c, topK,  tx, gy,          tw, ts);                // grass/theme top
+    }
+  }
+
   function drawRobux(c, x, y, r) {                  // the currency coin (R$) — flex
     c.save(); c.fillStyle = '#f5c542'; c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill();
     c.strokeStyle = '#c79a2e'; c.lineWidth = 2; c.stroke();
@@ -574,6 +630,7 @@
     const ctx = $ctx(); if (!ctx) return;
     const W = $W(), H = $H(); const pal = palOf(state); const p = state.player;
     const em = eventMod(state); const scale = (em.scale || 1) * ((state.runMod && state.runMod.scale) || 1);   // GIANT/MINI run-mods
+    rbxTheme = state.themeKey || 'grass';                              // Kenney tile set follows the run theme
 
     ctx.save();
     if (state.shakeT > 0) { const m = state.shakeMag; ctx.translate((Math.random()-0.5)*m, (Math.random()-0.5)*m); }
@@ -592,6 +649,7 @@
     drawSkyEasterEggs(ctx, state, W, H);                 // GIFT: fly high → space + Roblox memes (moon嫦娥玉兔变形金刚 / 火星马斯克外星人)
     if (bd.weather === 'clouds') drawClouds(ctx, W, H, bd.cloud);
     drawHills(ctx, pal, W, H, bd);
+    drawCloudsSprite(ctx, state, W, H);                  // Kenney parallax clouds (grass/snow themes) — additive polish over the sky
     drawWeather(ctx, bd, state, W, H);                   // rain / snow / leaves — BEHIND platforms (never hides a hazard)
 
     // platforms (sorted far→near is irrelevant in 2D; draw in order)
@@ -622,6 +680,15 @@
     if (state.time < 7) drawStartHint(ctx, state.time, W, H);
   }
 
+  function drawCloudsSprite(c, state, W, H) {        // Kenney CC0 clouds, slow parallax; skipped on lava/space (look wrong there)
+    if (!RBX.has('cloud1') || rbxTheme === 'lava' || rbxTheme === 'space') return;
+    const cam = View.camX || 0, span = W + 280;
+    const defs = [['cloud1', 0.08, 0.13, 60], ['cloud2', 0.42, 0.09, 50], ['cloud3', 0.72, 0.19, 56], ['cloud1', 0.92, 0.27, 44]];
+    c.save(); c.globalAlpha = 0.9;
+    for (const d of defs) { const base = d[1] * span - cam * 0.22, px = ((base % span) + span) % span - 140;
+      RBX.ctr(c, d[0], px, d[2] * H, d[3]); }
+    c.restore();
+  }
   function drawClouds(c, W, H, col) {
     c.save(); c.globalAlpha = 0.88; c.fillStyle = col || '#ffffff';
     const span = W + 240;
@@ -757,18 +824,22 @@
     if (pl.kind === 'bounce') { top = '#62f1de'; side = '#1f9c8f'; }     // trampoline
     const va = (pl.kind === 'vanish') ? (pl._gone ? 0.15 : (pl._fade != null ? pl._fade : 1)) : 1;
     c.save(); c.globalAlpha = va;
-    c.fillStyle = side; c.fillRect(x, topY, w, thick + 60);            // front/side face (extends down)
-    c.fillStyle = shade(side, 0.35); c.fillRect(x, topY + thick + 56, w, 4);
-    c.fillStyle = top; c.fillRect(x, topY - 8, w, 13);                 // TOP face — where you land
-    c.fillStyle = tint(top, 0.42); c.fillRect(x, topY - 8, w, 3);      // top catch-light (plastic gloss)
-    // STUDS — the Roblox signature: a row of little cylinders on the top surface
-    const sd = Math.max(14, 16 * View.SCALE / 1.9), r = Math.max(3.2, 4.1 * View.SCALE / 1.9);
-    const nStud = Math.max(1, Math.floor((w - 8) / sd)), padS = (w - nStud * sd) / 2 + sd / 2;
-    const studTop = tint(top, 0.36), studLip = shade(top, 0.20);
-    for (let i = 0; i < nStud; i++) { const cxp = x + padS + i * sd, cyp = topY - 4;
-      c.fillStyle = studLip; c.beginPath(); c.ellipse(cxp, cyp + 1.6, r, r * 0.62, 0, 0, Math.PI * 2); c.fill();
-      c.fillStyle = studTop; c.beginPath(); c.ellipse(cxp, cyp, r, r * 0.62, 0, 0, Math.PI * 2); c.fill(); }
-    c.strokeStyle = 'rgba(0,0,0,0.32)'; c.lineWidth = 1.5; c.strokeRect(x + 0.5, topY - 8 + 0.5, w, thick + 64);
+    if (RBX.ready() && pl.kind !== 'kill') {
+      drawTiledBase(c, x, topY, w);                                   // Kenney grass/theme ground (kill blocks stay procedural-red below)
+    } else {
+      c.fillStyle = side; c.fillRect(x, topY, w, thick + 60);            // front/side face (extends down)
+      c.fillStyle = shade(side, 0.35); c.fillRect(x, topY + thick + 56, w, 4);
+      c.fillStyle = top; c.fillRect(x, topY - 8, w, 13);                 // TOP face — where you land
+      c.fillStyle = tint(top, 0.42); c.fillRect(x, topY - 8, w, 3);      // top catch-light (plastic gloss)
+      // STUDS — the Roblox signature: a row of little cylinders on the top surface
+      const sd = Math.max(14, 16 * View.SCALE / 1.9), r = Math.max(3.2, 4.1 * View.SCALE / 1.9);
+      const nStud = Math.max(1, Math.floor((w - 8) / sd)), padS = (w - nStud * sd) / 2 + sd / 2;
+      const studTop = tint(top, 0.36), studLip = shade(top, 0.20);
+      for (let i = 0; i < nStud; i++) { const cxp = x + padS + i * sd, cyp = topY - 4;
+        c.fillStyle = studLip; c.beginPath(); c.ellipse(cxp, cyp + 1.6, r, r * 0.62, 0, 0, Math.PI * 2); c.fill();
+        c.fillStyle = studTop; c.beginPath(); c.ellipse(cxp, cyp, r, r * 0.62, 0, 0, Math.PI * 2); c.fill(); }
+      c.strokeStyle = 'rgba(0,0,0,0.32)'; c.lineWidth = 1.5; c.strokeRect(x + 0.5, topY - 8 + 0.5, w, thick + 64);
+    }
     c.restore();   // end vanish fade
     // ── obby obstacle markers (full alpha) ──
     if (pl.kind === 'kill') { c.save(); const pul = 0.5 + 0.5 * Math.sin(t * 9);   // DANGER at a glance: molten lava + spikes (Roblox spike-trap language — "don't step here")
@@ -780,14 +851,16 @@
         c.fillStyle = 'rgba(255,240,200,0.85)'; c.beginPath(); c.moveTo(bx0 + bw0 / 2 - 1.4, topY - 12); c.lineTo(bx0 + bw0 / 2, topY - 18); c.lineTo(bx0 + bw0 / 2 + 1.4, topY - 12); c.closePath(); c.fill(); }   // glint on each tip
       c.fillStyle = '#ffd24a'; for (let i = 0; i < 3; i++) { const bxp = x + w * (0.25 + 0.25 * i) + Math.sin(t * 4 + i) * 3; c.beginPath(); c.arc(bxp, topY + 1, 2, 0, Math.PI * 2); c.fill(); }   // bubbling lava
       c.restore(); }
-    if (pl.kind === 'bounce') { c.save();   // SPRING: a coil down the front + bouncy arrow — "this launches you" at a glance
-      c.strokeStyle = '#0a4a44'; c.lineWidth = 3; c.lineCap = 'round';
-      const cw = Math.min(15, w * 0.28), cy0 = topY + 5, ch = 22, loops = 3;
-      c.beginPath(); c.moveTo(sx - cw, cy0);
-      for (let i = 0; i < loops; i++) { const yy = cy0 + (ch / loops) * i; c.lineTo(sx + cw, yy + (ch / loops) * 0.5); c.lineTo(sx - cw, yy + (ch / loops)); }
-      c.stroke();
-      c.strokeStyle = '#063a34'; c.beginPath(); c.moveTo(sx - 9, topY + 1); c.lineTo(sx, topY - 8); c.lineTo(sx + 9, topY + 1); c.stroke();   // bouncy up-arrow on the pad
-      c.lineCap = 'butt'; c.restore(); }
+    if (pl.kind === 'bounce') {   // SPRING: Kenney springboard sprite → procedural coil fallback
+      if (!RBX.foot(c, 'springboardUp', sx, topY - 3, Math.min(46, Math.max(30, w * 0.7)))) {
+        c.save(); c.strokeStyle = '#0a4a44'; c.lineWidth = 3; c.lineCap = 'round';
+        const cw = Math.min(15, w * 0.28), cy0 = topY + 5, ch = 22, loops = 3;
+        c.beginPath(); c.moveTo(sx - cw, cy0);
+        for (let i = 0; i < loops; i++) { const yy = cy0 + (ch / loops) * i; c.lineTo(sx + cw, yy + (ch / loops) * 0.5); c.lineTo(sx - cw, yy + (ch / loops)); }
+        c.stroke();
+        c.strokeStyle = '#063a34'; c.beginPath(); c.moveTo(sx - 9, topY + 1); c.lineTo(sx, topY - 8); c.lineTo(sx + 9, topY + 1); c.stroke();   // bouncy up-arrow on the pad
+        c.lineCap = 'butt'; c.restore(); }
+    }
     if (pl.kind === 'vanish' && !pl._gone) { c.save(); c.setLineDash([6, 4]);   // DASHED = temporary/unstable, it blinks out (Roblox disappearing-platform language)
       c.strokeStyle = 'rgba(255,255,255,' + (0.5 + 0.35 * Math.sin(t * 6 + pl.x)).toFixed(2) + ')'; c.lineWidth = 2;
       c.strokeRect(x + 2, topY - 7, w - 4, 11); c.setLineDash([]); c.restore(); }
@@ -806,9 +879,12 @@
       c.fillStyle = 'rgba(255,40,40,' + (0.3 + 0.4 * pulse).toFixed(2) + ')'; c.fillRect(x, topY - 8, w, thick + 64);
       c.fillStyle = '#fff'; c.font = 'bold 22px monospace'; c.textAlign = 'center'; c.fillText('⚡', sx, topY + 16); c.textAlign = 'left'; c.restore(); }
     // end flag pole
-    if (pl.type === 'end') { const poleH = 56; c.fillStyle = '#ddd'; c.fillRect(sx - 1, topY - 8 - poleH, 3, poleH);
-      const wave = Math.sin(t * 4) * 4; c.fillStyle = pal.end; c.beginPath();
-      c.moveTo(sx + 2, topY - 8 - poleH); c.lineTo(sx + 30 + wave, topY - 8 - poleH + 8); c.lineTo(sx + 2, topY - 8 - poleH + 18); c.closePath(); c.fill(); }
+    if (pl.type === 'end') {   // FINISH: Kenney flag sprite → procedural pole fallback
+      if (!RBX.foot(c, 'flagGreen', sx, topY - 6, 72)) {
+        const poleH = 56; c.fillStyle = '#ddd'; c.fillRect(sx - 1, topY - 8 - poleH, 3, poleH);
+        const wave = Math.sin(t * 4) * 4; c.fillStyle = pal.end; c.beginPath();
+        c.moveTo(sx + 2, topY - 8 - poleH); c.lineTo(sx + 30 + wave, topY - 8 - poleH + 8); c.lineTo(sx + 2, topY - 8 - poleH + 18); c.closePath(); c.fill(); }
+    }
     // 地震 — cracking shudder overlay: jagged dark fissures + a red warning tint (then it drops)
     if (pl._crackUntil != null) { c.save();
       c.fillStyle = 'rgba(180,40,20,0.22)'; c.fillRect(x, topY - 8, w, thick + 20);
@@ -821,6 +897,8 @@
   function drawCoin(c, pl, t) {
     const sx = wx2sx(pl.x), sy = wy2sy(pl.y + pl.coin.dy);
     const spin = Math.abs(Math.cos(t * 4 + pl.x * 0.07));   // width oscillates → spinning coin
+    if (RBX.has('coinGold')) { const im = RBX.img.coinGold, h = 26, w = h * (0.18 + 0.82 * spin);   // sprite flip-spin
+      c.drawImage(im, sx - w/2, sy - h/2, w, h); return; }
     c.fillStyle = '#ffd633'; c.beginPath(); c.ellipse(sx, sy, 6 * spin + 2, 8, 0, 0, Math.PI * 2); c.fill();
     c.strokeStyle = '#b8860b'; c.lineWidth = 1.5; c.stroke();
     c.fillStyle = '#fff6c0'; c.beginPath(); c.ellipse(sx - 1, sy - 2, 2 * spin + 0.5, 3, 0, 0, Math.PI * 2); c.fill();
@@ -901,6 +979,16 @@
       c.translate(sx, cy); c.rotate(ang); c.translate(-sx, -cy); }
     const X = sx, F = feet, dir = p.facing;
     drawGiftAvatar(c, p, X, F);                                      // GIFT wings / spring / aura (behind the body)
+    if (RBX.has('stand')) {                                          // Kenney character sprite (walk/jump frames)
+      let fk = p.onPlat ? 'stand' : 'jump';
+      if (p.onPlat) { const wf = ['stand','walk1','walk2','walk3']; fk = wf[Math.floor(Math.abs(p.runPhase || 0) / 0.85) % 4]; }
+      const ph = 56;                                                 // display height (px @ scale 1); GIANT/MINI + squash apply via the outer transform
+      RBX.foot(c, fk, X, F + 4, ph, dir < 0);                        // feet at F; Kenney art faces right → flip when facing left
+      if (p.egg) { const hy = F - ph + 6;                            // gold crown floats over the sprite head (rare-skin tell)
+        c.fillStyle = '#ffe35a'; c.strokeStyle = '#b8860b'; c.lineWidth = 1.2;
+        c.beginPath(); c.moveTo(X - 9, hy); c.lineTo(X - 9, hy - 8); c.lineTo(X - 4, hy - 3); c.lineTo(X, hy - 9);
+        c.lineTo(X + 4, hy - 3); c.lineTo(X + 9, hy - 8); c.lineTo(X + 9, hy); c.closePath(); c.fill(); c.stroke(); }
+    } else {
     const C = p.egg ? GOLD_NOOB : NOOB;                              // 1/8 rare gold skin
     // legs — classic noob GREEN (running stagger on ground; tucked in air)
     const swing = p.onPlat ? Math.round(Math.sin(p.runPhase) * 3) : (p.vy > 0 ? -2 : 2);
@@ -930,6 +1018,7 @@
       c.beginPath(); c.moveTo(X - 6, F - 40); c.lineTo(X - 6, F - 46); c.lineTo(X - 3, F - 43); c.lineTo(X, F - 47);
       c.lineTo(X + 3, F - 43); c.lineTo(X + 6, F - 46); c.lineTo(X + 6, F - 40); c.closePath(); c.fill(); c.stroke();
       c.fillStyle = '#fff6c0'; c.fillRect(X - 1, F - 45, 2, 2);
+    }
     }
     c.restore();
   }
