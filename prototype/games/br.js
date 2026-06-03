@@ -74,7 +74,7 @@
   const FF_AUDIO = {
     base: 'assets/kenney/audio/ff/',
     files: { shot:'shot.wav', shotLow:'shotLow.wav', hit:'hit.ogg', wHit:'wHit.ogg', rBlast:'rBlast.wav', death:'death.ogg',
-             lose:'lose.ogg', win:'win.ogg', pickup:'pickup.ogg', pickupRare:'pickupRare.ogg', qDash:'qDash.ogg', zone:'zone.ogg' },
+             lose:'lose.ogg', win:'win.ogg', pickup:'pickup.ogg', pickupRare:'pickupRare.ogg', qDash:'qDash.ogg', zone:'zone.wav' },
     vol:   { shot:0.3, shotLow:0.34, hit:0.4, wHit:0.4, rBlast:0.5, death:0.5, lose:0.5, win:0.55, pickup:0.42, pickupRare:0.5, qDash:0.4, zone:0.4 },
     pool: {}, ok: {},
     load() { try { for (const k in this.files) { const kk=k, arr=[]; for (let i=0;i<3;i++){ const a=new Audio(this.base+this.files[k]); a.preload='auto'; a.volume=this.vol[k]||0.4; if(i===0){ a.addEventListener('canplaythrough',()=>{this.ok[kk]=true;},{once:true}); a.addEventListener('error',()=>{this.ok[kk]=false;},{once:true}); } arr.push(a); } this.pool[kk]=arr; } } catch(_){} },

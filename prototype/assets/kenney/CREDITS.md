@@ -30,3 +30,10 @@ CC0 deed: https://creativecommons.org/publicdomain/zero/1.0/
 - OGA "Car Sound Effects Pack" (CC0): GTA nitro = real car acceleration. https://opengameart.org/content/car-sound-effects-pack-low-quality
 - Kenney "Impact Sounds" (CC0): GTA crash + FF hit = metal clang, FF wHit = wood, FF qDash/death = impacts. https://github.com/Boyquotes/kenney-impact-sounds-for-godot
 - Kept (neutral, not sci-fi): cash/win/lose/pickup/zone from Kenney Digital. Roblox audio unchanged (user OK).
+
+## Audio realism pass (v3) — layered + synthesized, spectrally verified (audio-verify.py)
+- Root cause found: the CC0 "real" firearm recordings are dull tonal mid-pops (92% energy 250-2kHz, no crack/body); my earlier 22kHz trim also killed the high-freq crack. Objectively measured.
+- Guns (GTA shot, FF shot/shotLow/rBlast): rebuilt PUBG-style at 44.1kHz = recording (body) + synthesized high-passed-noise CRACK + sub-bass thump + room tail. Verified broadband (flat 0.06-0.08, full low+mid+high).
+- GTA crash + FF zone: fully synthesized (metal crunch+thud+debris ; storm rumble). No copyright.
+- FF pickup/pickupRare/win/lose: Kenney Impact Sounds (CC0) grab/glass/bell/thud, replacing the digital synth blips.
+- All synthesis original; all samples CC0. Roblox + GTA(non-crash) unchanged.
