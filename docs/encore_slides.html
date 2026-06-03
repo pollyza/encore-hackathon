@@ -88,11 +88,12 @@ body {
     flex: 1;
     display: flex;
     flex-direction: column;
-    /* flex-start, not center: when content > viewport, centering chops the
-       TOP off (titles vanish). Top-aligned means any overflow is at the
-       bottom, which is much more graceful. Combined with reduced content
-       per slide, all 10 slides now fit comfortably on a 1080p display. */
-    justify-content: flex-start;
+    /* center keeps short slides balanced (no awkward bottom whitespace).
+       Every slide has been trimmed to fit ≤ 100vh at 1080p with normal
+       padding, so centering is safe. If content ever exceeds, the
+       overflow is hidden at top + bottom equally, but the slide should
+       be trimmed instead of relying on overflow. */
+    justify-content: center;
     max-height: 100%;
     overflow: hidden;
     padding: var(--slide-padding);
@@ -100,8 +101,6 @@ body {
     z-index: 2;
     gap: clamp(0.4rem, 1.2vw, 1rem);
 }
-/* Title slide still wants vertical centering for its hero layout */
-.title-slide .slide-content { justify-content: center; }
 img, .image-container {
     max-width: 100%;
     max-height: min(50vh, 400px);
@@ -874,12 +873,13 @@ h2.section-title .red { color: var(--c-red); }
 }
 .demo-frame {
     position: relative;
-    /* Lock aspect to the game's 9:16 canvas; size with the viewport.
-       Was capped at 360px which felt small on desktop; now grows up to
-       460px on big screens while staying within 80vh on phones. */
-    width: clamp(280px, 50vh, 460px);
+    /* Aspect-fixed 9:16 phone frame. Capped at 60vh so the iframe height
+       roughly matches the combined height of the right column's QR +
+       CONTROLS blocks — avoids the demo-row having one column much
+       taller than the other (which was overflowing the slide). */
+    width: clamp(240px, 36vh, 360px);
     aspect-ratio: 9 / 16;
-    max-height: 80vh;
+    max-height: 60vh;
     background: var(--bg-secondary);
     border: 2px solid var(--c-red);
     border-radius: clamp(12px, 1.8vw, 22px);
@@ -930,6 +930,32 @@ h2.section-title .red { color: var(--c-red); }
     border-radius: 0 6px 6px 0;
 }
 .demo-side-block:last-child { border-left-color: var(--c-teal); }
+/* QR block — leftmost block on demo-side, red accent so it stands out
+   against the gold / teal of CONTROLS / FYI. White background on the QR
+   itself so the scanner always reads it cleanly against the dark deck. */
+.demo-side-qr { border-left-color: var(--c-red); }
+.demo-side-qr .demo-side-label { color: var(--c-red); }
+.qr-wrap {
+    display: flex;
+    align-items: center;
+    gap: clamp(0.7rem, 1.6vw, 1.2rem);
+}
+.qr-img {
+    width: clamp(96px, 12vw, 140px);
+    height: clamp(96px, 12vw, 140px);
+    background: #fff;
+    padding: clamp(6px, 0.8vw, 10px);
+    border-radius: 6px;
+    box-shadow: 0 4px 14px rgba(255, 70, 85, 0.25);
+    flex-shrink: 0;
+    image-rendering: pixelated;
+}
+.qr-url {
+    font-family: var(--font-mono);
+    font-size: var(--small-size);
+    color: var(--text-secondary);
+    word-break: break-all;
+}
 .demo-side-label {
     font-family: var(--font-pixel);
     font-size: clamp(0.5rem, 0.8vw, 0.7rem);
@@ -1393,7 +1419,8 @@ h2.section-title .red { color: var(--c-red); }
 <section class="slide">
     <div class="slide-content">
         <div class="eyebrow reveal" style="--delay:0.05s">02 · Encore 是什么</div>
-        <h2 class="section-title reveal" style="--delay:0.15s">主播打的那一波,<span class="accent">30 秒后变成观众能玩的小游戏。</span></h2>
+        <h2 class="section-title reveal" style="--delay:0.15s">让观众从"只能看"<span class="accent">变成"也能玩"。</span></h2>
+        <p class="lead reveal" style="--delay:0.22s">不打扰主播打游戏的前提下, 把每个高光时刻自动变成 30 秒可玩小游戏 —— 观众多了<strong>参与感和自己的短视频</strong>, 主播多了<strong>被动产出和打赏入口</strong>, 平台多了<strong>新 UGC 内容池和 install 漏斗</strong>。</p>
         <div class="vision-grid">
             <div class="v-step reveal-scale" style="--delay:0.3s">
                 <div class="step-num">STEP 01</div>
@@ -1459,7 +1486,7 @@ h2.section-title .red { color: var(--c-red); }
 <section class="slide">
     <div class="slide-content">
         <div class="eyebrow reveal" style="--delay:0.05s">04 · 玩感 + 体验</div>
-        <h2 class="section-title reveal" style="--delay:0.15s">3 套模板覆盖 60-70% 内容,<span class="accent">从底部弹出,永不挡主播。</span></h2>
+        <h2 class="section-title reveal" style="--delay:0.15s">3 套模板覆盖主流,<span class="accent">永不挡主播。</span></h2>
         <div class="tpl-grid">
             <div class="tpl fps reveal" style="--delay:0.3s">
                 <span class="badge">动作 · 抢劫驾驶</span>
@@ -1493,7 +1520,7 @@ h2.section-title .red { color: var(--c-red); }
 <section class="slide">
     <div class="slide-content">
         <div class="eyebrow reveal" style="--delay:0.05s">05 · 不抢谁的盘子</div>
-        <h2 class="section-title reveal" style="--delay:0.15s">跟互动游戏 / 弹幕游戏<span class="accent">不冲突,服务不同的人。</span></h2>
+        <h2 class="section-title reveal" style="--delay:0.15s">跟互动游戏 / 弹幕游戏<span class="accent">不抢盘子。</span></h2>
         <p class="lead reveal" style="--delay:0.25s">平台已有的<strong>互动游戏</strong>(萌宠快跑)和<strong>弹幕游戏</strong>跟 Encore 看起来像, 但底层逻辑不同 —— 服务不同主播、不同观众。</p>
         <div class="vision-grid">
             <div class="v-step reveal" style="--delay:0.4s">
@@ -1532,10 +1559,7 @@ h2.section-title .red { color: var(--c-red); }
     <div class="slide-content">
         <div class="eyebrow reveal" style="--delay:0.05s">⚡ 现场演示</div>
         <h2 class="section-title reveal" style="--delay:0.15s">扫码 <span class="accent">就能玩。</span></h2>
-        <p class="lead reveal" style="--delay:0.25s">
-            选一个模板 — GTA Heist / Obby Parkour / Free Fire BR — 30 秒玩完。
-            <strong>点击 iframe 进入游戏</strong>,按键盘 <code class="key-inline">←</code> <code class="key-inline">→</code> 回到 deck。
-        </p>
+        <p class="lead reveal" style="--delay:0.25s">选一个模板 30 秒玩完。 <strong>点击 iframe 进入游戏</strong>, 按键盘 <code class="key-inline">←</code> <code class="key-inline">→</code> 回到 deck。</p>
         <div class="demo-row">
             <div class="demo-frame reveal-scale" style="--delay:0.4s">
                 <div class="demo-frame-glow"></div>
@@ -1562,6 +1586,13 @@ h2.section-title .red { color: var(--c-red); }
                 </div>
             </div>
             <div class="demo-side reveal-right" style="--delay:0.55s">
+                <div class="demo-side-block demo-side-qr">
+                    <div class="demo-side-label">SCAN ME · 扫码玩</div>
+                    <div class="qr-wrap">
+                        <img src="qr-encore.svg" alt="QR · encore-deploy.vercel.app" class="qr-img">
+                        <div class="qr-url">encore-deploy.vercel.app</div>
+                    </div>
+                </div>
                 <div class="demo-side-block">
                     <div class="demo-side-label">CONTROLS</div>
                     <ul class="demo-side-list">
@@ -1571,14 +1602,6 @@ h2.section-title .red { color: var(--c-red); }
                         <li><strong>Obby Parkour</strong>:右下 ▲ JUMP 跳平台</li>
                         <li><strong>Free Fire BR</strong>:长按开镜 · 武器切换</li>
                         <li>30 秒后自动结束</li>
-                    </ul>
-                </div>
-                <div class="demo-side-block">
-                    <div class="demo-side-label">FYI</div>
-                    <ul class="demo-side-list">
-                        <li>启动 splash 上随机滚出 3 套模板中的 1 个 + 1 套<strong>主题</strong></li>
-                        <li>角色是<strong>程序化像素美术</strong>占位 ——<br>真 AI 精灵管道已就绪</li>
-                        <li>无需安装,Canvas2D 跑在浏览器里</li>
                     </ul>
                 </div>
                 <a id="demo-open-link" class="demo-open-btn" target="_blank" rel="noopener" hidden>▶ Open game in new tab</a>
@@ -1628,33 +1651,30 @@ h2.section-title .red { color: var(--c-red); }
 <section class="slide">
     <div class="slide-content">
         <div class="eyebrow reveal" style="--delay:0.05s">07 · 成本 + 风险</div>
-        <h2 class="section-title reveal" style="--delay:0.15s">不自己跑 Vision,<span class="accent">两阶段成本路径都算得清。</span></h2>
-        <p class="lead reveal" style="--delay:0.22s">复用平台已有的 <strong>高光识别 + 游戏识别</strong> 管道(主播侧标签 / 推荐 / 审核已经在跑), Encore 直接消费信号 —— 我们这边不需要再跑一遍 Vision。</p>
+        <h2 class="section-title reveal" style="--delay:0.15s">不自跑 Vision,<span class="accent">成本算得清。</span></h2>
+        <p class="lead reveal" style="--delay:0.22s">复用平台已有的<strong>高光识别 + 游戏识别</strong>信号, Encore 不需要自跑 Vision。</p>
         <div class="vision-grid">
             <div class="v-step reveal-scale" style="--delay:0.32s">
-                <div class="step-num">A · 阶段 1 · M9 上线</div>
+                <div class="step-num">A · 阶段 1 · M9</div>
                 <div class="ico">📦</div>
                 <h3>预制模板匹配<br>~$0 增量</h3>
-                <p>检测到 (高光 + 游戏 X) → 直接匹配跟游戏 title 绑定的预制 Encore 模板。 核心投入 = <strong>多预生成模板</strong>(品类 × 主题组合)。</p>
-                <p><em>优势: 上线快, 单位成本 ≈ 0, 行为可预测, 不依赖 LLM 实时延迟。</em></p>
+                <p>(高光 + 游戏 X) → 匹配预制模板。 核心投入 = <strong>预生成模板</strong>(品类 × 主题, 一次性)。 上线快、可预测、不依赖 LLM。</p>
             </div>
             <div class="v-step reveal-scale" style="--delay:0.47s">
-                <div class="step-num">B · 阶段 2 · M14+ 长期</div>
+                <div class="step-num">B · 阶段 2 · M14+</div>
                 <div class="ico">🧠</div>
                 <h3>LLM 实时生成<br>~$1M / 月全量</h3>
-                <p>同样的输入信号 + Sonnet / Gemini 理解高光的具体玩法(1v3 retake vs sniper headshot 是 3 个不同子场景)→ 实时生成定制 Encore。</p>
-                <p><em>优势: 玩法跟高光紧密契合, 不再是粗粒度模板。 单条 ~$0.017, 50K 直播间同时在播 ≈ $1M/月。</em></p>
+                <p>Sonnet / Gemini 理解高光具体玩法 → 实时生成定制 Encore, 跟主播这一波紧密契合。 单条 ~$0.017。</p>
             </div>
             <div class="v-step reveal-scale" style="--delay:0.62s">
                 <div class="step-num">C · 风险诚实承认</div>
                 <div class="ico">⚠️</div>
-                <h3>3 件没解决的事</h3>
-                <p><strong>(1)</strong> 30 秒小游戏好不好玩 — 需要 6-12 个月调优</p>
-                <p><strong>(2)</strong> Phase 2 实时生成的延迟 + 质量 — 待工程验证(高光出现到 Encore 弹出 &lt; 5s 是硬约束)</p>
-                <p><strong>(3)</strong> 单品类切入 — 先 FPS / MOBA / BR, 长尾扩展靠 Phase 2</p>
+                <h3>3 件没解决</h3>
+                <p><strong>(1)</strong> 30s 游戏好不好玩 — 6-12 月调优</p>
+                <p><strong>(2)</strong> Phase 2 LLM 延迟 / 质量 — 待工程验证</p>
+                <p><strong>(3)</strong> 单品类切入 — 先 FPS / MOBA / BR</p>
             </div>
         </div>
-        <p class="lead reveal" style="--delay:0.88s; margin-top:0.6rem;">法务: 抽象像素美术不碰任何游戏 IP, 不 OCR 游戏 UI 文字。 没有合规黑洞。</p>
     </div>
 </section>
 
@@ -1665,7 +1685,7 @@ h2.section-title .red { color: var(--c-red); }
 <section class="slide">
     <div class="slide-content">
         <div class="eyebrow reveal" style="--delay:0.05s">08 · 商业 + 路线图</div>
-        <h2 class="section-title reveal" style="--delay:0.15s">第一版只一个付费点,<span class="accent">三类收入分阶段加。</span></h2>
+        <h2 class="section-title reveal" style="--delay:0.15s">一个付费点,<span class="accent">三类收入分阶段。</span></h2>
         <div class="vision-grid">
             <div class="v-step reveal-scale" style="--delay:0.3s">
                 <div class="step-num">A · 观众付费</div>
