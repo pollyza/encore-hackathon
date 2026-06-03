@@ -3244,6 +3244,7 @@
     timeLeft = current.duration;
     gameOver = false; gameWon = false; started = true;
     document.body.classList.add('playing');
+    try { BGM.play(key); } catch (e) {}                          // per-game background music (gesture: this follows a tap)
     // Platformer (Roblox) uses a dedicated right-side JUMP button; hide the aim pad
     // for it and show the button. Other modes keep their CSS defaults (reset to '').
     { const tm = current.touchMode || 'shooter';
@@ -3257,23 +3258,33 @@
   }
 
   // V2G scenario application — read pendingConfig.scenario and patch state
-  // post-init: clamp enemy count, override starting HP, swap weapon (BR).
+  // post-init: clamp enemy count, override starting HP, apply Gift Boost.
   function applyScenarioOverrides() {
     if (!pendingConfig || !pendingConfig.scenario) return;
     const sc = pendingConfig.scenario;
     if (sc.hp_start != null && state.player) {
-      const hp = Math.max(10, Math.min(100, sc.hp_start | 0));
+      const hpCap = sc.gift_boost ? 200 : 100;
+      const hp = Math.max(10, Math.min(hpCap, sc.hp_start | 0));
       state.player.hp = hp;
       state.player.maxHp = Math.max(state.player.maxHp, hp);
     }
     if (sc.enemy_count != null) {
-      const desired = Math.max(1, Math.min(5, sc.enemy_count | 0));
+      const maxEnemies = current === Games.br ? 9 : 5;
+      const desired = Math.max(1, Math.min(maxEnemies, sc.enemy_count | 0));
       // Trim or extend either the enemies (FPS/MOBA champs) or bots (BR) arrays
       if (state.enemies && state.enemies.length > desired) {
         state.enemies.length = desired;
       }
       if (state.bots && state.bots.length > desired) {
         state.bots.length = desired;
+      }
+      // BR: keep the lobby count in sync with the ACTUAL bots so 清场 = 吃鸡 works
+      // regardless of the configured enemy_count (startPlayers was baked at init to
+      // 10; trimming bots without this left the win needing eliminations that can
+      // never happen).
+      if (current === Games.br && state.bots) {
+        state.startPlayers = state.bots.length + 1;
+        state.eliminated = 0;
       }
       // Update score line display so HUD reflects the override
       if (current === Games.fps || current === Games.moba) {
@@ -3286,6 +3297,9 @@
       };
       const rar = rarityForWeapon[sc.weapon];
       if (rar) state.player.weapon = brWeaponForRarity(rar);
+    }
+    if (sc.gift_boost && current && typeof current.applyGiftBoost === 'function') {
+      current.applyGiftBoost(sc.gift_boost, sc);
     }
     // Append the description to mode badge if present (gives the streamer
     // visible proof that the AI-detected scenario landed)
@@ -3342,6 +3356,7 @@
 
   function backToMenu() {
     started = false; gameOver = false; current = null; state = null;
+    try { BGM.stop(); } catch (e) {}
     document.body.classList.remove('playing');
     document.getElementById('end').classList.remove('on');
     document.getElementById('splash').classList.add('on');
@@ -3431,6 +3446,34 @@
   // in automatically on next frame after load completes.
   Assets.load('assets/atlas.png', 'assets/atlas.json');
 
+  // ── Background music (Incompetech, CC-BY — see assets/kenney/CREDITS.md): one loop
+  //    per game at low volume, starts on game-start (a user gesture), with a persisted
+  //    mute toggle. GTA=funk, Roblox=electronic, FF=intense — matched to the user's refs.
+  const BGM = {
+    el: null, map: { gta:'gta', roblox:'roblox', br:'ff' },
+    muted: (() => { try { return localStorage.getItem('encoreBgmMuted') === '1'; } catch (e) { return false; } })(),
+    play(key) { const m = this.map[key]; if (!m) return;
+      if (!this.el) { this.el = new Audio(); this.el.loop = true; this.el.volume = 0.30; }
+      const src = 'assets/kenney/audio/bgm/' + m + '.mp3';
+      if (this.el.dataset.k !== src) { this.el.src = src; this.el.dataset.k = src; }
+      this.el.muted = this.muted; try { this.el.currentTime = 0; } catch (e) {}
+      const p = this.el.play(); if (p && p.catch) p.catch(() => {}); this._sync(); },
+    stop() { if (this.el) { try { this.el.pause(); } catch (e) {} } },
+    toggle() { this.muted = !this.muted; if (this.el) this.el.muted = this.muted;
+      if (this.muted) this.stop(); else if (this.el) { const p = this.el.play(); if (p && p.catch) p.catch(() => {}); }
+      try { localStorage.setItem('encoreBgmMuted', this.muted ? '1' : '0'); } catch (e) {} this._sync(); },
+    _sync() { const b = document.getElementById('bgm-toggle'); if (b) b.textContent = this.muted ? '🔇' : '🔊'; },
+  };
+  window.BGM = BGM;
+  (function () { const b = document.createElement('button'); b.id = 'bgm-toggle'; b.textContent = BGM.muted ? '🔇' : '🔊';
+    b.style.cssText = 'position:fixed;top:128px;right:8px;z-index:70;width:27px;height:27px;border:0;border-radius:50%;background:rgba(0,0,0,0.32);color:#fff;font-size:13px;line-height:27px;padding:0;cursor:pointer;opacity:0.78;-webkit-tap-highlight-color:transparent';
+    const t = (e) => { if (e && e.cancelable) e.preventDefault(); BGM.toggle(); };
+    b.addEventListener('click', t); b.addEventListener('touchstart', t, { passive: false });
+    document.body.appendChild(b); })();
+  // iOS/sheet safety: if a game is running but BGM got autoplay-blocked (e.g. launched
+  // via postMessage in the LIVE sheet, not a direct tap), resume it on the first touch.
+  document.addEventListener('pointerdown', () => { try { if (BGM.el && started && !BGM.muted && BGM.el.paused) { const p = BGM.el.play(); if (p && p.catch) p.catch(() => {}); } } catch (e) {} }, { passive: true });
+
   // ============================================================
   //  V2G — embedded boot + parent message listener
   // ============================================================
@@ -3513,7 +3556,7 @@
       pendingConfig = {
         template: forceTemplate,
         theme:    forceTheme || null,
-        scenario: {},
+        scenario: _params.get('gift_boost') ? { gift_boost: _params.get('gift_boost') } : {},
       };
       startGame(forceTemplate);
     };
@@ -3530,9 +3573,9 @@
 <!-- External game modules — register on window.Games after main IIFE exposes engine globals.
      ?v= version query busts stale browser cache of the game modules (bump on each ship). -->
 <script src="games/juice.js?v=r12a"></script>
-<script src="games/roblox.js?v=r12a"></script>
-<script src="games/gta.js?v=r12a"></script>
-<script src="games/br.js?v=r12b"></script>
+<script src="games/roblox.js?v=r22"></script>
+<script src="games/gta.js?v=r21"></script>
+<script src="games/br.js?v=r20"></script>
 <script>
   window.__encoreExternalGamesReady = true;
   if (window.__encoreFlushDeferredLaunch) window.__encoreFlushDeferredLaunch();

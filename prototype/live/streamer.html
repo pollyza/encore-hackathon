@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 
 <link rel="stylesheet" href="css/live-shell.css">
-<link rel="stylesheet" href="css/ai-panel.css">
+<link rel="stylesheet" href="css/ai-panel.css?v=3">
 <link rel="stylesheet" href="css/mini-games.css">
 </head>
 <body>
@@ -48,7 +48,8 @@
          null-deref; never displayed. All 3 modes render via canvas below. -->
     <video id="live-video" muted playsinline loop preload="none"
            style="display:none;"></video>
-    <!-- Canvas2D procedural scene for all 3 modes -->
+    <!-- Canvas2D procedural scene for all 3 modes (D's #23 — supersedes the
+         404'ing gitignored LIVE clip; this is the proper fix for that issue). -->
     <canvas id="live-canvas" style="display:none;"></canvas>
     <div class="atmosphere"></div>
 
@@ -446,7 +447,7 @@
 <script src="js/observer-client.js?v=8"></script>
 <script src="js/player-recorder.js?v=1"></script>
 <script src="js/clip-composer.js?v=1"></script>
-<script src="js/encore-sheet.js?v=12"></script>
+<script src="js/encore-sheet.js?v=15"></script>
 <script src="js/live-room.js?v=8"></script>
 <script>
 (() => {
@@ -542,12 +543,18 @@
                    seed: Math.floor(Math.random()*100000), description: DESC[template] };
     } else if (template === 'gta') {
       scenario = { shop_count: 4, cop_spawn_rate: 0.2, map_size: 1500, description: DESC[template] };
+    } else if (template === 'br') {
+      // Free Fire is a 10-player lobby — 9 bots, NOT the 2-4 legacy-FPS count
+      // (that trimmed the lobby to 2 and made 清场吃鸡 impossible).
+      scenario = { enemy_count: 9, hp_start: 100,
+                   weapon: ['pistol','smg','rifle','sniper'][Math.floor(Math.random()*4)],
+                   description: DESC[template] };
     } else {
       const weapons = ['pistol','smg','rifle','sniper'];
       scenario = { enemy_count: 2 + Math.floor(Math.random()*3),
                    hp_start: [60,80,100][Math.floor(Math.random()*3)],
                    description: DESC[template] };
-      if (template === 'fps' || template === 'br') scenario.weapon = weapons[Math.floor(Math.random()*4)];
+      if (template === 'fps') scenario.weapon = weapons[Math.floor(Math.random()*4)];
     }
     return {
       highlight: true, confidence: 1.0, template, theme, scenario,

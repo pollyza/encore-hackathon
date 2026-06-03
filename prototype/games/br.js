@@ -67,7 +67,23 @@
   function $scoreEl()   { return document.getElementById('score'); }
   function $Iso()       { return window.Iso; }
   function $keys()      { return window.keys || {}; }
-  function $SFX()       { return window.SFX || {}; }
+  // ── Kenney CC0 audio (Free Fire BR) — sci-fi/digital samples (CC0; see
+  //    assets/kenney/CREDITS.md) mapped to the game's sfx names. Overriding $SFX()
+  //    routes every existing SFX.x() call through here: a real sample if mapped+loaded,
+  //    else the shared synth SFX. BR-local — GTA/Roblox untouched.
+  const FF_AUDIO = {
+    base: 'assets/kenney/audio/ff/',
+    files: { shot:'shot.wav', shotLow:'shotLow.wav', hit:'hit.ogg', wHit:'wHit.ogg', rBlast:'rBlast.wav', death:'death.ogg',
+             lose:'lose.ogg', win:'win.ogg', pickup:'pickup.ogg', pickupRare:'pickupRare.ogg', qDash:'qDash.ogg', zone:'zone.wav' },
+    vol:   { shot:0.3, shotLow:0.34, hit:0.4, wHit:0.4, rBlast:0.5, death:0.5, lose:0.5, win:0.55, pickup:0.42, pickupRare:0.5, qDash:0.4, zone:0.4 },
+    pool: {}, ok: {},
+    load() { try { for (const k in this.files) { const kk=k, arr=[]; for (let i=0;i<3;i++){ const a=new Audio(this.base+this.files[k]); a.preload='auto'; a.volume=this.vol[k]||0.4; if(i===0){ a.addEventListener('canplaythrough',()=>{this.ok[kk]=true;},{once:true}); a.addEventListener('error',()=>{this.ok[kk]=false;},{once:true}); } arr.push(a); } this.pool[kk]=arr; } } catch(_){} },
+    play(n){ if(!this.ok[n]||!this.pool[n])return false; try { const arr=this.pool[n]; let a=arr.find(x=>x.paused||x.ended); if(!a){ a=arr[0].cloneNode(); a.volume=this.vol[n]||0.4; } a.currentTime=0; const pr=a.play(); if(pr&&pr.catch)pr.catch(()=>{}); return true; } catch(_){ return false; } },
+  };
+  try { FF_AUDIO.load(); window.__ffAudioOk = () => FF_AUDIO.ok; } catch (_) {}
+  const FF_SFX_PROXY = (typeof Proxy !== 'undefined') ? new Proxy({}, { get(_, name) { if (typeof name !== 'string') return undefined;
+    return function () { if (FF_AUDIO.play(name)) return; const s = window.SFX; if (s && typeof s[name] === 'function') { try { s[name](); } catch (_) {} } }; } }) : null;
+  function $SFX()       { return FF_SFX_PROXY || window.SFX || {}; }
   function $moveVec()   { return window.getMoveVec ? window.getMoveVec() : {x:0,y:0}; }
   function $aimAngle()  { return window.aimAngle ? window.aimAngle() : null; }
   function $mouseWorld(){ return window.mouseWorld || null; }
@@ -97,7 +113,7 @@
 
     // normal gun (AR) — the shooting core stays as-is (user approved it)
     gunDmg:           18,
-    gunFireRate:      0.16,
+    gunFireRate:      0.18,
     gunRange:         320,
     gunAccuracy:      0.07,
     bulletSpeed:      520,
@@ -128,19 +144,31 @@
 
     // AI (kept; light tune) — 9 bots + 玩家 = 真 10 人吃鸡大乱斗
     botCount:         9,
-    botHp:            58,     // R13: 52→58 — the smarter bots (dodge/wall/weird-gun) ARE the difficulty lift; only a small HP bump so fights last toward the ~20s climax without becoming bullet-sponges (anti-恶心)
-    botSpeed:         78,     // 75 → 78
-    botDmg:           8,      // ⑤ 7→8
-    botAccuracy:      0.14,   // R2: 略提精度(玩家有自动锁敌优势了, bot 要更有威胁)
-    botRange:         230,
-    aiIdealRange:     170,
-    aiLosRange:       280,
-    aiFireInterval:   0.85,   // ⑤ 1.05→0.85: 更快开火 → 互殴更密
+    botHp:            64,     // R14: small lift; behavior carries the difficulty, not HP sponge
+    botSpeed:         88,     // R14: stronger movement + zone rotation, not HP sponge
+    botDmg:           9,
+    botAccuracy:      0.115,
+    botRange:         265,
+    aiIdealRange:     155,
+    aiLosRange:       335,
+    aiFireInterval:   0.72,
+
+    // ── Difficulty curve (the "难度权"): a normal player beats the 6 REGULAR bots by
+    //    skill, but the last 3 are ELITE "高手" — accurate, aggressive, tougher, like
+    //    real players. You can ALMOST clear them solo → that "差一点" tension is what
+    //    nudges a gift purchase. Tough-but-beatable, never a cheap bullet-sponge.
+    eliteCount:       3,      // of botCount (9) → 6 regular + 3 elite
+    eliteHpMul:       1.65,   // survive your first burst (≈106hp), not a sponge
+    eliteAccMul:      0.42,   // MUCH tighter aim (they actually hit you)
+    eliteDmgMul:      1.45,   // shots sting
+    eliteFireMul:     1.55,   // fire faster (more pressure)
+    eliteSpeedMul:    1.12,   // rotate/kite a touch faster
+    eliteDodgeMul:    0.55,   // dodge-roll on a shorter cooldown (reads as "smart")
 
     // zone / round
     zoneStartR:       11,     // tiles
     zoneEndR:         3,
-    zoneShrinkS:      22,     // ⑤ 26→22: 更快缩圈 → 决赛圈聚拢混战
+    zoneShrinkS:      21,     // R14: slightly tighter collapse to force real final-circle fights
     crateHazardEvery: 7,      // s — telegraphed, dodge-roll-able
     crateHazardDmg:   22,
 
@@ -661,6 +689,8 @@
       dmg: TUNING.botDmg,
       accuracy: TUNING.botAccuracy,
       range: TUNING.botRange,
+      elite: false,           // the difficulty-curve "高手" tier (boosted in the spawn loop)
+      fireMul: 1,             // fire-rate multiplier (elites fire faster)
     };
   }
 
@@ -740,11 +770,13 @@
     b.aimAng += Math.max(-Math.PI*2*dt, Math.min(Math.PI*2*dt, aDiff));
 
     // State transitions
+    const lateAggro = Math.max(0, Math.min(1, (s.elapsed - 8) / 14));
+    const engageRange = AI_LOS_RANGE * (1 + lateAggro * 0.22);
     if (b.hp / b.maxHp < AI_FLEE_HP_PCT) {
       if (b.state !== 'FLEE') { b.state = 'FLEE'; b.stateT = 0; }
-    } else if (b.state === 'PATROL' && losClear && dist < AI_LOS_RANGE) {
+    } else if (b.state === 'PATROL' && losClear && dist < engageRange) {
       b.state = 'ENGAGE'; b.stateT = 0;
-    } else if (b.state === 'ENGAGE' && (!losClear || dist > AI_LOS_RANGE * 1.4)) {
+    } else if (b.state === 'ENGAGE' && (!losClear || dist > engageRange * 1.35)) {
       b.state = 'PATROL'; b.stateT = 0; b.patrolTarget = null;
     }
     // Auto-trigger dodge if recently hit & cooldown elapsed
@@ -752,7 +784,7 @@
       b.state = 'DODGE';
       b.stateT = 0;
       b.dodgeDir = Math.random() < 0.5 ? -1 : 1;
-      b.dodgeCooldown = AI_DODGE_COOLDOWN;
+      b.dodgeCooldown = AI_DODGE_COOLDOWN * (b.elite ? TUNING.eliteDodgeMul : 1);   // elites juke more often (reads as "skilled")
       b.iframeT = 0.2;   // R13: brief dodge-ROLL i-frames — a quick juke, not a DPS shield (anti-恶心)
       b.lastHitT = 0;
       if ($particles()) $particles()(s.particles, b.wx, b.wy, '#9fefff', 6);   // roll dust
@@ -789,14 +821,26 @@
       spdMul = AI_FLEE_SPEED;
     }
 
-    // Stay-inside-zone pressure overrides movement when near edge
+    // Zone IQ: bots begin rotating before the edge, and outside-zone movement
+    // takes priority over fleeing/looting. This keeps the arena populated instead
+    // of letting weak bots drift into storm and die without fighting.
     const dzc = Math.hypot(b.wx - s.zone.cx, b.wy - s.zone.cy);
-    if (dzc > s.zone.r * 0.85) {
+    if (dzc > s.zone.r * 0.60) {                       // R15: rotate earlier (was .72) so the fast shrink can't farm them
       const zdx = s.zone.cx - b.wx, zdy = s.zone.cy - b.wy;
       const zd = Math.hypot(zdx, zdy) || 1;
-      mvx = zdx / zd;
-      mvy = zdy / zd;
-      spdMul = 1.05;
+      const zx = zdx / zd, zy = zdy / zd;
+      // 0 at .60r → 1 at the edge. A bot caught OUTSIDE makes a near-straight
+      // beeline in (pull .97) so it survives to FIGHT in the circle instead of
+      // melting in the storm. .60 measured better than a harder .56 (which made
+      // bots clump/jam on cover en route) — moderate rotate keeps them fighting.
+      const urgent = Math.max(0, Math.min(1, (dzc / s.zone.r - 0.60) / 0.40));
+      const outside = dzc > s.zone.r;
+      const pull = outside ? 0.97 : (0.70 + urgent * 0.24);   // keep tactical maneuver in-band; hard rotate only when truly out
+      mvx = mvx * (1 - pull) + zx * pull;
+      mvy = mvy * (1 - pull) + zy * pull;
+      const md = Math.hypot(mvx, mvy) || 1;
+      mvx /= md; mvy /= md;
+      spdMul = Math.max(spdMul, outside ? 2.1 : (1.42 + urgent * 0.18));   // beat a ~15px/s radius shrink
     }
 
     // Dodge incoming airstrike/lightning telegraphs — makes the AI feel smart
@@ -819,7 +863,8 @@
     b.wy = Math.max(10, Math.min(s.mapH * Iso.WS - 10, ny));
 
     // Storm DoT on bot when outside zone (kept for parity with player rules)
-    if (dzc > s.zone.r) {
+    const dzAfterMove = Math.hypot(b.wx - s.zone.cx, b.wy - s.zone.cy);
+    if (dzAfterMove > s.zone.r) {
       b.hp -= 7 * dt;
       if (b.hp <= 0) {
         if ($particles()) $particles()(s.particles, b.wx, b.wy, b.color, 14);
@@ -850,7 +895,7 @@
     // Fire — only when ENGAGE, LOS clear, in range, fireCd elapsed
     if (b.state === 'ENGAGE' && losClear && dist < b.range && b.fireCd <= 0 && !(b.treeT > 0) && !(b.iceT > 0) && !(b.duckT > 0) && !(b.floatT > 0)) {   // 变树/冰冻/变鸭/气球 不能开枪(null-safe)
       const aggro = brAggro(s.elapsed);   // R9: ease-in → escalate → finale
-      b.fireCd = (AI_FIRE_INTERVAL + Math.random() * 0.6) / (aggro * (s.berserkT > 0 ? 1.7 : 1));   // slower early, faster late
+      b.fireCd = (AI_FIRE_INTERVAL + Math.random() * 0.6) / (aggro * (s.berserkT > 0 ? 1.7 : 1) * (b.fireMul || 1));   // slower early, faster late; elites fire faster
       const ang = b.aimAng + (Math.random() - 0.5) * b.accuracy * (1.7 - aggro);                    // wide spread early → tight late
       if (s.waterGunT > 0) {   // watergun: 无害水花
         s.bullets.push({ wx: b.wx, wy: b.wy, vx: Math.cos(ang) * 360, vy: Math.sin(ang) * 360, life: 1.5, owner: 'b', ownerId: b.id, dmg: 0, color: '#7fd4ff', mode: 'water' });
@@ -1044,6 +1089,10 @@
     freeze:    { label: '冰冻枪',     color: '#7fd4ff' },
     balloon:   { label: '气球枪',     color: '#ff8ad0' },   // R5: 命中→敌人飘起来, 不能开枪
     magnet:    { label: '磁铁枪',     color: '#b98cff' },   // R5: 命中→把敌人吸到你面前
+    // ── GIFT-only spectacle weapons (the "Enhance" gift layer) — huge & loud,
+    //    strong but timed/limited so a skilled player never needs them. ──
+    ff_tank:    { label: '装甲坦克炮', color: '#ffd24a' },  // 大炮: 慢速大弹 + 范围爆炸 + 重震屏
+    ff_shotgun: { label: '黄金M1887', color: '#ffcf3a' },  // 金色双管: 近距离海量散弹 + 巨大枪口闪
   };
   const AIRDROP_KEYS = Object.keys(AIRDROP_MODES);
   // R2: 开局每人就有一把怪枪, 中途会变, bot 也用。BASE_WEIRD=玩家底枪轮换(去掉 rocket/nade 太吵);
@@ -1071,6 +1120,16 @@
     else if (mode === 'freeze') push(angle, 1, 560, 1.3, { coverDmg: 8, pierce: 1, piercesCover: true, onHit: 'freeze' });
     else if (mode === 'balloon') push(angle, 1, 580, 1.3, { coverDmg: 8, pierce: 1, piercesCover: true, onHit: 'balloon' });
     else if (mode === 'magnet')  push(angle, 1, 600, 1.3, { coverDmg: 8, pierce: 1, piercesCover: true, onHit: 'magnet' });
+    // ── GIFT spectacle guns ──
+    else if (mode === 'ff_tank') {                              // 坦克炮: 慢速巨弹, 命中爆 AOE, 每发重震
+      push(angle, 40, 360, 1.6, { mode: 'nade', pierce: 1, piercesCover: true, coverDmg: 60, big: 2.6, trail: '#ffd24a' });
+      const ba = angle + Math.PI; p.dodgeVX = Math.cos(ba) * 0.6; p.dodgeVY = Math.sin(ba) * 0.6; p.dodgeT = Math.max(p.dodgeT, 0.10);
+      pushShake(s, 16); try { if (window.Juice) { window.Juice.hitstop(0.05); jTrauma(0.35); } } catch (_) {}
+    }
+    else if (mode === 'ff_shotgun') {                           // 金色 M1887: 8 颗大散弹, 近距离秒人
+      for (let k = -4; k <= 4; k++) push(angle + k * 0.085, 14, 600, 0.42, { coverDmg: 16, big: 1.5, trail: '#ffcf3a' });
+      pushShake(s, 9);
+    }
     else push(angle, TUNING.airdropDmg, TUNING.airdropBulletSpeed, 1.4, { pierce: TUNING.airdropPierce, piercesCover: true, coverDmg: TUNING.coverDmgAirdrop });
   }
   function explodeNade(s, bl, theme) {
@@ -1192,6 +1251,120 @@
     }
   }
 
+  // ═══════════════════════════════════════════════════════════════════════
+  // GIFT "ENHANCE" SPECTACLE — TikTok-gift-driven enhancements (Free Fire).
+  // Each is an FF community meme, HUGE & loud on screen (built to be screenshot/
+  // share-worthy), and STRONG-BUT-TIMED: a skilled player never needs them; a
+  // struggling player gets a dramatic, funny second wind. A 3-gift pool means
+  // every send looks different. This is the documented "Enhance" gift layer —
+  // it embellishes a run, it never gates play.
+  const BR_GIFTS = {
+    tank:    { ico: '🚁', name: 'BOOYAH 装甲空投', tone: '#ffd24a', dur: 9, intro: 'crate',
+      apply(s, p) { p.maxHp = Math.max(p.maxHp, 160); p.hp = p.maxHp; p.healKits = Math.max(p.healKits, 2);
+        p.airdropMode = 'ff_tank'; p.airdropAmmo = Math.max(p.airdropAmmo, 22); p._giftGun = 'ff_tank'; } },
+    eagle:   { ico: '🦅', name: '神鹰轰炸 · FALCO', tone: '#9ad8ff', dur: 7, intro: 'eagle',
+      apply(s, p) { p.maxHp = Math.max(p.maxHp, 130); p.hp = p.maxHp; p.iframeT = Math.max(p.iframeT || 0, 1.4); } },
+    shotgun: { ico: '🔫', name: '黄金 M1887', tone: '#ffcf3a', dur: 8, intro: 'crate',
+      apply(s, p) { p.maxHp = Math.max(p.maxHp, 140); p.hp = p.maxHp;
+        p.airdropMode = 'ff_shotgun'; p.airdropAmmo = Math.max(p.airdropAmmo, 18); p._giftGun = 'ff_shotgun'; } },
+  };
+  const BR_GIFT_KEYS = ['tank', 'eagle', 'shotgun'];
+
+  function startGiftIntro(s, key, g) {
+    const Iso = $Iso(); const pr = Iso.w2s(s.player.wx, s.player.wy);
+    if (g.intro === 'eagle') s.giftFX = { type: 'eagle', tone: g.tone, t: 0, x: -90, y: $H() * 0.22, bombT: 0, bombs: [] };
+    else s.giftFX = { type: 'crate', tone: g.tone, ico: g.ico, t: 0, sx: pr.sx, sy: pr.sy, burst: false };
+  }
+
+  function updateGiftFX(s, dt) {
+    if (s.giftBoost) {                                   // active-gift timer + revert
+      s.giftBoost.t -= dt; s.giftBoost.age += dt;
+      if (s.giftBoost.t <= 0) {
+        const p = s.player;
+        if (p._giftGun && p.airdropMode === p._giftGun) { p.airdropAmmo = 0; p.airdropMode = 'strong'; }
+        p._giftGun = null; s.giftBoost = null;
+      }
+    }
+    const fx = s.giftFX; if (!fx) return;
+    fx.t += dt;
+    if (fx.type === 'crate') {
+      if (!fx.burst && fx.t >= 0.62) {                   // crate slams down → bursts open
+        fx.burst = true; pushShake(s, 14);
+        if ($particles()) { $particles()(s.particles, s.player.wx, s.player.wy, fx.tone, 30); $particles()(s.particles, s.player.wx, s.player.wy, '#fff', 14); }
+        try { if (window.Juice) { window.Juice.hitstop(0.06); jTrauma(0.5); window.Juice.flash(fx.tone, 90); } } catch (_) {}
+        const SFX = $SFX(); if (SFX.pickupRare) SFX.pickupRare();
+      }
+      if (fx.t > 1.5) s.giftFX = null;
+    } else if (fx.type === 'eagle') {                    // eagle crosses screen, carpet-bombs nearby bots
+      const W = $W(); fx.x += dt * (W + 180) / 1.6; fx.bombT -= dt;
+      if (fx.bombT <= 0 && fx.x > 40 && fx.x < W - 40) {
+        fx.bombT = 0.16; const Iso = $Iso();
+        let tgt = null, nd = 1e9;
+        for (const b of s.bots) { const d = Math.hypot(b.wx - s.player.wx, b.wy - s.player.wy); if (d < 380 && d < nd) { nd = d; tgt = b; } }
+        if (tgt) {
+          const pr = Iso.w2s(tgt.wx, tgt.wy); fx.bombs.push({ sx: pr.sx, sy: pr.sy, t: 0 });
+          for (const b of s.bots.slice()) if (Math.hypot(b.wx - tgt.wx, b.wy - tgt.wy) < 62) hurtBot(s, b, 34, 'p');
+          if ($particles()) $particles()(s.particles, tgt.wx, tgt.wy, '#ff8a3a', 16);
+          pushShake(s, 8); const SFX = $SFX(); if (SFX.rBlast) SFX.rBlast();
+        }
+      }
+      for (const bm of fx.bombs) bm.t += dt;
+      fx.bombs = fx.bombs.filter(b => b.t < 0.5);
+      if (fx.x > W + 120 && fx.bombs.length === 0) s.giftFX = null;
+    }
+  }
+
+  function drawGiftFX(c, s, theme, W, H) {
+    const Iso = $Iso();
+    if (s.giftBoost && s.player) {                       // aura ring + giant gun barrel
+      const pr = Iso.w2s(s.player.wx, s.player.wy);
+      const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 140);
+      c.save(); c.globalAlpha = 0.45 + 0.3 * pulse; c.strokeStyle = s.giftBoost.tone; c.lineWidth = 3;
+      c.beginPath(); c.ellipse(pr.sx, pr.sy + 8, 26 + 4 * pulse, 13 + 2 * pulse, 0, 0, Math.PI * 2); c.stroke();
+      c.globalAlpha = 1; c.restore();
+      const gun = s.giftBoost.key;
+      if (gun === 'tank' || gun === 'shotgun') {
+        const ang = s.player.aimAng || 0;
+        c.save(); c.translate(pr.sx, pr.sy - 6); c.rotate(ang);
+        if (gun === 'tank') { c.fillStyle = '#2c2616'; c.fillRect(0, -7, 46, 14); c.fillStyle = '#ffd24a'; c.fillRect(0, -5, 40, 10); c.fillStyle = '#8a6a1a'; c.fillRect(38, -9, 9, 18); }
+        else { c.fillStyle = '#ffcf3a'; c.fillRect(0, -7, 34, 5); c.fillRect(0, 2, 34, 5); c.fillStyle = '#8a6a1a'; c.fillRect(30, -9, 7, 18); }
+        c.restore();
+      }
+    }
+    const fx = s.giftFX; if (!fx) return;
+    if (fx.type === 'crate') {
+      const drop = Math.min(1, fx.t / 0.62); const y = fx.sy - 230 * (1 - drop);
+      c.save();
+      if (!fx.burst) {
+        c.fillStyle = fx.tone; c.beginPath(); c.arc(fx.sx, y - 28, 27, Math.PI, 0); c.fill();
+        c.strokeStyle = 'rgba(255,255,255,.6)'; c.lineWidth = 1.5;
+        c.beginPath(); c.moveTo(fx.sx - 23, y - 28); c.lineTo(fx.sx - 10, y - 6); c.moveTo(fx.sx + 23, y - 28); c.lineTo(fx.sx + 10, y - 6); c.stroke();
+        c.fillStyle = '#6b4a22'; c.fillRect(fx.sx - 15, y - 6, 30, 26);
+        c.font = 'bold 17px sans-serif'; c.textAlign = 'center'; c.fillText(fx.ico, fx.sx, y + 13);
+      } else {
+        const r = (fx.t - 0.62) / 0.88; c.globalAlpha = Math.max(0, 1 - r); c.strokeStyle = fx.tone; c.lineWidth = 4;
+        c.beginPath(); c.arc(fx.sx, fx.sy, 10 + r * 72, 0, Math.PI * 2); c.stroke();
+      }
+      c.restore();
+    } else if (fx.type === 'eagle') {
+      c.save(); c.translate(fx.x, fx.y + 8 * Math.sin(fx.t * 6));
+      const flap = Math.sin(performance.now() / 90) * 18;
+      c.fillStyle = '#9ad8ff';
+      c.beginPath(); c.moveTo(-4, 0); c.lineTo(-42, -10 - flap); c.lineTo(-10, 5); c.fill();
+      c.beginPath(); c.moveTo(4, 0); c.lineTo(42, -10 - flap); c.lineTo(10, 5); c.fill();
+      c.fillStyle = '#cfe8ff'; c.beginPath(); c.ellipse(0, 0, 26, 10, 0, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#fff'; c.beginPath(); c.arc(24, -2, 7, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#ffb24a'; c.beginPath(); c.moveTo(30, -2); c.lineTo(41, 0); c.lineTo(30, 3); c.fill();
+      c.restore();
+      for (const bm of fx.bombs) {
+        const r = bm.t / 0.5; c.save();
+        c.globalAlpha = Math.max(0, 1 - r); c.fillStyle = '#ff8a3a'; c.beginPath(); c.arc(bm.sx, bm.sy, 6 + r * 42, 0, Math.PI * 2); c.fill();
+        c.globalAlpha = Math.max(0, 0.8 - r); c.fillStyle = '#fff'; c.beginPath(); c.arc(bm.sx, bm.sy, 3 + r * 22, 0, Math.PI * 2); c.fill();
+        c.restore();
+      }
+    }
+  }
+
   // ─── The Games.br module ────────────────────────────────────
   window.Games = window.Games || {};
   window.Games.br = {
@@ -1227,6 +1400,24 @@
         { key: 'e', ico: '🧱', label: '速建墙', color: null },   // R3: FF 招牌 Gloo 速建掩体墙(取代无用的 ADS)
         { key: 'r', ico: '🌀', label: '翻滚', color: 'cyan' },
       ];
+    },
+
+    applyGiftBoost(boost) {
+      const s = $state(); if (!s || !s.brActive || !s.player) return false;
+      const p = s.player;
+      // pick the gift: an explicit pool key, else rotate so repeat sends differ
+      let key = BR_GIFTS[boost] ? boost : null;
+      if (!key) { s._giftRot = (s._giftRot || 0); key = BR_GIFT_KEYS[s._giftRot % BR_GIFT_KEYS.length]; s._giftRot++; }
+      const g = BR_GIFTS[key];
+      g.apply(s, p);
+      if (s.skills && s.skills.q) { s.skills.q._cd = 0; }   // refresh dash → the comeback feels instant
+      s.giftBoost = { key, name: g.name, ico: g.ico, tone: g.tone, t: g.dur, age: 0 };
+      startGiftIntro(s, key, g);
+      // gift name shows ONCE, via the top DOM banner — no canvas popup of the same
+      // text (that double-printed it and collided with the coach/start-hint).
+      if ($showBanner()) $showBanner()(g.ico + ' ' + g.name, g.tone, 2.2);
+      try { if (window.Juice) { window.Juice.flash(g.tone, 120); window.Juice.confetti($W()); jTrauma(0.45); } } catch (_) {}
+      return true;
     },
 
     init() {
@@ -1409,6 +1600,18 @@
         const b = makeBot(cx, cy, id, theme);
         b.personality = PERS[id % PERS.length];
         b.airdropMode = rollWeird(BOT_WEIRD);   // R2: 每个 bot 开局随机怪枪
+        // ── ELITE "高手" tier: the last `eliteCount` bots play like real players —
+        //    tougher, accurate, aggressive. The other 6 fall to skill; these 3 are
+        //    the "差一点打不过" wall that nudges a gift. (gold band tell in drawBot)
+        if (id >= N_BOTS - TUNING.eliteCount) {
+          b.elite = true;
+          b.maxHp = b.hp = Math.round(TUNING.botHp * TUNING.eliteHpMul);
+          b.accuracy = TUNING.botAccuracy * TUNING.eliteAccMul;
+          b.dmg = Math.round(TUNING.botDmg * TUNING.eliteDmgMul);
+          b.speed = Math.round(TUNING.botSpeed * TUNING.eliteSpeedMul);
+          b.fireMul = TUNING.eliteFireMul;
+          b.airdropMode = 'strong';   // elites carry the piercing power-gun, not a comedy gun
+        }
         bots.push(b);
       }
 
@@ -1538,6 +1741,7 @@
       const theme = s.theme;
 
       s.elapsed += dt;
+      updateGiftFX(s, dt);    // GIFT "Enhance" spectacle timer + eagle bombing run + crate drop
       // ⑤ 决赛圈高潮: 最后阶段全员暴走 + 横幅, 把残局推成快节奏 last-man 收尾
       if (!s.finalCircle && s.elapsed >= 20 && s.bots.length > 1) {
         s.finalCircle = true;
@@ -1648,11 +1852,8 @@
       if (p.spdBuff > 0) p.spdBuff -= dt;
       if (p.fireCd > 0) p.fireCd -= dt;
 
-      // Idle HP regen (only outside damage) — gentle drip to keep player alive on lucky play
-      p.idleT += dt;
-      if (p.idleT > 4 && p.hp < p.maxHp && p.hp > 0) {
-        p.hp = Math.min(p.maxHp, p.hp + 4 * dt);
-      }
+      // No passive HP regen — Free Fire / PUBG don't auto-heal you for standing
+      // still. Recover only via the heal kit (W) or a gift. Keeps the tension real.
 
       // ── R3 纯自动锁敌(去掉拖动瞄准, 消除"两套瞄准"冲突) ──────────────────────
       // 按住右下角开火键(右侧触摸)/空格 = 开火; 枪永远自动打最近"可见"敌人, 玩家不用瞄准。
@@ -2094,6 +2295,9 @@
         c.globalAlpha = 1; c.restore();
       }
 
+      // GIFT "Enhance" spectacle (crate drop / eagle bombing run / giant gun + aura)
+      drawGiftFX(c, s, theme, W, H);
+
       // Mini HUD (timer ring + zone radar + airdrop indicator)
       drawHUD(c, s, theme, W, H);
     },
@@ -2281,6 +2485,17 @@
       c.beginPath(); c.ellipse(sx, sy - 6, 13, 8, 0, 0, Math.PI * 2); c.stroke();
       c.restore();
     }
+    if (b.elite) {                                            // 高手 tell — gold pulsing ring + a small crown
+      const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 200 + b.id);
+      c.save();
+      c.globalAlpha = 0.4 + 0.35 * pulse; c.strokeStyle = '#ffd24a'; c.lineWidth = 2;
+      c.beginPath(); c.ellipse(sx, sy + 2, 14 + 2 * pulse, 8, 0, 0, Math.PI * 2); c.stroke();
+      c.globalAlpha = 1; c.fillStyle = '#ffd24a';
+      const hy = sy - 31;
+      c.beginPath(); c.moveTo(sx - 6, hy); c.lineTo(sx - 6, hy - 5); c.lineTo(sx - 2, hy - 2);
+      c.lineTo(sx, hy - 6); c.lineTo(sx + 2, hy - 2); c.lineTo(sx + 6, hy - 5); c.lineTo(sx + 6, hy); c.closePath(); c.fill();
+      c.restore();
+    }
     const hpBar = () => {
       const barW = 22;
       c.fillStyle = '#222'; c.fillRect(Math.round(sx - barW / 2), Math.round(sy - 34), barW, 3);
@@ -2312,18 +2527,20 @@
   function drawBullet(c, bl, theme) {
     const Iso = $Iso();
     const { sx, sy } = Iso.w2s(bl.wx, bl.wy, 8);
+    const big = bl.big || 1;                              // GIFT shells render oversized
     // Bullet trail tail
     const tailAng = Math.atan2(bl.vy, bl.vx);
-    const tailLen = bl.mode === 'normal' ? 8 : 12;
+    const tailLen = (bl.mode === 'normal' ? 8 : 12) * big;
     c.strokeStyle = bl.color;
-    c.lineWidth = 2;
+    c.lineWidth = 2 * big;
     c.beginPath();
     c.moveTo(sx, sy);
     c.lineTo(sx - Math.cos(tailAng) * tailLen, sy - Math.sin(tailAng) * tailLen * 0.5);
     c.stroke();
-    // Bullet core
-    c.fillStyle = bl.color;
-    c.fillRect(sx - 2, sy - 2, 4, 4);
+    // Bullet core (big shells get a glow halo so they read as a tank round)
+    if (big > 1.6) { c.globalAlpha = 0.4; c.fillStyle = bl.color; c.beginPath(); c.arc(sx, sy, 5 * big, 0, Math.PI * 2); c.fill(); c.globalAlpha = 1; }
+    c.fillStyle = big > 1 ? '#fff' : bl.color;
+    const r = 2 * big; c.fillRect(sx - r, sy - r, r * 2, r * 2);
   }
 
   // ─── Per-biome ambient atmosphere (R4) ─────────────────────

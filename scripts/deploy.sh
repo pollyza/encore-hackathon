@@ -90,10 +90,33 @@ for sub in games assets; do
     fi
 done
 
+# Kenney CC0 art + audio live UNDER assets/ in nested dirs (assets/kenney/, assets/kenney/audio/).
+# The flat games/assets loop above only copies top-level files, so sync the whole tree here.
+if [[ -d "$REPO_ROOT/prototype/assets/kenney" ]]; then
+    for target in "$PREVIEW_DIR/assets/kenney" "$DEPLOY_DIR/prototype/assets/kenney"; do
+        mkdir -p "$target"
+        cp -R "$REPO_ROOT/prototype/assets/kenney/." "$target/"
+        echo "  → $target/ (Kenney art+audio tree)"
+    done
+fi
+
 # Slides — used by the access-gated deck in the deploy bundle
 if [[ -f "$REPO_ROOT/docs/encore_slides.html" ]]; then
     [[ -d "$DEPLOY_DIR/docs" ]] && sync_file "$REPO_ROOT/docs/encore_slides.html" "$DEPLOY_DIR/docs/encore_slides.html"
     [[ -d "$PREVIEW_DIR" ]] && sync_file "$REPO_ROOT/docs/encore_slides.html" "$PREVIEW_DIR/encore_slides.html"
+fi
+
+# Landing + QR — the Vercel root rewrite points at docs/landing.html. Keep the
+# local mirrors current so QR/link QA uses the same entry page as production.
+if [[ -f "$REPO_ROOT/docs/landing.html" ]]; then
+    mkdir -p "$DEPLOY_DIR/docs" "$PREVIEW_DIR/docs"
+    sync_file "$REPO_ROOT/docs/landing.html" "$DEPLOY_DIR/docs/landing.html"
+    sync_file "$REPO_ROOT/docs/landing.html" "$PREVIEW_DIR/docs/landing.html"
+fi
+if [[ -f "$REPO_ROOT/docs/qr-encore.svg" ]]; then
+    mkdir -p "$DEPLOY_DIR/docs" "$PREVIEW_DIR/docs"
+    sync_file "$REPO_ROOT/docs/qr-encore.svg" "$DEPLOY_DIR/docs/qr-encore.svg"
+    sync_file "$REPO_ROOT/docs/qr-encore.svg" "$PREVIEW_DIR/docs/qr-encore.svg"
 fi
 
 # LIVE streamer host — now under prototype/live/ (was prototype/) as of v0.6.1

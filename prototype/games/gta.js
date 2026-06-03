@@ -161,6 +161,8 @@
     chopperSweepWU:   115,
     chopperBeamLanes: 0.9,
     chopperHeatRate:  0.22,
+    chopperFireCd:    0.42,   // while you're in the beam the heli machine-guns you (real punishment, not just "stays hot")
+    chopperBulletDmg: 9,
     // 爆胎漂移 (random event #6, user-named "开着开着爆胎"): a tyre blows → the car
     // drifts to one side & steering goes loose for a beat; counter-steer to save it
     // (操作空间, never an instant death). No damage — it's a skill check, not malice.
@@ -240,7 +242,22 @@
   function $scoreEl()  { return document.getElementById('score'); }
   function $Iso()      { return window.Iso; }
   function $keys()     { return window.keys || {}; }
-  function $SFX()      { return window.SFX || {}; }
+  // ── Kenney CC0 audio (GTA) — sci-fi/digital samples (CC0; assets/kenney/CREDITS.md)
+  //    mapped to the game's sfx names. Overriding $SFX() routes every existing SFX.x()
+  //    call through here: a real sample if mapped+loaded, else the shared synth SFX
+  //    (e.g. tire screech stays synth — no tonally-right CC0 clip). GTA-local.
+  const GTA_AUDIO = {
+    base: 'assets/kenney/audio/gta/',
+    files: { qDash:'qDash.ogg', cash:'cash.ogg', hit:'hit.wav', shot:'shot.wav', win:'win.ogg', lose:'lose.ogg' },
+    vol:   { qDash:0.42, cash:0.5, hit:0.5, shot:0.3, win:0.55, lose:0.5 },
+    pool: {}, ok: {},
+    load() { try { for (const k in this.files) { const kk=k, arr=[]; for (let i=0;i<3;i++){ const a=new Audio(this.base+this.files[k]); a.preload='auto'; a.volume=this.vol[k]||0.4; if(i===0){ a.addEventListener('canplaythrough',()=>{this.ok[kk]=true;},{once:true}); a.addEventListener('error',()=>{this.ok[kk]=false;},{once:true}); } arr.push(a); } this.pool[kk]=arr; } } catch(_){} },
+    play(n){ if(!this.ok[n]||!this.pool[n])return false; try { const arr=this.pool[n]; let a=arr.find(x=>x.paused||x.ended); if(!a){ a=arr[0].cloneNode(); a.volume=this.vol[n]||0.4; } a.currentTime=0; const pr=a.play(); if(pr&&pr.catch)pr.catch(()=>{}); return true; } catch(_){ return false; } },
+  };
+  try { GTA_AUDIO.load(); window.__gtaAudioOk = () => GTA_AUDIO.ok; } catch (_) {}
+  const GTA_SFX_PROXY = (typeof Proxy !== 'undefined') ? new Proxy({}, { get(_, name) { if (typeof name !== 'string') return undefined;
+    return function () { if (GTA_AUDIO.play(name)) return; const s = window.SFX; if (s && typeof s[name] === 'function') { try { s[name](); } catch (_) {} } }; } }) : null;
+  function $SFX()      { return GTA_SFX_PROXY || window.SFX || {}; }
   function $J()        { return window.Juice || null; }
 
   // ─── color helpers ──────────────────────────────────────────
@@ -348,8 +365,24 @@
   // Low-angle 2.5D car: a ground shadow + a raised body with a lit roof, darker
   // flanks, and a rounded shell — reads as a solid vehicle from a GTA-ish low
   // camera instead of a flat tile. Pure local draw (no projection change).
-  function drawCarTopDown(c, sx, sy, w, body, glass) {
+  // ── Kenney CC0 car sprites (GTA pilot) — top-down "Racing Pack" cars (CC0 / public
+  //    domain; see assets/kenney/CREDITS.md). Same pattern as Roblox: loose-image loader,
+  //    procedural fallback on every call so a missing/slow asset never breaks the game or
+  //    QA gates. GTA-local — Roblox/BR + the shared Assets atlas are untouched.
+  const GTA_SPR = {
+    base: 'assets/kenney/gta/',
+    files: { player:'car_player.png', cop:'car_cop.png', t1:'car_t1.png', t2:'car_t2.png', t3:'car_t3.png', t4:'car_t4.png', t5:'car_t5.png' },
+    img: {}, ok: {},
+    load() { try { for (const k in this.files) { const kk = k, im = new Image(); im.onload = () => { this.ok[kk] = true; }; im.onerror = () => { this.ok[kk] = false; }; im.src = this.base + this.files[k]; this.img[kk] = im; } } catch (_) {} },
+    has(k) { const im = this.img[k]; return !!(this.ok[k] && im && im.complete && im.naturalWidth > 0); },
+    car(c, kind, sx, sy, w) { const k = this.has(kind) ? kind : (this.has('t1') ? 't1' : null); if (!k) return false;   // top-down car, front=up, native aspect
+      const im = this.img[k], h = w * im.naturalHeight / im.naturalWidth; c.drawImage(im, sx - w/2, sy - h/2, w, h); return true; },
+  };
+  try { GTA_SPR.load(); } catch (_) {}
+
+  function drawCarTopDown(c, sx, sy, w, body, glass, kind) {
     sx = Math.round(sx); sy = Math.round(sy);
+    if (kind && GTA_SPR.car(c, kind, sx, sy, w)) return;             // Kenney car sprite (cop siren bar is drawn separately) → procedural fallback below
     const h = w * 1.7, rx = w*0.16;
     const rrect = (x,y,ww,hh,r) => { c.beginPath(); c.moveTo(x+r,y); c.arcTo(x+ww,y,x+ww,y+hh,r); c.arcTo(x+ww,y+hh,x,y+hh,r); c.arcTo(x,y+hh,x,y,r); c.arcTo(x,y,x+ww,y,r); c.closePath(); };
     // ground shadow (offset down-right → implies a low sun / height)
@@ -656,6 +689,118 @@
 
   // ─── module ─────────────────────────────────────────────────
   window.Games = window.Games || {};
+  // ═══ GIFT "ENHANCE" SPECTACLE (GTA) ══════════════════════════════════════
+  // The crew bails you out — TikTok-gift "protection" beats: cartel airstrike /
+  // FBI escort / Lester wiping your wanted level. Big, loud, timed; a struggling
+  // driver gets a dramatic save without auto-win (heat climbs right back, you
+  // still have to finish the run). A 3-gift pool → every send differs.
+  const GTA_GIFTS = {
+    cartel: { ico: '🚁', name: '黑帮空袭 · CARTEL', tone: '#ff5a3c', dur: 9 },   // chopper hovers + bombs your path
+    fbi:    { ico: '🚔', name: 'FBI 护送 · ESCORT',  tone: '#54a8ff', dur: 9 },   // armored SUVs ride shotgun
+    tank:   { ico: '🛡', name: '犀牛坦克 · RHINO',  tone: '#7dd66a', dur: 8 },   // become a tank, plow everything
+  };
+  const GTA_GIFT_KEYS = ['cartel', 'fbi', 'tank'];
+
+  // Destroy traffic + cops near a world point (visible smash). Returns the count.
+  function gtaClearAround(s, wx, wy, R) {
+    const P = gProj(s); let n = 0;
+    for (const o of s.obstacles) if (!o.hit && Math.abs(o.wx - wx) < R && Math.abs(o.wy - wy) < R) {
+      o.hit = true; n++; for (let i = 0; i < 6; i++) pushSpark(s, P.sx(o.wx), P.sy(o.wy), i % 2 ? '#ff7a3b' : '#ffd24a', 16); }
+    for (const c of s.cops) if (!c._dead && Math.hypot(c.wx - wx, c.wy - wy) < R) {
+      c._dead = true; s.cash += 120; n++; for (let i = 0; i < 8; i++) pushSpark(s, P.sx(c.wx), P.sy(c.wy), i % 2 ? '#ff7a3b' : '#ffd24a', 18);
+      if (s.heat > 0) { s.heat = Math.max(0, s.heat - 0.5); s.stars = Math.ceil(s.heat - 1e-6); } }
+    return n;
+  }
+
+  // All 3 GTA gifts are PERSISTENT protection that works from a fresh round (no
+  // pre-existing cops needed): you're invulnerable for the whole window and the
+  // crew actively clears your path. Visible from frame 1.
+  function gtaApplyGift(s, key) {
+    const p = s.player;
+    p.maxHp = Math.max(p.maxHp, 130); p.hp = p.maxHp;
+    p.boostsLeft = Math.max(p.boostsLeft, TUNING.nitroCount + 2);
+    p.invulnT = Math.max(p.invulnT || 0, 0.6);            // updateGtaGiftFX keeps it topped up for the duration
+    s.giftStrike = { type: key, t: 0, dur: GTA_GIFTS[key].dur, fireT: 0, hits: [] };
+  }
+
+  function updateGtaGiftFX(s, dt) {
+    if (s.giftBoost) { s.giftBoost.t -= dt; s.giftBoost.age = (s.giftBoost.age || 0) + dt; if (s.giftBoost.t <= 0) s.giftBoost = null; }
+    const fx = s.giftStrike; if (!fx) return;
+    const p = s.player; if (!p) { s.giftStrike = null; return; }
+    fx.t += dt;
+    p.invulnT = Math.max(p.invulnT || 0, 0.3);          // PROTECTED the whole window (all 3 gifts, from frame 1)
+    const ws = $Iso().WS, P = gProj(s);
+    if (fx.type === 'cartel') {                          // chopper hovers above you + bombs the road AHEAD
+      fx.fireT -= dt;
+      if (fx.fireT <= 0) { fx.fireT = 0.55;
+        const tx = p.wx + (Math.random() - 0.5) * ws * 1.4, ty = p.wy - ws * (1.6 + Math.random() * 2.6);
+        gtaClearAround(s, tx, ty, ws * 1.3);
+        fx.hits.push({ sx: P.sx(tx), sy: P.sy(ty), t: 0 }); pushShake(s, 9);
+        const J = $J(); if (J && J.addTrauma) J.addTrauma(0.3);
+      }
+    } else if (fx.type === 'fbi') {                      // escorts gun down anything just ahead of you
+      fx.fireT -= dt;
+      if (fx.fireT <= 0) { fx.fireT = 0.5; gtaClearAround(s, p.wx, p.wy - ws * 2, ws * 2.6); }
+    } else if (fx.type === 'tank') {                     // plow EVERYTHING you touch (smash, not phase-through)
+      gtaClearAround(s, p.wx, p.wy, ws * 1.5);
+      if (Math.floor(fx.t * 8) % 2 === 0) pushShake(s, 5);
+    }
+    for (const h of fx.hits) h.t += dt; fx.hits = fx.hits.filter(h => h.t < 0.5);
+    if (fx.t >= fx.dur && fx.hits.length === 0) s.giftStrike = null;
+  }
+
+  function drawGiftFXGta(ctx, s, W, H) {
+    const p = s.player;
+    if (s.giftBoost && p) {                                // aura ring under the car
+      const P = gProj(s), sx = P.sx(p.wx), sy = P.sy(p.wy), pulse = 0.5 + 0.5 * Math.sin(performance.now() / 140);
+      ctx.save(); ctx.globalAlpha = 0.4 + 0.3 * pulse; ctx.strokeStyle = s.giftBoost.tone; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.ellipse(sx, sy + 14, 30 + 5 * pulse, 12, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 1; ctx.restore();
+    }
+    const fx = s.giftStrike; if (!fx) return;
+    if (fx.type === 'cartel' && p) {
+      const PR = gProj(s), cpx = PR.sx(p.wx);                           // chopper HOVERS right above your car (escort)
+      const cpy = Math.max(70, PR.sy(p.wy) - 150) + Math.sin(performance.now() / 240) * 5;
+      ctx.save(); ctx.translate(cpx, cpy); ctx.scale(2.0, 2.0);
+      ctx.save(); ctx.globalAlpha = 0.18; ctx.fillStyle = '#fff3c0';    // searchlight cone down to the road
+      ctx.beginPath(); ctx.moveTo(-6, 6); ctx.lineTo(6, 6); ctx.lineTo(34, 120); ctx.lineTo(-34, 120); ctx.closePath(); ctx.fill(); ctx.restore();
+      ctx.shadowColor = '#ff6a3c'; ctx.shadowBlur = 16;
+      ctx.fillStyle = '#4a5440'; ctx.fillRect(-24, -7, 48, 14); ctx.fillRect(16, -3, 22, 6);   // olive military body + tail
+      ctx.fillStyle = '#9fe0ff'; ctx.fillRect(-15, -5, 15, 9);                                  // bright cockpit glass
+      ctx.fillStyle = '#2a3024'; ctx.fillRect(-22, 5, 44, 4);                                   // skid
+      ctx.shadowBlur = 0; ctx.strokeStyle = '#eef2f6'; ctx.lineWidth = 3; ctx.globalAlpha = 0.9;
+      ctx.beginPath(); ctx.moveTo(-34, -12); ctx.lineTo(34, -12); ctx.stroke(); ctx.globalAlpha = 1;   // rotor
+      ctx.fillStyle = '#ff3b3b'; ctx.fillRect(-3, -3, 5, 5); ctx.restore();
+      for (const h of fx.hits) { const r = h.t / 0.5; ctx.save();
+        ctx.globalAlpha = Math.max(0, 1 - r); ctx.fillStyle = '#ff7a3b'; ctx.beginPath(); ctx.arc(h.sx, h.sy, 6 + r * 46, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = Math.max(0, 0.8 - r); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(h.sx, h.sy, 3 + r * 24, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
+    } else if (fx.type === 'fbi' && p) {
+      const P = gProj(s), sx = P.sx(p.wx), sy = P.sy(p.wy);  // two FBI SUVs flanking the player
+      const blue = Math.floor(performance.now() / 110) % 2 === 0;
+      for (const dx of [-50, 50]) { ctx.save(); ctx.translate(sx + dx, sy);
+        ctx.shadowColor = blue ? '#3a6bff' : '#ff3b3b'; ctx.shadowBlur = 12;    // siren glow → pops on the dark road
+        ctx.fillStyle = '#222838'; ctx.strokeStyle = '#cdd6e8'; ctx.lineWidth = 1.6;  // charcoal body + silver outline
+        ctx.fillRect(-11, -20, 22, 40); ctx.strokeRect(-11, -20, 22, 40); ctx.shadowBlur = 0;
+        ctx.fillStyle = '#7f9bd6'; ctx.fillRect(-8, -14, 16, 9);                // windshield
+        ctx.fillStyle = '#0f1320'; ctx.fillRect(-8, 4, 16, 8);                  // hood
+        ctx.fillStyle = blue ? '#5a8bff' : '#10183a'; ctx.fillRect(-9, -23, 8, 4);  // light bar L
+        ctx.fillStyle = blue ? '#3a1018' : '#ff5b5b'; ctx.fillRect(1, -23, 8, 4);   // light bar R
+        ctx.restore(); }
+    } else if (fx.type === 'tank' && p) {
+      const P = gProj(s), sx = P.sx(p.wx), sy = P.sy(p.wy);   // your car IS a Rhino tank now
+      ctx.save(); ctx.translate(sx, sy); ctx.shadowColor = '#7dd66a'; ctx.shadowBlur = 12;
+      ctx.fillStyle = '#1c241a'; ctx.fillRect(-21, -22, 8, 48); ctx.fillRect(13, -22, 8, 48);   // treads
+      ctx.fillStyle = '#3f5a36'; ctx.strokeStyle = '#2a3d24'; ctx.lineWidth = 2;                // hull
+      ctx.fillRect(-15, -18, 30, 40); ctx.strokeRect(-15, -18, 30, 40);
+      ctx.fillStyle = '#4d6e41'; ctx.beginPath(); ctx.arc(0, -2, 11, 0, Math.PI * 2); ctx.fill();  // turret
+      ctx.fillStyle = '#26331f'; ctx.fillRect(-4, -36, 8, 28);                                   // cannon (forward = up)
+      ctx.shadowBlur = 0; ctx.restore();
+      if (Math.floor(performance.now() / 120) % 2 === 0) {                                       // muzzle flash
+        ctx.save(); ctx.globalAlpha = 0.85; ctx.fillStyle = '#ffd24a';
+        ctx.beginPath(); ctx.arc(sx, sy - 38, 7, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
+    }
+  }
+
   window.Games.gta = {
     name: 'GTA · HEIST RUN',
     badge: 'GTA',
@@ -680,6 +825,21 @@
     onActionDown() { if (this.castPress) this.castPress('q'); },             // fire-on-press → nitro works while steering thumb is down
 
     skills() { return [ { key: 'q', ico: '⚡', label: '氮气', color: '#00f0ff' }, null, null, null ]; },
+
+    applyGiftBoost(boost) {
+      const s = $state(); if (!s || !s.gtaActive || !s.player) return false;
+      // pick the gift — explicit pool key, else rotate so repeat sends differ
+      let key = GTA_GIFTS[boost] ? boost : null;
+      if (!key) { s._giftRot = (s._giftRot || 0); key = GTA_GIFT_KEYS[s._giftRot % GTA_GIFT_KEYS.length]; s._giftRot++; }
+      const g = GTA_GIFTS[key];
+      gtaApplyGift(s, key);
+      s.giftBoost = { key, name: g.name, ico: g.ico, tone: g.tone, t: g.dur, age: 0 };
+      const P = gProj(s); pushSpark(s, P.sx(s.player.wx), P.sy(s.player.wy) + 10, g.tone, 30);
+      // gift name shows ONCE via the top DOM banner — no duplicate canvas popup
+      const J = $J(); if (J) { J.flash(g.tone, 110); if (J.confetti) J.confetti($W()); if (J.addTrauma) J.addTrauma(0.45); }
+      if (window.showBanner) window.showBanner(g.ico + ' ' + g.name, g.tone, 2.0);
+      return true;
+    },
 
     init() {
       const cfgScenario = (window.pendingConfig && window.pendingConfig.scenario) || {};
@@ -839,6 +999,7 @@
       const P = gProj(s);
 
       s.elapsed += dt;
+      updateGtaGiftFX(s, dt);    // GIFT "Enhance" timer + cartel airstrike / FBI escort / heat-wipe
       if (s._speedLinesT > 0) s._speedLinesT = Math.max(0, s._speedLinesT - dt);
       if (s.trafficQuiet > 0) s.trafficQuiet = Math.max(0, s.trafficQuiet - dt);
       if (s._heatFlashT > 0) s._heatFlashT = Math.max(0, s._heatFlashT - dt);
@@ -1041,6 +1202,26 @@
         else if (s.chopper.x <= s.latLeft) { s.chopper.x = s.latLeft; s.chopper.dir = 1; }
         if (Math.abs(p.wx - s.chopper.x) < TUNING.chopperBeamLanes * ws) {
           s.heat = Math.min(TUNING.heatMax, s.heat + TUNING.chopperHeatRate * dt); s.heatCalmT = 0; s.stars = Math.ceil(s.heat - 1e-6);
+          // R: caught in the beam → the heli STRAFES you (a real threat that can bust
+          // you, not just "stays hot"). Direct strafe damage = reliable punishment on
+          // a moving runner; the falling tracers below sell it visually. Drive OUT of
+          // the beam to break it.
+          s.chopper.fireT = (s.chopper.fireT || 0) - dt;
+          if (s.chopper.fireT <= 0) {
+            s.chopper.fireT = TUNING.chopperFireCd;
+            // visible machine-gun tracers raining from the heli onto your lane (cosmetic)
+            for (let k = 0; k < 3; k++) s.copBullets.push({ wx: s.chopper.x + (Math.random()-0.5)*ws*0.8, wy: p.wy + ws*(6-k*1.5), vx: 0, vy: -TUNING.copBulletSpeedWU*1.3, life: 0.45, _minD: 1e9, dmg: 0, heli: true });
+            const Jc = $J(); if (Jc) { Jc.flash('#ffd24a', 26); }
+            pushShake(s, 6);
+            // the actual hit (machine-gun rattle). Gated by the heli's OWN fireT, so we
+            // do NOT touch p.invulnT — doing so also made you immune to cop slams.
+            p.hp = Math.max(0, p.hp - TUNING.chopperBulletDmg); s.robCombo = 0;
+            pushSpark(s, P.sx(p.wx), P.sy(p.wy), '#ffd84a', 8);
+            const SFX = $SFX(); try { if (SFX.hit) SFX.hit(); } catch (_) {}
+            if (window.showBanner) window.showBanner(`🚁 直升机扫射! HP ${p.hp}`, '#ff6a4a', 0.5);
+            if (p.hp <= 0) { return this._bust(s); }
+            if (!s.chopper._warned) { s.chopper._warned = true; gtaToast(s, '🚁 直升机开火!快躲开探照灯!', '#ff6a4a', false); }
+          }
         }
       } else if (s.chopper) s.chopper = null;
 
@@ -1268,7 +1449,7 @@
         b.wx += b.vx * dt; b.wy += b.vy * dt; b.life -= dt;
         const d = Math.hypot(b.wx - p.wx, b.wy - p.wy); b._minD = Math.min(b._minD, d);
         if (d < p.r + 6 && (p.invulnT || 0) <= 0) {
-          b.life = 0; p.hp = Math.max(0, p.hp - TUNING.copBulletDmg); p.invulnT = 0.6; s.robCombo = 0;
+          b.life = 0; p.hp = Math.max(0, p.hp - (b.dmg || TUNING.copBulletDmg)); p.invulnT = 0.6; s.robCombo = 0;
           pushShake(s, 8); pushSpark(s, P.sx(p.wx), P.sy(p.wy), '#ffd84a', 10);
           const J = $J(); if (J) { J.flash('#ff7744', 70); J.chroma(80); }
           const SFX = $SFX(); try { if (SFX.hit) SFX.hit(); } catch (_) {}
@@ -1441,9 +1622,9 @@
           for (let i = -2; i <= 2; i++) { ctx.fillStyle = (i & 1) ? '#f4c430' : '#222'; ctx.fillRect(sx - bw/2 + (i+2)*bw/5, sy - 10, bw/5, 20); }
           ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.strokeRect(sx - bw/2, sy - 10, bw, 20);
         } else if (o.smashed) {
-          ctx.save(); ctx.translate(sx, sy); ctx.rotate(o.spin || 0); drawCarTopDown(ctx, 0, 0, laneW * o.w, o.color, '#11151f'); ctx.restore();
+          ctx.save(); ctx.translate(sx, sy); ctx.rotate(o.spin || 0); drawCarTopDown(ctx, 0, 0, laneW * o.w, o.color, '#11151f', (o._spr || (o._spr = 't' + (1 + Math.abs((o.wx|0)+(o.wy|0)) % 5)))); ctx.restore();
         } else {
-          drawCarTopDown(ctx, sx, sy, laneW * o.w, o.color, '#11151f');
+          drawCarTopDown(ctx, sx, sy, laneW * o.w, o.color, '#11151f', (o._spr || (o._spr = 't' + (1 + Math.abs((o.wx|0)+(o.wy|0)) % 5))));
         }
       }
 
@@ -1452,8 +1633,8 @@
         const sy = g2sy(cop.wy); if (sy < -80 || sy > H + 80) continue;
         const sx = g2sx(cop.wx);
         if (cop._hitFlash > 0) { cop._hitFlash -= 0.016; }                  // white flash when shot
-        if (cop._wipe > 0) { ctx.save(); ctx.translate(sx, sy); ctx.rotate(cop._spin || 0); drawCarTopDown(ctx, 0, 0, laneW * 0.62, t.cop, t.copGlass); ctx.restore(); }
-        else drawCarTopDown(ctx, sx, sy, laneW * 0.62, cop._hitFlash > 0 ? '#ffffff' : t.cop, t.copGlass);
+        if (cop._wipe > 0) { ctx.save(); ctx.translate(sx, sy); ctx.rotate(cop._spin || 0); drawCarTopDown(ctx, 0, 0, laneW * 0.62, t.cop, t.copGlass, 'cop'); ctx.restore(); }
+        else drawCarTopDown(ctx, sx, sy, laneW * 0.62, cop._hitFlash > 0 ? '#ffffff' : t.cop, t.copGlass, cop._hitFlash > 0 ? null : 'cop');
         const fl = Math.sin(s.elapsed * 16 + cop.sirenPhase) > 0;
         const cl = t.copLight || ['#ff2b2b', '#2b6bff'];
         ctx.fillStyle = fl ? cl[0] : cl[1]; ctx.fillRect(sx - 8, sy - 4, 16, 4);
@@ -1503,7 +1684,7 @@
         if (p._tireT > 0) { const ws2 = p._tireDir*laneW*0.30; for (let i=0;i<5;i++){ const k=(s.elapsed*3+i*0.2)%1; ctx.globalAlpha=0.5-0.45*k; ctx.fillStyle='#9aa0aa'; ctx.beginPath(); ctx.arc(sx+ws2 - p._tireDir*k*22, sy+laneW*0.40+k*10, 3+k*8, 0, Math.PI*2); ctx.fill(); } ctx.globalAlpha=1; }
         const inv = (p.invulnT||0) > 0 && Math.floor(s.elapsed*12)%2===0;
         if (p._tankT > 0) { ctx.save(); ctx.shadowColor = '#ff3bd6'; ctx.shadowBlur = 18; drawCarTopDown(ctx, sx, sy, laneW*0.80, '#ff3bd6', '#ffd0f5'); ctx.restore(); }
-        else drawCarTopDown(ctx, sx, sy, laneW*0.66, inv ? '#ffffff' : t.car, t.carGlass);
+        else drawCarTopDown(ctx, sx, sy, laneW*0.66, inv ? '#ffffff' : t.car, t.carGlass, inv ? null : 'player');
         drawGangster(ctx, sx, sy, laneW, p._robSide, p._robberPop, s.elapsed);   // always-on driver head; leans out w/ gun on rob
         // drive-by muzzle flash (firing backward at the cops behind)
         if (p._muzzleT > 0) { const gs = p._gunSide || 1, mx = sx + gs*laneW*0.34, my = sy + laneW*0.42;
@@ -1562,6 +1743,7 @@
         if (Math.floor(s.elapsed*5)%2===0) { ctx.fillStyle = '#ff3b3b'; ctx.beginPath(); ctx.arc(bx, cy, 2.5, 0, Math.PI*2); ctx.fill(); }   // blinking belly light
       }
       drawNoirOverlay(ctx, W, H, s);        // vignette + wanted-level red tint (noir, not candy)
+      drawGiftFXGta(ctx, s, W, H);          // GIFT "Enhance" spectacle (cartel chopper / FBI escort / aura)
       drawMiniHUD(ctx, W, H, s, t);
       drawWantedHUD(ctx, W, H, s);          // ★ wanted level
       drawRampageHUD(ctx, W, H, s);         // 连击 ×N rampage chain + cash multiplier

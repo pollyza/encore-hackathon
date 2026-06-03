@@ -66,17 +66,43 @@
     gta:    'shop heist run',     // Mario v2 5/28
   };
   const WEAPONS = ['pistol', 'smg', 'rifle', 'sniper'];
+  // GIFT "Enhance" layer — per-game pools of community-meme boosts. The result
+  // screen rotates through each pool so every round offers a DIFFERENT gift
+  // (variety = repeat-purchase pull). Each is big & funny & on-brand; strong but
+  // timed, never gates play. Keys match the game modules' applyGiftBoost pools.
+  const GIFT_POOLS = {
+    br: [
+      { key: 'tank',    ico: '🚁', head: 'BOOYAH Airdrop',  sub: 'Air-drops a tank cannon — huge AOE shells', button: '🌹 5' },
+      { key: 'eagle',   ico: '🦅', head: 'Falco Airstrike', sub: 'Pet eagle carpet-bombs the lobby',          button: '🌹 5' },
+      { key: 'shotgun', ico: '🔫', head: 'Golden M1887',    sub: 'Iconic gold shotgun — point-blank melt',    button: '🌹 5' },
+    ],
+    gta: [
+      { key: 'cartel', ico: '🚁', head: 'Cartel Airstrike', sub: 'A chopper rides shotgun & bombs your path',     button: '🌹 5' },
+      { key: 'fbi',    ico: '🚔', head: 'FBI Escort',       sub: 'Armored SUVs flank you — bulletproof run',     button: '🌹 5' },
+      { key: 'tank',   ico: '🛡', head: 'Rhino Tank',       sub: 'Become a tank — plow through everything',       button: '🌹 5' },
+    ],
+    roblox: [
+      { key: 'wings', ico: '🪽', head: 'Dominus Wings', sub: 'Giant glowing wings — take off & glide', button: '🌹 5' },
+      { key: 'coil',  ico: '🌀', head: 'Gravity Coil',  sub: 'The classic gear — moon-jump sky-high',  button: '🌹 5' },
+      { key: 'oof',   ico: '🚀', head: 'OOF Rocket',    sub: 'Mega-bounce spring — to the moon, OOF!', button: '🌹 5' },
+    ],
+  };
+  const giftRotation = {};   // template -> next index, so consecutive rounds offer different gifts
+  let pickedGift = null;     // the gift currently shown on the result screen (copy + send agree)
 
   // IFRAME URL — relative to /live/streamer.html, hits /prototype/encore_prototype.html
   // (which the deploy mirror flattens to /encore_prototype.html). Both work.
-  const IFRAME_URL = '../encore_prototype.html?embedded=1&v=v2g-ready-r2';
+  const IFRAME_URL = '../encore_prototype.html?embedded=1&v=v2g-ready-r3';
 
   // Random V2GResponse — used when no real Vision detection is available.
   // Each open() pulls a fresh config so demo rounds feel varied.
+  const URL_PARAMS = new URLSearchParams(window.location.search);
   function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
   function makeRandomConfig() {
-    const template = pickRandom(TEMPLATES);
-    const theme    = pickRandom(THEMES[template]);
+    const forcedTemplate = URL_PARAMS.get('force_template');
+    const template = TEMPLATES.includes(forcedTemplate) ? forcedTemplate : pickRandom(TEMPLATES);
+    const forcedTheme = URL_PARAMS.get('force_theme');
+    const theme = (THEMES[template] || []).includes(forcedTheme) ? forcedTheme : pickRandom(THEMES[template]);
     let scenario;
     // Per-template scenario fields (Mario v2 5/28)
     if (template === 'roblox') {
@@ -93,6 +119,13 @@
         cop_spawn_rate: 0.2,
         map_size:       1500,
         description:    TEMPLATE_DESC[template],
+      };
+    } else if (template === 'br') {
+      scenario = {
+        enemy_count: 9,
+        hp_start:    100,
+        description: TEMPLATE_DESC[template],
+        weapon:      pickRandom(WEAPONS),
       };
     } else {
       // fps / moba / br / td legacy fields
@@ -120,6 +153,7 @@
   let phase = 'closed';           // closed | loading | game | result | ranking
   let lastResult = null;
   let currentConfig = null;       // last V2GResponse we launched the iframe with
+  let nextConfigOverride = null;   // one-shot config used by Gift Boost replay
   let loadingRAF = null;
   let loadingStageIv = null;
   let ackTimer = null;
@@ -181,7 +215,8 @@
   }
 
   // ── LOADING phase ─────────────────────────────────────────────────────
-  function startLoading() {
+  function startLoading(forcedConfig) {
+    if (forcedConfig) nextConfigOverride = forcedConfig;
     setPhase('loading');
 
     // Reset visuals
@@ -261,9 +296,10 @@
   // (e.g. observer-client passing a real Vision detection).
   function startGame() {
     setPhase('game');
-    currentConfig = cfg.pickConfig
+    currentConfig = nextConfigOverride || (cfg.pickConfig
       ? (cfg.pickConfig() || makeRandomConfig())
-      : makeRandomConfig();
+      : makeRandomConfig());
+    nextConfigOverride = null;
 
     // Update sheet header subtitle to show the picked template + theme
     const subEl = document.querySelector('#sheet-header .brand .text .sub');
@@ -803,25 +839,11 @@
     if (cancelBtn) cancelBtn.addEventListener('click', markCancelled);
     if (nowBtn)    nowBtn.addEventListener('click', () => { cancelPublishCountdown(); markPublished(); });
 
-    // Enhance CTA (v0.8.1 MVP single paid SKU, persistent in both winner/non-winner states)
+    // Enhance CTA → REAL per-game gift: send the rolled gift + start a boosted
+    // replay (sendGiftBoost). Replaces the v0.8.1 text-swap mock + its gift-gate
+    // (Enhance only enhances — no "送礼换试玩" gating).
     const enhCta = document.getElementById('result-enhance-cta');
-    if (enhCta) {
-      enhCta.addEventListener('click', () => {
-        const gate = document.getElementById('result-enhance-gate');
-        const isGated = gate && !gate.hidden;
-        if (isGated) {
-          // gift-gate ON: simulate "sent gift, now unlocked" → swap to buy state
-          enhCta.querySelector('.head').textContent = 'Enhance unlocked';
-          enhCta.querySelector('.sub').textContent = 'Tap again to apply to next round';
-          gate.hidden = true;
-        } else {
-          enhCta.querySelector('.head').textContent = '✓ Enhance applied';
-          enhCta.querySelector('.sub').textContent = '🔥 Fire bullets · ❤️ Double HP next round';
-          enhCta.querySelector('.price').textContent = 'BUY';
-          enhCta.style.pointerEvents = 'none';
-        }
-      });
-    }
+    if (enhCta) enhCta.addEventListener('click', sendGiftBoost);
 
     // Clip play / sound / regenerate — UI-only mocks for demo
     const playOverlay = document.getElementById('result-clip-play');
@@ -914,23 +936,77 @@
       }
     }
 
-    // Reset Enhance CTA to default state (works in both winner + non-winner)
-    const enhCta = document.getElementById('result-enhance-cta');
-    if (enhCta) {
-      enhCta.style.pointerEvents = '';
-      const head = enhCta.querySelector('.head');
-      const sub  = enhCta.querySelector('.sub');
-      const pric = enhCta.querySelector('.price');
-      if (head) head.textContent = 'Enhance · next round';
-      if (sub)  sub.textContent  = '🔥 Fire bullets · ❤️ Double HP · ➕ Extra life';
-      if (pric) pric.textContent = '$0.5';
-    }
+    // Enhance CTA → our per-game gift pool (rotates each round; won=Flex / lost=Comeback)
+    updateEnhanceCta(won);
   }
 
   function playAgain() {
     destroyIframe();
     document.getElementById('phase-game').innerHTML = '';
     startLoading();
+  }
+
+  function giftPoolFor(t) { return GIFT_POOLS[t] || GIFT_POOLS.br; }
+
+  // Pick the NEXT gift in this template's pool (rotates each result screen → variety).
+  function rollGift(t) {
+    const pool = giftPoolFor(t);
+    const i = (giftRotation[t] || 0) % pool.length;
+    giftRotation[t] = i + 1;
+    return pool[i];
+  }
+
+  function currentGiftBoost() {
+    if (pickedGift) return pickedGift;
+    const t = (currentConfig && currentConfig.template) || 'br';
+    return (pickedGift = rollGift(t));
+  }
+
+  // Drives PR#19's v0.8 Enhance CTA (#result-enhance-cta) with our per-game gift
+  // pool — rotates each round so every offer differs.
+  function updateEnhanceCta(won) {
+    const t = (currentConfig && currentConfig.template) || 'br';
+    pickedGift = rollGift(t);                       // fresh, different gift each round (variety)
+    const g = pickedGift;
+    const cta = document.getElementById('result-enhance-cta');
+    if (!cta) return;
+    cta.style.pointerEvents = '';
+    const ico = cta.querySelector('.ico'), head = cta.querySelector('.head'), sub = cta.querySelector('.sub'), price = cta.querySelector('.price');
+    if (ico)  ico.textContent  = g.ico;
+    // won → flex/show-off framing; lost → comeback framing (the empathetic second wind)
+    if (head) head.textContent = (won ? 'Flex it · ' : 'Comeback · ') + g.head;
+    if (sub)  sub.textContent  = won ? (g.sub + ' — go viral') : (g.sub + ' — bounce back');
+    if (price) price.textContent = g.button;        // 🌹 5
+    // Enhance only ENHANCES — never gate play behind a gift (no 送礼换试玩)
+    const gate = document.getElementById('result-enhance-gate'); if (gate) gate.hidden = true;
+  }
+
+  function makeGiftBoostConfig() {
+    const base = currentConfig || makeRandomConfig();
+    const boost = currentGiftBoost();
+    const scenario = Object.assign({}, base.scenario || {}, {
+      gift_boost: boost.key,
+      gift_label: boost.head,
+      description: (base.scenario && base.scenario.description) || TEMPLATE_DESC[base.template] || 'gift boosted run',
+    });
+    return Object.assign({}, base, {
+      scenario,
+      _meta: Object.assign({}, base._meta || {}, {
+        gift: boost.key,
+        coins: 5,
+        model: 'demo-gift-boost',
+      }),
+    });
+  }
+
+  function sendGiftBoost() {
+    const boost = currentGiftBoost();
+    const boosted = makeGiftBoostConfig();
+    cfg.onAck && cfg.onAck(boost.ico + ' ' + boost.head + ' sent · enjoy the boost!');
+    pickedGift = null;                              // next round rolls a fresh gift
+    destroyIframe();
+    document.getElementById('phase-game').innerHTML = '';
+    startLoading(boosted);
   }
 
   // ── RANKING phase ─────────────────────────────────────────────────────
@@ -1085,9 +1161,6 @@
     document.getElementById('rank-pill')?.addEventListener('click', showRanking);
     document.getElementById('share-pill')?.addEventListener('click', () => {
       cfg.onAck && cfg.onAck('Share — coming soon');
-    });
-    document.querySelector('#phase-result .gift-remix .send')?.addEventListener('click', () => {
-      cfg.onAck && cfg.onAck('Gift Remix · M11+');
     });
 
     // Ranking back + tabs
