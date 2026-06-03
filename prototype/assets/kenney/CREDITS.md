@@ -37,3 +37,7 @@ CC0 deed: https://creativecommons.org/publicdomain/zero/1.0/
 - GTA crash + FF zone: fully synthesized (metal crunch+thud+debris ; storm rumble). No copyright.
 - FF pickup/pickupRare/win/lose: Kenney Impact Sounds (CC0) grab/glass/bell/thud, replacing the digital synth blips.
 - All synthesis original; all samples CC0. Roblox + GTA(non-crash) unchanged.
+
+## Audio v4 — real pro gun recordings (user-approved by ear via listen page)
+- Guns now use BigSoundBank real recordings (royalty-free, no attribution), trimmed to single shots: GTA shot=.357 magnum, FF shot=rifle, FF shotLow=shotgun, FF rBlast=rifle B. Source: https://bigsoundbank.com (gunshots).
+- Lesson: my spectral verifier (audio-verify.py) FAILED these real recordings yet the user approved them by ear — the verifier detects broadband-vs-tonal but a click is also broadband, so it is NOT a proxy for "sounds like a real gun". The listen-and-pick page (user ears) is the real gate.
