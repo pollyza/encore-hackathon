@@ -41,3 +41,7 @@ CC0 deed: https://creativecommons.org/publicdomain/zero/1.0/
 ## Audio v4 — real pro gun recordings (user-approved by ear via listen page)
 - Guns now use BigSoundBank real recordings (royalty-free, no attribution), trimmed to single shots: GTA shot=.357 magnum, FF shot=rifle, FF shotLow=shotgun, FF rBlast=rifle B. Source: https://bigsoundbank.com (gunshots).
 - Lesson: my spectral verifier (audio-verify.py) FAILED these real recordings yet the user approved them by ear — the verifier detects broadband-vs-tonal but a click is also broadband, so it is NOT a proxy for "sounds like a real gun". The listen-and-pick page (user ears) is the real gate.
+
+## Background music (BGM) — Incompetech / Kevin MacLeod (CC-BY 4.0, attribution here)
+- GTA="Funkorama" (funk, GTA San Andreas vibe) · Roblox="Electrodoodle" (electronic/EDM, Ahrix-Nova vibe) · FF="Killers" (intense, battle hype). Matched to the user reference tracks. Trimmed to ~36s loops, normalized, low in-game volume + mute toggle (persisted).
+- Source: https://incompetech.com · Music by Kevin MacLeod, CC-BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Attribution satisfied by this file.

@@ -3244,6 +3244,7 @@
     timeLeft = current.duration;
     gameOver = false; gameWon = false; started = true;
     document.body.classList.add('playing');
+    try { BGM.play(key); } catch (e) {}                          // per-game background music (gesture: this follows a tap)
     // Platformer (Roblox) uses a dedicated right-side JUMP button; hide the aim pad
     // for it and show the button. Other modes keep their CSS defaults (reset to '').
     { const tm = current.touchMode || 'shooter';
@@ -3355,6 +3356,7 @@
 
   function backToMenu() {
     started = false; gameOver = false; current = null; state = null;
+    try { BGM.stop(); } catch (e) {}
     document.body.classList.remove('playing');
     document.getElementById('end').classList.remove('on');
     document.getElementById('splash').classList.add('on');
@@ -3443,6 +3445,34 @@
   // an AI-generated atlas is dropped into prototype/assets/, sprites swap
   // in automatically on next frame after load completes.
   Assets.load('assets/atlas.png', 'assets/atlas.json');
+
+  // ── Background music (Incompetech, CC-BY — see assets/kenney/CREDITS.md): one loop
+  //    per game at low volume, starts on game-start (a user gesture), with a persisted
+  //    mute toggle. GTA=funk, Roblox=electronic, FF=intense — matched to the user's refs.
+  const BGM = {
+    el: null, map: { gta:'gta', roblox:'roblox', br:'ff' },
+    muted: (() => { try { return localStorage.getItem('encoreBgmMuted') === '1'; } catch (e) { return false; } })(),
+    play(key) { const m = this.map[key]; if (!m) return;
+      if (!this.el) { this.el = new Audio(); this.el.loop = true; this.el.volume = 0.30; }
+      const src = 'assets/kenney/audio/bgm/' + m + '.mp3';
+      if (this.el.dataset.k !== src) { this.el.src = src; this.el.dataset.k = src; }
+      this.el.muted = this.muted; try { this.el.currentTime = 0; } catch (e) {}
+      const p = this.el.play(); if (p && p.catch) p.catch(() => {}); this._sync(); },
+    stop() { if (this.el) { try { this.el.pause(); } catch (e) {} } },
+    toggle() { this.muted = !this.muted; if (this.el) this.el.muted = this.muted;
+      if (this.muted) this.stop(); else if (this.el) { const p = this.el.play(); if (p && p.catch) p.catch(() => {}); }
+      try { localStorage.setItem('encoreBgmMuted', this.muted ? '1' : '0'); } catch (e) {} this._sync(); },
+    _sync() { const b = document.getElementById('bgm-toggle'); if (b) b.textContent = this.muted ? '🔇' : '🔊'; },
+  };
+  window.BGM = BGM;
+  (function () { const b = document.createElement('button'); b.id = 'bgm-toggle'; b.textContent = BGM.muted ? '🔇' : '🔊';
+    b.style.cssText = 'position:fixed;top:7px;left:7px;z-index:70;width:30px;height:30px;border:0;border-radius:50%;background:rgba(0,0,0,0.4);color:#fff;font-size:15px;line-height:30px;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent';
+    const t = (e) => { if (e && e.cancelable) e.preventDefault(); BGM.toggle(); };
+    b.addEventListener('click', t); b.addEventListener('touchstart', t, { passive: false });
+    document.body.appendChild(b); })();
+  // iOS/sheet safety: if a game is running but BGM got autoplay-blocked (e.g. launched
+  // via postMessage in the LIVE sheet, not a direct tap), resume it on the first touch.
+  document.addEventListener('pointerdown', () => { try { if (BGM.el && started && !BGM.muted && BGM.el.paused) { const p = BGM.el.play(); if (p && p.catch) p.catch(() => {}); } } catch (e) {} }, { passive: true });
 
   // ============================================================
   //  V2G — embedded boot + parent message listener
