@@ -3466,7 +3466,7 @@
   };
   window.BGM = BGM;
   (function () { const b = document.createElement('button'); b.id = 'bgm-toggle'; b.textContent = BGM.muted ? '🔇' : '🔊';
-    b.style.cssText = 'position:fixed;top:7px;left:7px;z-index:70;width:30px;height:30px;border:0;border-radius:50%;background:rgba(0,0,0,0.4);color:#fff;font-size:15px;line-height:30px;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent';
+    b.style.cssText = 'position:fixed;top:128px;right:8px;z-index:70;width:27px;height:27px;border:0;border-radius:50%;background:rgba(0,0,0,0.32);color:#fff;font-size:13px;line-height:27px;padding:0;cursor:pointer;opacity:0.78;-webkit-tap-highlight-color:transparent';
     const t = (e) => { if (e && e.cancelable) e.preventDefault(); BGM.toggle(); };
     b.addEventListener('click', t); b.addEventListener('touchstart', t, { passive: false });
     document.body.appendChild(b); })();
