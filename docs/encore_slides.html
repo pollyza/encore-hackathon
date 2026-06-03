@@ -1650,29 +1650,27 @@ h2.section-title .red { color: var(--c-red); }
      ============================================ -->
 <section class="slide">
     <div class="slide-content">
-        <div class="eyebrow reveal" style="--delay:0.05s">07 · 成本 + 风险</div>
-        <h2 class="section-title reveal" style="--delay:0.15s">不自跑 Vision,<span class="accent">成本算得清。</span></h2>
-        <p class="lead reveal" style="--delay:0.22s">复用平台已有的<strong>高光识别 + 游戏识别</strong>信号, Encore 不需要自跑 Vision。</p>
+        <div class="eyebrow reveal" style="--delay:0.05s">07 · 成本三档</div>
+        <h2 class="section-title reveal" style="--delay:0.15s">Phase 2 三档,<span class="accent">全部 ≤ $10 万/月。</span></h2>
+        <p class="lead reveal" style="--delay:0.22s">Phase 1 (M9) 复用平台高光信号 + 手工模板, <strong>~$0 增量</strong>。 Phase 2 (M14+) 接 LLM 时, 按收入流成熟度选下面任一档:</p>
         <div class="vision-grid">
             <div class="v-step reveal-scale" style="--delay:0.32s">
-                <div class="step-num">A · 阶段 1 · M9</div>
+                <div class="step-num">A · 最便宜</div>
                 <div class="ico">📦</div>
-                <h3>预制模板匹配<br>~$0 增量</h3>
-                <p>(高光 + 游戏 X) → 匹配预制模板。 核心投入 = <strong>预生成模板</strong>(品类 × 主题, 一次性)。 上线快、可预测、不依赖 LLM。</p>
+                <h3>离线模板工厂<br>~$5-15K / 月</h3>
+                <p>每月 batch 跑 LLM 生成 10K+ 模板入库, runtime <strong>99% 命中</strong>查库, 1% Haiku 兜底。 runtime 零 LLM 延迟。</p>
             </div>
             <div class="v-step reveal-scale" style="--delay:0.47s">
-                <div class="step-num">B · 阶段 2 · M14+</div>
-                <div class="ico">🧠</div>
-                <h3>LLM 实时生成<br>~$1M / 月全量</h3>
-                <p>Sonnet / Gemini 理解高光具体玩法 → 实时生成定制 Encore, 跟主播这一波紧密契合。 单条 ~$0.017。</p>
+                <div class="step-num">B · 中等</div>
+                <div class="ico">⚡</div>
+                <h3>Haiku 实时 + cache<br>~$30-50K / 月</h3>
+                <p>每个高光过 Claude 3 Haiku, system prompt 缓存 90%, 单条 ~$0.0005。 每个高光都有 LLM 看一眼。</p>
             </div>
             <div class="v-step reveal-scale" style="--delay:0.62s">
-                <div class="step-num">C · 风险诚实承认</div>
-                <div class="ico">⚠️</div>
-                <h3>3 件没解决</h3>
-                <p><strong>(1)</strong> 30s 游戏好不好玩 — 6-12 月调优</p>
-                <p><strong>(2)</strong> Phase 2 LLM 延迟 / 质量 — 待工程验证</p>
-                <p><strong>(3)</strong> 单品类切入 — 先 FPS / MOBA / BR</p>
+                <div class="step-num">C · 较高</div>
+                <div class="ico">🧠</div>
+                <h3>智能分级<br>~$75-95K / 月</h3>
+                <p>Haiku 给高光打分, top 10% (ace / clutch) 路由 Sonnet 出最高质量, 90% 走 Haiku。 平均 ~$0.001 / 高光。</p>
             </div>
         </div>
     </div>
