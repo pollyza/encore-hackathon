@@ -1,47 +1,49 @@
 <!doctype html><html lang="zh"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>Encore · 枪声 4 选 1</title>
+<title>Encore · 真枪声试听</title>
 <style>
-  :root{color-scheme:dark}
-  *{box-sizing:border-box}
-  body{margin:0;background:#0e1014;color:#e8edf2;font:16px/1.5 -apple-system,system-ui,"PingFang SC",sans-serif;padding:18px 16px 60px}
-  h1{font-size:20px;margin:0 0 4px}
-  .sub{color:#9aa3ad;font-size:13px;margin:0 0 18px}
-  .tip{background:#1a2733;border:1px solid #28425a;border-radius:10px;padding:12px 14px;font-size:13px;color:#bcd4e6;margin-bottom:20px}
-  .tip b{color:#7ad0ff}
-  .card{background:#161a20;border:1px solid #262c35;border-radius:14px;padding:16px;margin-bottom:14px}
-  .lbl{font-size:18px;font-weight:700;margin:0 0 2px}
-  .lbl span{display:inline-block;min-width:30px;color:#ffd24a}
-  .desc{color:#9aa3ad;font-size:13px;margin:0 0 12px}
+  :root{color-scheme:dark}*{box-sizing:border-box}
+  body{margin:0;background:#0e1014;color:#e8edf2;font:16px/1.5 -apple-system,system-ui,"PingFang SC",sans-serif;padding:18px 16px 70px}
+  h1{font-size:20px;margin:0 0 4px}.sub{color:#9aa3ad;font-size:13px;margin:0 0 16px}
+  .tip{background:#1a2733;border:1px solid #28425a;border-radius:10px;padding:12px 14px;font-size:13px;color:#bcd4e6;margin-bottom:18px}.tip b{color:#7ad0ff}
+  .card{background:#161a20;border:1px solid #262c35;border-radius:14px;padding:15px;margin-bottom:12px}
+  .lbl{font-size:17px;font-weight:700;margin:0 0 2px}.desc{color:#9aa3ad;font-size:12px;margin:0 0 11px}
   .row{display:flex;gap:10px}
-  button{flex:1;border:0;border-radius:10px;padding:14px 8px;font-size:15px;font-weight:700;color:#06120a;cursor:pointer}
-  .b1{background:#5ad1a0}.b2{background:#ff9d3a}
-  button:active{transform:scale(.97)}
-  .foot{margin-top:24px;background:#13211a;border:1px solid #245a3f;border-radius:10px;padding:14px;font-size:14px;color:#bfe9cf}
-  .foot b{color:#7ef5b0}
+  button{flex:1;border:0;border-radius:10px;padding:13px 8px;font-size:14px;font-weight:700;color:#06120a;cursor:pointer}
+  .b1{background:#5ad1a0}.b2{background:#ff9d3a}button:active{transform:scale(.97)}
+  #st{position:fixed;left:0;right:0;bottom:0;background:#11151b;border-top:1px solid #2a3340;padding:9px;text-align:center;font-size:12px;color:#7c8794}
+  .foot{margin-top:20px;background:#13211a;border:1px solid #245a3f;border-radius:10px;padding:13px;font-size:13px;color:#bfe9cf}.foot b{color:#7ef5b0}
 </style></head>
 <body>
-<h1>枪声 4 选 1 — 用你的耳朵定</h1>
-<p class="sub">我听不到声音,所以做了这个让你挑。同一把步枪,4 种不同"质感"。</p>
-<div class="tip">重点听 <b>连发(自动)</b> 那个键 —— 那就是游戏里疯狂开枪的样子,直接验证"是不是像键盘敲击"。挑一个你觉得最像真枪/最爽的,告诉我 <b>A / B / C / D</b>,我就把这个质感套到三款游戏所有枪上(GTA 手枪 + FF 步枪/霰弹/AK)。</div>
+<h1>真枪声试听(专业音效库录音)</h1>
+<p class="sub">不再是我合成的 —— 这些是专业音效库(BigSoundBank,免版权可商用)里的真枪实录。</p>
+<div class="tip">先随便点一个键解锁声音。重点听 <b>连发(自动)</b> —— 那是游戏里疯狂开枪的样子,直接验证"是不是像真枪、还是键盘敲"。告诉我哪几把用在 <b>FF 步枪 / FF 霰弹 / GTA 手枪扫射</b>,或直接说"你分配"。</div>
 
-<div class="card"><p class="lbl"><span>A</span>原声(真实录音,不加工)</p><p class="desc">最"真",但可能发闷——CC0 真枪录音本身偏沉。</p>
-<div class="row"><button class="b1" onclick="one('A')">▶ 单发</button><button class="b2" onclick="burst('A')">▶▶ 连发(自动)</button></div></div>
+<div class="card"><p class="lbl">① .357 马格南(大口径左轮)</p><p class="desc">沉、猛、有回响。适合 GTA 手枪扫射 / FF 重武器。</p>
+<div class="row"><button class="b1" onclick="one('357mag')">▶ 单发</button><button class="b2" onclick="burst('357mag')">▶▶ 连发</button></div></div>
 
-<div class="card"><p class="lbl"><span>B</span>均衡(枪身+炸裂+低频+尾音)</p><p class="desc">分层,低中高都有,比较"标准"的游戏枪声。</p>
-<div class="row"><button class="b1" onclick="one('B')">▶ 单发</button><button class="b2" onclick="burst('B')">▶▶ 连发(自动)</button></div></div>
+<div class="card"><p class="lbl">② 9mm 手枪/冲锋</p><p class="desc">脆、快、连发利落。适合 GTA 扫射 / FF 冲锋枪。</p>
+<div class="row"><button class="b1" onclick="one('9mm')">▶ 单发</button><button class="b2" onclick="burst('9mm')">▶▶ 连发</button></div></div>
 
-<div class="card"><p class="lbl"><span>C</span>厚重(深低频 + 长尾音)</p><p class="desc">电影感大 BANG,低频猛、有回响。偏"重"。</p>
-<div class="row"><button class="b1" onclick="one('C')">▶ 单发</button><button class="b2" onclick="burst('C')">▶▶ 连发(自动)</button></div></div>
+<div class="card"><p class="lbl">③ 步枪 A</p><p class="desc">标准步枪点射。FF 主武器候选。</p>
+<div class="row"><button class="b1" onclick="one('rifle1')">▶ 单发</button><button class="b2" onclick="burst('rifle1')">▶▶ 连发</button></div></div>
 
-<div class="card"><p class="lbl"><span>D</span>凌厉(炸裂感强 + 紧)</p><p class="desc">脆、利、短促,攻击性强。偏"快"。</p>
-<div class="row"><button class="b1" onclick="one('D')">▶ 单发</button><button class="b2" onclick="burst('D')">▶▶ 连发(自动)</button></div></div>
+<div class="card"><p class="lbl">④ 步枪 B</p><p class="desc">另一支步枪,音色不同。FF 主武器/AK 候选。</p>
+<div class="row"><button class="b1" onclick="one('rifle2')">▶ 单发</button><button class="b2" onclick="burst('rifle2')">▶▶ 连发</button></div></div>
 
-<div class="foot">听完回我一个字母(<b>A/B/C/D</b>)。觉得都不对也直接说,我换思路。<br>背景音乐我已经按你给的参考定了方向(GTA=圣安地列斯主题感 / Roblox=Ahrix Nova 旋律电子 / FF=战斗 hype),挑完枪声一起加。</div>
+<div class="card"><p class="lbl">⑤ 霰弹枪</p><p class="desc">轰一声,厚重。FF 霰弹/爆破候选。</p>
+<div class="row"><button class="b1" onclick="one('shotgun')">▶ 单发</button><button class="b2" onclick="burst('shotgun')">▶▶ 连发</button></div></div>
 
+<div class="foot">听完回我:每把用在哪(FF 步枪 / FF 霰弹 / GTA 手枪),或"你分配"。觉得都不行,我再换库。<br>音乐挑完枪声一起加(GTA=圣安地列斯主题感 / Roblox=Ahrix Nova / FF=战斗 hype,免版权同 vibe)。</div>
+
+<div id="st">点任意键开始</div>
 <script>
-const map={A:'gun_A_raw.wav',B:'gun_B_balanced.wav',C:'gun_C_boom.wav',D:'gun_D_punch.wav'};
-function one(k){const a=new Audio(map[k]);a.volume=0.95;a.play().catch(()=>{});}
-function burst(k){for(let i=0;i<7;i++){setTimeout(()=>{const a=new Audio(map[k]);a.volume=0.92;a.play().catch(()=>{});},i*110);}}
+const SND={'357mag':'real_357mag.mp3','9mm':'real_9mm.mp3','rifle1':'real_rifle1.mp3','rifle2':'real_rifle2.mp3','shotgun':'real_shotgun.mp3'};
+let ctx=null; const buf={}; const st=document.getElementById('st');
+async function ready(){ if(!ctx) ctx=new (window.AudioContext||window.webkitAudioContext)(); if(ctx.state==='suspended') await ctx.resume(); }
+async function get(k){ if(buf[k]) return buf[k]; const r=await fetch(SND[k]); const ab=await r.arrayBuffer(); buf[k]=await ctx.decodeAudioData(ab); return buf[k]; }
+function play(b,t,v){ const s=ctx.createBufferSource(); s.buffer=b; const g=ctx.createGain(); g.gain.value=v; s.connect(g); g.connect(ctx.destination); s.start(t); }
+async function one(k){ try{ await ready(); const b=await get(k); play(b,ctx.currentTime,0.95); st.textContent='▶ '+k; }catch(e){ st.textContent='出错: '+e.message; } }
+async function burst(k){ try{ await ready(); const b=await get(k); for(let i=0;i<7;i++) play(b,ctx.currentTime+i*0.11,0.85); st.textContent='▶▶ '+k+' 连发'; }catch(e){ st.textContent='出错: '+e.message; } }
 </script>
 </body></html>
