@@ -4,8 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Encore v0.6 — GTA · Roblox · Free Fire BR</title>
+<!-- Pitch-deck fonts (Press Start 2P / VT323 / JetBrains Mono) so the splash + how-to +
+     end overlays match docs/encore_slides.html. display=swap → falls back to Courier mono
+     offline; the in-game HUD keeps monospace regardless. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=JetBrains+Mono:wght@400;700&display=swap">
 <!-- CSS extracted to styles.css for multi-dev work (Ticket M9-prep) -->
-<link rel="stylesheet" href="styles.css?v=entry-ui-v4">
+<link rel="stylesheet" href="styles.css?v=entry-ui-v6">
 </head>
 <body>
 <div id="wrap">
@@ -3062,89 +3068,34 @@
                   navigator.maxTouchPoints > 0 ||
                   matchMedia('(pointer: coarse)').matches;
 
+  // ONE plain-language sentence (做什么 + 目标), gettable in ~3s — these games are
+  // basic and viewers already know GTA/Roblox/FF, so a list of rows just makes them
+  // swipe away. `goal` = the big one-liner; `ctrl` = one tiny control hint.
   const HOW_TO_PLAY = {
     fps: {
-      title: 'COVER STRIKE',
-      rows: isTouch ? [
-        ['LEFT JOY',  '左下摇杆走位 · 躲到掩体后'],
-        ['RIGHT DRAG', '右下区域拖屏瞄准 · 自动开火'],
-        ['HUD',       '弹匣 12 发 · 红色弹道是危险'],
-        ['WIN',       '清完所有敌人或撑过 30 秒'],
-      ] : [
-        ['WASD',  '走位 · 躲到掩体后'],
-        ['MOUSE', '移动鼠标瞄准 · 自动开火'],
-        ['HUD',   '弹匣 12 发 · 红色弹道是危险'],
-        ['WIN',   '清完所有敌人或撑过 30 秒'],
-      ],
+      title: '掩体射击',
+      goal: '瞄准开枪,清光所有敌人就赢',
+      ctrl: isTouch ? '左手拖着走躲掩体 · 右手拖屏自动开枪' : 'WASD 走位躲掩体 · 鼠标瞄准自动开火',
     },
     moba: {
-      title: 'DRAGON PIT',
-      rows: isTouch ? [
-        ['LEFT JOY',   '走位 · 推线打小兵补刀拿钱'],
-        ['RIGHT DRAG', '拖动预瞄技能方向'],
-        ['Q 技能',     '直线穿透弹道 (放手发射)'],
-        ['W 技能',     '范围 AoE 圈 (放手落地)'],
-        ['目标',       '清掉敌方英雄 → 抢龙坑大龙'],
-        ['WIN',        '在 45 秒内击败大龙'],
-      ] : [
-        ['WASD',  '走位 · 推线打小兵补刀拿钱'],
-        ['MOUSE', '移动鼠标瞄准 (会自动锁敌)'],
-        ['Q 键',  '按住预瞄 · 放手发射直线弹'],
-        ['W 键',  '按住预瞄 · 放手落 AoE'],
-        ['目标',  '清掉敌方英雄 → 抢龙坑大龙'],
-        ['WIN',   '在 45 秒内击败大龙'],
-      ],
+      title: '抢大龙',
+      goal: '走位放招,推掉大龙就赢',
+      ctrl: isTouch ? '左手走位打钱 · Q/W 按住瞄、松手放招' : 'WASD 走位 · Q/W 按住瞄、松手放招',
     },
     br: {
-      title: 'FREE FIRE · BOOYAH 决赛圈',
-      rows: isTouch ? (isEmbedded ? [
-        ['🏆 目标',    '10 人乱斗 · 活到最后 = BOOYAH'],
-        ['🕹 左侧',    '拖着跑位 · 进安全圈躲毒'],
-        ['🔫 右下',    '按住开火 · 自动锁敌'],
-        ['🧱 技能',    'Q 冲刺 · W KIT · E Gloo 墙'],
-      ] : [
-        ['🏆 目标',    '10 人乱斗 · 活到最后 = BOOYAH'],
-        ['🕹 左摇杆',  '拖着跑位 · 进安全圈躲毒'],
-        ['🔫 按住右侧', '自动锁敌开火 · 不用自己瞄'],
-        ['🎁 空投',    '捡发光补给箱 = 换搞怪强枪'],
-        ['🤸 技能',    'R 翻滚无敌 · Q 冲刺 · W 回血 · E Gloo 墙'],
-      ]) : [
-        ['🏆 目标',      '10 人乱斗 · 活到最后 = BOOYAH'],
-        ['WASD 移动',    '跑位 · 进安全圈躲毒'],
-        ['右键/空格 开火', '自动锁敌 · 不用自己瞄'],
-        ['🎁 空投',      '捡发光补给箱 = 换搞怪强枪'],
-        ['技能',         'R 翻滚无敌 · Q 冲刺 · W 回血 · E Gloo 墙'],
-      ],
+      title: 'Free Fire 决赛圈',
+      goal: '活到最后一个 = 吃鸡 BOOYAH',
+      ctrl: isTouch ? '左手跑位 · 右手开枪 · E 放墙挡子弹' : 'WASD 跑位 · 右键/空格开枪 · E 放墙',
     },
     roblox: {
-      title: 'ROBLOX · 混沌闯关',
-      rows: isTouch ? [
-        ['🏁 怎么赢',  '30 秒内跑到最右边的终点旗 = 通关!'],
-        ['🕹 左下拖',  '左右走 — 想走哪就往哪拖'],
-        ['🟩 右下点',  '跳;空中再点一下 = 二段跳(跳更远 / 救命)'],
-        ['⚠ 预警闪现', '危险来了!照字躲 — 跳开 / 反方向顶 / 起跳越过'],
-        ['🟥 红熔岩',  '别踩!掉下去 = 在最近存档点(青旗)重生,不用从头'],
-      ] : [
-        ['🏁 怎么赢',  '30 秒内跑到最右边的终点旗 = 通关!'],
-        ['← → / A D', '左右走'],
-        ['空格 / ↑',  '跳;空中再按一下 = 二段跳'],
-        ['⚠ 预警',    '照字躲 — 跳开 / 反方向顶 / 起跳越过'],
-        ['🟥 红熔岩',  '别踩!掉下去 = 最近存档点重生'],
-      ],
+      title: 'Roblox 闯关',
+      goal: '跳到最右边的终点旗就通关',
+      ctrl: isTouch ? '左手拖着走 · 点右边跳(空中再点跳更远)' : '← → 走 · 空格跳(空中再按跳更远)',
     },
     gta: {
-      title: '开车去抢钱 💰',
-      rows: isTouch ? [
-        ['目标',      '开车抢光所有发光的店'],
-        ['怎么抢',    '滑左摇杆,开进发光的店 → 自动打劫'],
-        ['怎么赢',    '抢光所有店 · 或 活到 30 秒'],
-        ['小心',      '别撞车 · 别被警察抓 · 右下氮气加速'],
-      ] : [
-        ['目标',      '开车抢光所有发光的店'],
-        ['怎么抢',    'A/D 开进发光的店 → 自动打劫'],
-        ['怎么赢',    '抢光所有店 · 或 活到 30 秒'],
-        ['小心',      '别撞车 · 别被抓 · SPACE 氮气加速'],
-      ],
+      title: '开车抢钱',
+      goal: '开车抢光所有店,别被警察抓',
+      ctrl: isTouch ? '左手开车 · 冲进发光的店自动打劫' : 'A/D 开车 · 冲进发光的店自动打劫',
     },
   };
 
@@ -3155,17 +3106,15 @@
     overlay.className = '';
     overlay.classList.add('on', key);
     document.getElementById('howto-title').textContent = data.title;
+    // One big goal line + one small control hint (replaces the old row list).
     const list = document.getElementById('howto-list');
-    list.innerHTML = '';
-    data.rows.forEach(([k, v]) => {
-      const li = document.createElement('li');
-      li.innerHTML = '<span class="key">' + k + '</span><span>' + v + '</span>';
-      list.appendChild(li);
-    });
+    list.innerHTML = '<div class="howto-goal">' + data.goal + '</div>' +
+                     (data.ctrl ? '<div class="howto-ctrl">' + data.ctrl + '</div>' : '');
     tutorialActive = true;
-    // Auto-dismiss countdown — quicker in V2G embedded mode (sheet dwell time
-    // is ~30s); longer for standalone play so users can actually read.
-    const totalMs = isEmbedded ? 3500 : 5500;
+    // Auto-dismiss countdown. First play only (replays skip it — see startGame).
+    // One short sentence reads in ~3s, so keep the dwell tight or viewers wait,
+    // bored, on text they already understood.
+    const totalMs = isEmbedded ? 3000 : 4000;
     tutorialAutoStart = performance.now();
     tutorialAutoTimer = totalMs;
     const auto = document.getElementById('howto-auto');
@@ -3255,7 +3204,23 @@
       const skillsEl = document.getElementById('skills'); if (skillsEl) skillsEl.style.display = (tm === 'platformer') ? 'none' : ''; }
     document.getElementById('splash').classList.remove('on');
     document.getElementById('end').classList.remove('on');
-    showTutorial(key);
+    // How-to shows ONLY the first time you play each game this session. Replays
+    // (重玩) and gift re-launches skip it — by then you know the rules; popping it
+    // every time just gets in the way. Tracked per-game so a DIFFERENT game still
+    // teaches its own controls.
+    if (!howToSeen(key)) { markHowToSeen(key); showTutorial(key); }
+    else { tutorialActive = false; showBanner('GO!', '#25F4EE', 0.7); }
+  }
+
+  // Per-game "已经看过教程" flag. sessionStorage so it survives replays AND the
+  // gift re-launch (fresh iframe, same origin/session); falls back to an in-memory
+  // map if storage is unavailable (some embedded contexts throw).
+  const _seenHowtoMem = {};
+  function howToSeen(key) {
+    try { return sessionStorage.getItem('encore_howto_' + key) === '1'; } catch (_) { return !!_seenHowtoMem[key]; }
+  }
+  function markHowToSeen(key) {
+    try { sessionStorage.setItem('encore_howto_' + key, '1'); } catch (_) { _seenHowtoMem[key] = true; }
   }
 
   // V2G scenario application — read pendingConfig.scenario and patch state
@@ -3363,6 +3328,32 @@
     document.getElementById('splash').classList.add('on');
   }
 
+  // Branded "loading" frame shown whenever no game is running yet. Replaces the
+  // old solid #0a0d14 fill: on a cold cache the game modules (br.js ~200KB etc.)
+  // take a beat to download, and a flat dark canvas read as a broken "black
+  // screen" — the #1 demo bug. A visible Encore wordmark + pulse says "loading",
+  // not "crashed".
+  let _postedStarted = false;
+  function drawLoadingFrame(g, w, h, ts) {
+    const grd = g.createLinearGradient(0, 0, 0, h);
+    grd.addColorStop(0, '#15182a'); grd.addColorStop(1, '#0a0d14');
+    g.fillStyle = grd; g.fillRect(0, 0, w, h);
+    const cx = w / 2, cy = h / 2, t = (ts || 0) / 1000;
+    g.save();
+    g.translate(cx, cy - 14);
+    g.strokeStyle = 'rgba(254,44,85,0.9)'; g.lineWidth = 3; g.lineCap = 'round';
+    const a0 = (t * 3) % (Math.PI * 2);
+    g.beginPath(); g.arc(0, 0, 16, a0, a0 + Math.PI * 1.3); g.stroke();
+    g.restore();
+    g.fillStyle = '#fff';
+    g.font = '800 18px "Space Grotesk", system-ui, sans-serif';
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('⚡ ENCORE', cx, cy + 22);
+    g.fillStyle = 'rgba(255,255,255,0.45)';
+    g.font = '500 11px system-ui, sans-serif';
+    g.fillText('forking the highlight' + '.'.repeat(1 + (Math.floor(t * 2) % 3)), cx, cy + 44);
+  }
+
   function tick(ts) {
     requestAnimationFrame(tick);
     const now = ts/1000;
@@ -3370,7 +3361,7 @@
     last = now;
 
     if (!started || !current) {
-      ctx.fillStyle = '#0a0d14'; ctx.fillRect(0,0,W,H);
+      drawLoadingFrame(ctx, W, H, ts);
       return;
     }
 
@@ -3407,6 +3398,16 @@
     drawAmbient();
     drawColorGrading(current.fxKey);
     if (window.Juice) Juice.draw(ctx, W, H);   // popups + particles + post-FX overlay
+
+    // First real game frame is on screen — tell the host so it starts the
+    // gameplay recorder NOW (not at encore_ready, which fired while the canvas
+    // was still the loading frame → black recordings). Also a clean "the
+    // mini-game actually launched" signal for black-screen verification.
+    if (!_postedStarted) {
+      _postedStarted = true;
+      window.__encoreStarted = true;   // verification hook: a real game frame rendered
+      if (isEmbedded) { try { window.parent.postMessage({ type: 'encore_started' }, '*'); } catch (_) {} }
+    }
 
     const p = state.player;
     hpFill.style.width = Math.max(0, (p.hp/p.maxHp)*100) + '%';
@@ -3467,7 +3468,7 @@
   };
   window.BGM = BGM;
   (function () { const b = document.createElement('button'); b.id = 'bgm-toggle'; b.textContent = BGM.muted ? '🔇' : '🔊';
-    b.style.cssText = 'position:fixed;top:128px;right:8px;z-index:70;width:27px;height:27px;border:0;border-radius:50%;background:rgba(0,0,0,0.32);color:#fff;font-size:13px;line-height:27px;padding:0;cursor:pointer;opacity:0.78;-webkit-tap-highlight-color:transparent';
+    b.style.cssText = 'position:fixed;top:54px;right:8px;z-index:70;width:27px;height:27px;border:0;border-radius:50%;background:rgba(0,0,0,0.32);color:#fff;font-size:13px;line-height:27px;padding:0;cursor:pointer;opacity:0.78;-webkit-tap-highlight-color:transparent';
     const t = (e) => { if (e && e.cancelable) e.preventDefault(); BGM.toggle(); };
     b.addEventListener('click', t); b.addEventListener('touchstart', t, { passive: false });
     document.body.appendChild(b); })();
@@ -3480,7 +3481,13 @@
   // ============================================================
   const EMBEDDED_EXTERNAL_TEMPLATES = new Set(['gta', 'roblox', 'br']);
   let deferredEmbeddedLaunch = null;
+  let embeddedLaunched = false;   // idempotency: this iframe session launches once
+  let _deferRetryIv = null;       // bounded poll that flushes a deferred launch
   function launchFromEmbeddedConfig(cfg) {
+    // Idempotent: the host sends launch on encore_ready AND a 2.5s blind
+    // fallback — once we've actually started, ignore duplicates so the fallback
+    // can't relaunch / double-init.
+    if (embeddedLaunched && started && current) return true;
     const tpl = cfg && cfg.template;
     const needsExternalModule = isEmbedded && EMBEDDED_EXTERNAL_TEMPLATES.has(tpl);
     if (!Games[tpl] || (needsExternalModule && !window.__encoreExternalGamesReady)) {
@@ -3488,9 +3495,24 @@
         console.warn('Encore: template not ready in launch config:', tpl, cfg);
       }
       deferredEmbeddedLaunch = cfg;
+      // Bounded retry — external game modules may still be downloading on a slow
+      // connection, and the one-shot flush at end-of-document can miss a launch
+      // that arrives just after it. This poll guarantees a deferred launch never
+      // gets stranded (the permanent black-screen case).
+      if (!_deferRetryIv) {
+        let tries = 0;
+        _deferRetryIv = setInterval(() => {
+          if (deferredEmbeddedLaunch && window.__encoreExternalGamesReady && Games[deferredEmbeddedLaunch.template]) {
+            clearInterval(_deferRetryIv); _deferRetryIv = null;
+            flushDeferredEmbeddedLaunch();
+          } else if (++tries > 60) { clearInterval(_deferRetryIv); _deferRetryIv = null; }
+        }, 50);
+      }
       return false;
     }
     deferredEmbeddedLaunch = null;
+    if (_deferRetryIv) { clearInterval(_deferRetryIv); _deferRetryIv = null; }
+    embeddedLaunched = true;
     pendingConfig = cfg;
     audio();  // unlock audio context (best-effort; may fail without user gesture)
     document.getElementById('splash').classList.remove('on');
@@ -3524,6 +3546,8 @@
       // host can recall to splash
       pendingConfig = null;
       deferredEmbeddedLaunch = null;
+      embeddedLaunched = false;
+      _postedStarted = false;
       backToMenu();
       if (isEmbedded) document.getElementById('splash').classList.remove('on');
     }
@@ -3574,9 +3598,9 @@
 <!-- External game modules — register on window.Games after main IIFE exposes engine globals.
      ?v= version query busts stale browser cache of the game modules (bump on each ship). -->
 <script src="games/juice.js?v=r12a"></script>
-<script src="games/roblox.js?v=r22"></script>
+<script src="games/roblox.js?v=r23"></script>
 <script src="games/gta.js?v=r21"></script>
-<script src="games/br.js?v=r22"></script>
+<script src="games/br.js?v=r24"></script>
 <script>
   window.__encoreExternalGamesReady = true;
   if (window.__encoreFlushDeferredLaunch) window.__encoreFlushDeferredLaunch();

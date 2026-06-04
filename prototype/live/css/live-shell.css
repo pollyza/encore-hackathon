@@ -140,12 +140,19 @@ button:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; 
   display: block;
 }
 #stream-bg video {
-  opacity: .55;
-  filter: saturate(1.05) brightness(.82);
+  opacity: 0;                                  /* hidden until it actually plays */
+  filter: saturate(1.05) brightness(.88);
+  z-index: 0;
+  transition: opacity .35s ease;
 }
+/* Real game-stream footage is playing → it IS the stream: full strength, layered
+   above the procedural canvas (which stays as the silent fallback beneath). */
+#stream-bg video.on { opacity: 1; z-index: 2; }
 #stream-bg canvas {
   image-rendering: pixelated;
   image-rendering: crisp-edges;
+  z-index: 1;
+  transition: opacity .4s ease;
 }
 
 /* Mode-specific background tint behind canvas/video */

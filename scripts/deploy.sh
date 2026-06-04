@@ -181,6 +181,14 @@ if [[ -f "$REPO_ROOT/prototype/live/streamer.html" ]]; then
             mkdir -p "$(dirname "$dst")"
             sync_file "$src" "$dst"
         done
+        # Real game-stream clips live under live/assets/streams/*.mp4. The css/js
+        # glob above doesn't recurse into assets/, so mirror that whole tree here
+        # (same reason as the kenney/ special-case). Missing dir = no-op (the
+        # streamer falls back to the procedural canvas).
+        if [[ -d "$REPO_ROOT/prototype/live/assets/streams" ]]; then
+            mkdir -p "$target_dir/live/assets/streams"
+            cp -R "$REPO_ROOT/prototype/live/assets/streams/." "$target_dir/live/assets/streams/" 2>/dev/null || true
+        fi
     done
 fi
 
