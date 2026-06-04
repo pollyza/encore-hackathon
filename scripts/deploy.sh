@@ -128,6 +128,26 @@ if [[ -f "$REPO_ROOT/docs/qr-encore.svg" ]]; then
     sync_file "$REPO_ROOT/docs/qr-encore.svg" "$PREVIEW_DIR/docs/qr-encore.svg"
 fi
 
+# Reference videos — streamer.html + encore-sheet.js reference these via
+# `../../reference/videos/{FF,GTA,roblox}.mp4` as the live preview background
+# AND the host half of the split-screen winner clip. PR #37 (Zihui)
+# committed them to the repo despite .gitignore *.mp4 (via git add -f) so
+# they ride along in checkouts, but deploy.sh wasn't syncing them — Vercel
+# 404'd, the live-video element silently fell back to the procedural Canvas,
+# and the host half of the recorded clip went black.
+# Ship the 3 small (~1-2MB each) demo videos to the bundle.
+if [[ -d "$REPO_ROOT/reference/videos" ]]; then
+    for target_dir in "$DEPLOY_DIR/reference/videos" "$PREVIEW_DIR/reference/videos"; do
+        mkdir -p "$target_dir"
+        for vid in "$REPO_ROOT/reference/videos/FF.mp4" \
+                   "$REPO_ROOT/reference/videos/GTA.mp4" \
+                   "$REPO_ROOT/reference/videos/roblox.mp4"; do
+            [[ -f "$vid" ]] || continue
+            sync_file "$vid" "$target_dir/$(basename "$vid")"
+        done
+    done
+fi
+
 # LIVE streamer host — now under prototype/live/ (was prototype/) as of v0.6.1
 # Sync to BOTH mirrors. The earlier version only synced to DEPLOY_DIR, which
 # left /tmp/encore-preview/prototype/live/streamer.html stale and produced
