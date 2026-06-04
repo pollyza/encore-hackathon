@@ -116,6 +116,15 @@
     const hue = ((h % 360) + 360) % 360;
     return `linear-gradient(135deg, hsl(${hue} 55% 55%), hsl(${(hue + 60) % 360} 55% 35%))`;
   }
+  // TikTok-fidelity: deterministic LV.NN per username.
+  // Range 8..72 matches real TikTok LIVE chat where regulars are LV.10–60+
+  // and newer accounts sit in single digits. Uses same hash as avatarFor
+  // so users with the same color also get a stable level.
+  function lvFor(name) {
+    let h = 0;
+    for (let i = 0; i < name.length; i++) h = (h * 37 + name.charCodeAt(i)) | 0;
+    return 8 + (((h % 65) + 65) % 65);
+  }
 
   // ── State ─────────────────────────────────────────────────────────────
   let cfg = null;
@@ -169,6 +178,14 @@
       bubble.className = 'bubble';
       const nameRow = document.createElement('div');
       nameRow.className = 'name';
+      // TikTok-fidelity: small LV.NN badge between name and host-tag.
+      // Level is a deterministic hash of name (8..72 range) so the same
+      // user keeps the same level across renders — matches real TikTok
+      // where regulars have stable LV stats.
+      const lv = document.createElement('span');
+      lv.className = 'lv';
+      lv.textContent = 'LV.' + lvFor(name);
+      nameRow.appendChild(lv);
       nameRow.appendChild(textNode(name));
       if (host) {
         const tag = document.createElement('span');
