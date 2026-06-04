@@ -70,7 +70,7 @@
     fall:   { deathY: -170 },                               // py below this = fell
     events: { firstRollAt: 8, rollGap: [4.5, 7], lastRollT: 26.5, warnDur: 0.95 },   // 8s safe intro (small白 learn longer); stop rolling at 26.5 so no lethal snatches a 95% win
     juice:  { landShake: 3, hardShake: 6, landHitstop: 0.03, hardHitstop: 0.07 },
-    obby:   { moveRange: 48, moveSpeed: 1.5, vanishPeriod: 2.4, bounceVy: 900, checkpointEvery: 5 },
+    obby:   { moveRange: 48, moveSpeed: 1.5, vanishPeriod: 2.8, bounceVy: 900, checkpointEvery: 5 },
     respawn:{ immune: 0.8 },                                  // brief post-respawn grace so you don't instantly re-die
   };
 
@@ -197,7 +197,7 @@
     const P = [];
     let y = 30;
     P.push({ x: 0, y: y, w: 210, type: 'start' });           // LONG start runway — a first-timer learns to walk before the first hop
-    let prevKill = false, sinceCp = 0;
+    let prevKill = false, sinceCp = 0, vanishCount = 0; const maxVanish = 4;
     for (let i = 0; i < T.plat.count; i++) {
       const prev = P[P.length - 1];
       let w = T.plat.wMin + rand() * (T.plat.wMax - T.plat.wMin);
@@ -206,12 +206,24 @@
       if (prev.kind === 'kill') gap = Math.min(gap, 26);     // small gap AFTER a kill so prev→next clears it
       const prog = i / T.plat.count, r = rand();             // obstacles escalate with progress
       const blk = { type: 'normal' };
-      if (i >= 4) {                                          // first FOUR after start stay plain — a safe runway for a first-timer to learn move+jump
-        if (!prevKill && r < 0.12 + 0.13 * prog) { blk.kind = 'kill'; w = 34; gap = Math.min(gap, 26); prevKill = true; }   // narrow lava brick — JUMP over it (tap clears)
+      // Obstacle assignment with FAIRNESS guards (this is the unbeatable-course fix):
+      //  · never two "risky" blocks (lava/vanish) in a row → every risky block is
+      //    flanked by solid landings, so you can stand on the previous block and
+      //    wait a vanish back in / line up the lava hop. No more "all gone at once".
+      //  · the block right after lava, and the last block before the finish, are
+      //    always plain landings.
+      //  · never two moving platforms in a row — out-of-phase motion can stretch
+      //    a safe base gap into an unreachable live gap.
+      //  · vanish capped per course (no crumbly-flavor wall of disappearing tiles).
+      const prevRisky = (prev.kind === 'kill' || prev.kind === 'vanish');
+      const prevMove = prev.kind === 'move';
+      const prevStable = !prev.kind;
+      if (i >= 4 && i < T.plat.count - 1 && prev.kind !== 'kill') {   // first FOUR + the last block stay plain; never an obstacle straight after lava
+        if (prevStable && r < 0.12 + 0.13 * prog) { blk.kind = 'kill'; w = 34; gap = Math.min(gap, 26); prevKill = true; }   // narrow lava brick — JUMP over it (tap clears)
         else {
           prevKill = false;
-          if (r < 0.30 + 0.16 * prog + mB) { blk.kind = 'move'; blk.move = { axis: (rand() < 0.5 ? 'x' : 'y'), range: T.obby.moveRange, speed: T.obby.moveSpeed * (0.8 + rand() * 0.5), phase: rand() * 6.28 }; }
-          else if (r < 0.46 + 0.16 * prog + mB + vB) { blk.kind = 'vanish'; blk.vanish = { period: T.obby.vanishPeriod, phase: rand() * T.obby.vanishPeriod }; }
+          if (!prevMove && r < 0.30 + 0.16 * prog + mB) { blk.kind = 'move'; blk.move = { axis: (rand() < 0.5 ? 'x' : 'y'), range: T.obby.moveRange, speed: T.obby.moveSpeed * (0.8 + rand() * 0.5), phase: rand() * 6.28 }; }
+          else if (!prevRisky && vanishCount < maxVanish && r < 0.46 + 0.16 * prog + mB + vB) { blk.kind = 'vanish'; blk.vanish = { period: T.obby.vanishPeriod, phase: rand() * T.obby.vanishPeriod }; vanishCount++; }
           else if (r < 0.56 + 0.10 * prog + mB + vB + bB) { blk.kind = 'bounce'; }
         }
       } else prevKill = false;
@@ -1315,7 +1327,7 @@
         const nx = pl.baseX + off; pl._dx = nx - pl.x; pl.x = nx;
       }
       if (pl.vanish) { const f = ((t + pl.vanish.phase) % pl.vanish.period) / pl.vanish.period;
-        pl._gone = f > 0.66; pl._fade = (f > 0.5) ? Math.max(0.12, 1 - (f - 0.5) / 0.16) : 1; }   // blinks, then gone ~1/3 of the cycle
+        pl._gone = f > 0.74; pl._fade = (f > 0.5) ? Math.max(0.12, 1 - (f - 0.5) / 0.24) : 1; }   // visible ~3/4 of the cycle (was 2/3) + longer fade telegraph → more time to land, clearer warning
     }
   }
 

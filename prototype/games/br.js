@@ -135,6 +135,10 @@
     moveResponseExp:  0.78,   // R3: 0.85→0.78 低位更跟手(轻推也走)
     sprintMul:        1.55,   // Q sprint speed multiplier
     adsSlowMin:       0.45,   // slowest move factor at full aim-down-sights (was 0.40)
+    // Procedural walk cycle for lingyi's static front/back sprites (kills the
+    // ice-skating). Cadence is driven by ACTUAL ground distance, never time, so
+    // the gait can't out-run the feet; amp eases in/out so idle never animates.
+    walk:             { stride: 58, bob: 3.2, sway: 0.05, squash: 0.06, easeIn: 9, easeOut: 11 },
 
     // normal gun (AR) — the shooting core stays as-is (user approved it)
     gunDmg:           18,
@@ -259,58 +263,80 @@
     c.beginPath(); c.moveTo(sx - TW, sy + TH); c.lineTo(sx, sy); c.lineTo(sx + TW, sy + TH); c.stroke();
   }
 
-  // Sub-voxel humanoid (player / bot body). Shoulder-tall block + head + helmet.
+  // Pixel-art survivor (player / bot). A readable humanoid — head, vest torso with
+  // a chest strap, two arms (front arm forward to hold the gun), two legs+boots,
+  // combat helmet — instead of the old diamond + square-head "block". Hard-edge
+  // pixels, fixed upper-left light → 3 tone steps (Roblox-meets-Minecraft house
+  // style). Same signature so both callsites (player/bot) are untouched.
   function drawVoxelMan(c, sx, sy, bodyColor, headColor, facing, helmetColor) {
     const Iso = $Iso();
-    const TW = Iso.TW * 0.42, TH = Iso.TH * 0.42;
-    const bodyH = 16;
     sx = Math.round(sx); sy = Math.round(sy);
-    // Shadow
-    c.fillStyle = 'rgba(0,0,0,0.45)';
+    const f = (facing < 0) ? -1 : 1;                       // gun / look direction
+
+    // 3-tone palettes (fixed light from upper-left)
+    const bHi = tint(bodyColor, 0.20), bMid = bodyColor, bLo = shade(bodyColor, 0.32);
+    const pants = shade(bodyColor, 0.58), pantsLo = shade(bodyColor, 0.72);
+    const skHi = tint(headColor, 0.14), sk = headColor, skLo = shade(headColor, 0.24);
+
+    // Ground shadow (iso ellipse, sits at the feet)
+    c.fillStyle = 'rgba(0,0,0,0.40)';
     c.beginPath();
-    c.ellipse(sx, sy + Iso.TH * 0.55, TW * 1.1, TH * 0.95, 0, 0, Math.PI*2);
+    c.ellipse(sx, sy + Iso.TH * 0.42, Iso.TW * 0.5, Iso.TH * 0.40, 0, 0, Math.PI * 2);
     c.fill();
-    // Body voxel
-    c.fillStyle = bodyColor;
-    c.beginPath();
-    c.moveTo(sx, sy - bodyH);
-    c.lineTo(sx + TW, sy - bodyH + TH);
-    c.lineTo(sx, sy - bodyH + 2*TH);
-    c.lineTo(sx - TW, sy - bodyH + TH);
-    c.closePath(); c.fill();
-    c.fillStyle = shade(bodyColor, 0.22);
-    c.beginPath();
-    c.moveTo(sx + TW, sy - bodyH + TH);
-    c.lineTo(sx + TW, sy + TH);
-    c.lineTo(sx, sy + 2*TH);
-    c.lineTo(sx, sy - bodyH + 2*TH);
-    c.closePath(); c.fill();
-    c.fillStyle = shade(bodyColor, 0.38);
-    c.beginPath();
-    c.moveTo(sx - TW, sy - bodyH + TH);
-    c.lineTo(sx - TW, sy + TH);
-    c.lineTo(sx, sy + 2*TH);
-    c.lineTo(sx, sy - bodyH + 2*TH);
-    c.closePath(); c.fill();
-    // Head
-    const hx = Math.round(sx - 3), hy = Math.round(sy - bodyH - 6);
-    c.fillStyle = headColor;
-    c.fillRect(hx, hy, 6, 6);
-    c.strokeStyle = 'rgba(0,0,0,0.35)';
-    c.lineWidth = 1;
-    c.strokeRect(hx + 0.5, hy + 0.5, 6, 6);
-    // Combat helmet — a rounded cap over the top of the head (reads as a soldier)
+
+    // Vertical layout — feet at sy, built upward
+    const legH = 6, torsoH = 9, headH = 8;
+    const torsoTop = sy - legH - torsoH;
+    const headTop = torsoTop - headH;
+
+    // Back arm (behind torso, away from camera-front)
+    c.fillStyle = bLo;
+    c.fillRect(sx - f * 6, torsoTop + 1, 2, 7);
+
+    // Legs + boots
+    c.fillStyle = pants;
+    c.fillRect(sx - 4, sy - legH, 3, legH);
+    c.fillRect(sx + 1, sy - legH, 3, legH);
+    c.fillStyle = pantsLo;
+    c.fillRect(sx - 4, sy - 2, 3, 2);
+    c.fillRect(sx + 1, sy - 2, 3, 2);
+
+    // Torso (tactical vest) — base + lit left edge + shaded right edge + top sheen
+    c.fillStyle = bMid; c.fillRect(sx - 5, torsoTop, 10, torsoH);
+    c.fillStyle = bHi;  c.fillRect(sx - 5, torsoTop, 2, torsoH);
+    c.fillStyle = bLo;  c.fillRect(sx + 3, torsoTop, 2, torsoH);
+    c.fillStyle = tint(bodyColor, 0.34); c.fillRect(sx - 5, torsoTop, 10, 1);
+    // vest detail: zipper + chest strap
+    c.fillStyle = shade(bodyColor, 0.5);
+    c.fillRect(sx - 1, torsoTop + 1, 1, torsoH - 1);
+    c.fillRect(sx - 4, torsoTop + 3, 8, 1);
+
+    // Front arm (toward facing) + hand — reads as "holding" the gun the caller draws
+    c.fillStyle = bMid; c.fillRect(sx + (f > 0 ? 4 : -6), torsoTop + 2, 2, 6);
+    c.fillStyle = skLo; c.fillRect(sx + (f > 0 ? 4 : -6), torsoTop + 7, 2, 2);
+
+    // Neck
+    c.fillStyle = skLo; c.fillRect(sx - 1, headTop + headH - 1, 2, 1);
+
+    // Head (cube head, Roblox/MC style) + face
+    c.fillStyle = sk;   c.fillRect(sx - 4, headTop, 8, headH);
+    c.fillStyle = skHi; c.fillRect(sx - 4, headTop, 2, headH);
+    c.fillStyle = skLo; c.fillRect(sx + 2, headTop, 2, headH);
+    c.fillStyle = tint(headColor, 0.3); c.fillRect(sx - 4, headTop, 8, 1);
+    // eyes look toward facing
+    c.fillStyle = '#1c1c26';
+    c.fillRect(sx + (f > 0 ? 0 : -2), headTop + 3, 1, 2);
+    c.fillRect(sx + (f > 0 ? 2 : 0), headTop + 3, 1, 2);
+
+    // Combat helmet
     if (helmetColor) {
       c.fillStyle = helmetColor;
-      c.beginPath(); c.ellipse(sx, hy + 1, 5, 4, 0, Math.PI, 0); c.fill();   // dome
-      c.fillRect(hx - 1, hy, 8, 2);                                          // brim
-      c.fillStyle = tint(helmetColor, 0.25);
-      c.fillRect(hx + 1, hy - 1, 2, 2);                                      // highlight
-    }
-    // Facing marker (gun side)
-    if (facing) {
-      c.fillStyle = shade(bodyColor, 0.55);
-      c.fillRect(Math.round(sx + facing * 4), Math.round(sy - bodyH - 2), 3, 2);
+      c.fillRect(sx - 5, headTop - 1, 10, 3);   // band
+      c.fillRect(sx - 4, headTop - 3, 8, 2);    // crown
+      c.fillStyle = tint(helmetColor, 0.28);
+      c.fillRect(sx - 4, headTop - 3, 4, 1);    // sheen
+      c.fillStyle = shade(helmetColor, 0.32);
+      c.fillRect(sx + f * 3, headTop, 2, 2);    // side clip
     }
   }
 
@@ -879,6 +905,7 @@
     // Apply movement + cover collision
     const Iso = $Iso();
     const statusMul = ((b.treeT > 0 || b.iceT > 0) ? 0 : 1) * (b.shrinkT > 0 ? 0.6 : 1) * (b.duckT > 0 ? 0.45 : 1) * (b.floatT > 0 ? 0.4 : 1);   // 树/冰=生根0, 缩小=0.6, 鸭=0.45, 气球=0.4 飘
+    const _bpx = b.wx, _bpy = b.wy;
     let nx = b.wx + mvx * b.speed * spdMul * evtSpd * statusMul * dt;
     let ny = b.wy + mvy * b.speed * spdMul * evtSpd * statusMul * dt;
     for (const c of s.covers) {
@@ -886,6 +913,10 @@
     }
     b.wx = Math.max(10, Math.min(s.mapW * Iso.WS - 10, nx));
     b.wy = Math.max(10, Math.min(s.mapH * Iso.WS - 10, ny));
+    // walk-cycle cadence tied to actual ground distance moved (anti-skate)
+    const _bmv = Math.abs(b.wx - _bpx) + Math.abs(b.wy - _bpy);
+    b.walkPhase = (b.walkPhase || 0) + _bmv / TUNING.walk.stride;
+    b.walkAmp = Math.max(0, Math.min(1, (b.walkAmp || 0) + (_bmv > 0.3 ? dt * TUNING.walk.easeIn : -dt * TUNING.walk.easeOut)));
 
     // Storm DoT on bot when outside zone (kept for parity with player rules)
     const dzAfterMove = Math.hypot(b.wx - s.zone.cx, b.wy - s.zone.cy);
@@ -1854,6 +1885,10 @@
       if (Math.abs(mv.x) > 0.1) p.facing = mv.x > 0 ? 1 : -1;
       if (mvMag > 0.1) p.moveScreenAng = Math.atan2(mv.y, mv.x);   // for sprint streaks
       p.movingNow = (moveSpd > 0 && res.moved > 0.5);
+      // Walk cadence tied to ACTUAL ground distance moved (anti-skate): the gait
+      // can't run faster than the feet cover ground; idle → phase frozen, amp eases out.
+      p.walkPhase = (p.walkPhase || 0) + res.moved / TUNING.walk.stride;
+      p.walkAmp = Math.max(0, Math.min(1, (p.walkAmp || 0) + (p.movingNow ? dt * TUNING.walk.easeIn : -dt * TUNING.walk.easeOut)));
 
       // 冲刺撞人: 冲刺中贴脸 bot → 击退 50wu + 轻伤(进攻位移; 翻滚是防御闪避, 二者区分)
       if (p.spdBuff > 0 && p.movingNow) {
@@ -2397,12 +2432,22 @@
     }
     // I-frame highlight ring during the dodge (clear "I'm invincible right now")
     const body = p.iframeT > 0 ? '#cfe8ff' : (p.flashT > 0 ? '#ffffff' : theme.playerBody);
+    // Procedural walk cycle — wraps the (static) sprite/fallback draw so the
+    // character bobs + sways + squashes as it covers ground instead of sliding.
+    const _wph = (p.walkPhase || 0) * Math.PI * 2, _wamp = p.walkAmp || 0;
+    const _bob = Math.abs(Math.sin(_wph)) * TUNING.walk.bob * _wamp;     // body lifts mid-step (2/stride)
+    const _sway = Math.sin(_wph) * TUNING.walk.sway * _wamp;             // small per-step sway
+    const _sqz = 1 - Math.abs(Math.cos(_wph)) * TUNING.walk.squash * _wamp;  // squash at footfall
+    try { window.__brWalk = { phase: p.walkPhase || 0, amp: _wamp, bob: +_bob.toFixed(2), moving: !!p.movingNow }; } catch (_) {}
+    c.save(); c.translate(sx, sy); c.rotate(_sway); c.scale(1, _sqz); c.translate(-sx, -sy);
+    const _psy = sy - _bob;
     const face = brFacingSprite('hero.br', p.aimAng);
-    drawBrAtlasSprite(c, face.slot, sx, sy, face.flipX, () => {
-      drawBrAtlasSprite(c, 'hero.br', sx, sy, face.flipX, () => {
-        drawVoxelMan(c, sx, sy, body, theme.playerHead, p.facing, p.iframeT > 0 ? '#cfe8ff' : theme.playerHelmet);
+    drawBrAtlasSprite(c, face.slot, sx, _psy, face.flipX, () => {
+      drawBrAtlasSprite(c, 'hero.br', sx, _psy, face.flipX, () => {
+        drawVoxelMan(c, sx, _psy, body, theme.playerHead, p.facing, p.iframeT > 0 ? '#cfe8ff' : theme.playerHelmet);
       });
     });
+    c.restore();
     if (p.frozenT > 0) drawPhone(c, sx, sy);
 
     // Weapon overlay (gun barrel or knife blade) toward aim direction
@@ -2539,12 +2584,20 @@
     const shrunk = b.shrinkT > 0;
     if (shrunk) { c.save(); c.translate(sx, sy); c.scale(0.32, 0.32); c.translate(-sx, -sy); }   // 缩成小不点(0.32 更夸张)
     const botSlot = 'bot.br.' + (b.squadId == null ? (b.id % 3) : b.squadId);
+    // Procedural walk cycle (same as player) — no more sliding bots.
+    const _bph = (b.walkPhase || 0) * Math.PI * 2, _bamp = b.walkAmp || 0;
+    const _bbob = Math.abs(Math.sin(_bph)) * TUNING.walk.bob * _bamp;
+    const _bsway = Math.sin(_bph) * TUNING.walk.sway * _bamp;
+    const _bsqz = 1 - Math.abs(Math.cos(_bph)) * TUNING.walk.squash * _bamp;
+    c.save(); c.translate(sx, sy); c.rotate(_bsway); c.scale(1, _bsqz); c.translate(-sx, -sy);
+    const _bsy = sy - _bbob;
     const face = brFacingSprite(botSlot, b.aimAng);
-    drawBrAtlasSprite(c, face.slot, sx, sy, face.flipX, () => {
-      drawBrAtlasSprite(c, botSlot, sx, sy, face.flipX, () => {
-        drawVoxelMan(c, sx, sy, bodyCol, '#ffa080', 0, (theme.botHelmet && theme.botHelmet[b.id % 3]) || '#7a2a1a');
+    drawBrAtlasSprite(c, face.slot, sx, _bsy, face.flipX, () => {
+      drawBrAtlasSprite(c, botSlot, sx, _bsy, face.flipX, () => {
+        drawVoxelMan(c, sx, _bsy, bodyCol, '#ffa080', 0, (theme.botHelmet && theme.botHelmet[b.id % 3]) || '#7a2a1a');
       });
     });
+    c.restore();
     if (shrunk) c.restore();
     if (b.iceT > 0) drawIce(c, sx, sy);          // 冻成冰块
     if (b.frozenT > 0) drawPhone(c, sx, sy);
