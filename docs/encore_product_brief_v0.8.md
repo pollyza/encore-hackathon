@@ -515,34 +515,35 @@ Encore 是**今天就能跑通的产品**, AI 是**第二阶段扩展性的保�
 
 #### Phase 2 (M14+) · 三档方案 from 最便宜到较高, **全部 ≤ $10 万/月**
 
-> 假设规模: 全量 50K 直播间同时在播, 平均 50 高光/直播间·小时, 5h/直播间·日, ~75M 高光/月(跟原 §7.2 假设一致)。
+> **规模假设**: TikTok 游戏直播 **每日开播主播 ~ 900K**, 平均开播 3h, 50 高光/直播·h → **~4B 高光/月**。 这是大盘量级, 实际 Encore 接入率初期会更低, 但用全量数字保证三档都顶得住。
+>
+> **核心原则**: 在这个量级下, **每条都跑 LLM 已经不现实**(单条最便宜 Haiku ~$0.0005, 全量 ≈ $2M/月)。 三档的差异 = **缓存命中率 + miss fallback 策略**。
 
-**方案 A · 最便宜 (~$5-15K / 月)** · **离线模板工厂**
+**方案 A · 最便宜 (~$15-25K / 月)** · **极致命中模板池**
 
-- 路径: 每月跑一次 offline batch, LLM 生成 10K-50K 模板变体, 按 (游戏 × 场景类型 × 玩感细节) hash 入库
-- Runtime: 检测高光 → 算 hash → 查库 → **99% 命中**, 直接用预生成模板
-- 1% miss → fall through 到 Haiku 实时生成
-- 成本拆解: 离线 batch ~$5K/月, runtime fall-through 1% × Haiku ~$300/月
-- **优势**: 成本最低 / runtime 0 LLM 延迟 / batch 时可以多 candidate 选最好 / LLM 用更长 prompt 更深思考
+- 路径: 每月跑 offline batch, LLM 生成 **20 万级别**模板变体, 按 (游戏 × 场景类型 × 玩感细节) 多维 hash 入库
+- Runtime: 检测高光 → 算 hash → 查库 → **99.95% 命中**, 0 LLM 延迟; 0.05% miss → Haiku 兜底
+- 成本拆解: 离线 batch 模板生成 + 月度增量 refresh ~$10-15K, runtime fall-through 0.05% × 4B × $0.0008 ≈ $1.6K
+- **优势**: 成本最低 / runtime 0 LLM 延迟 / 池大命中高 / batch 时 LLM 用最长 prompt + 多 candidate 选最优
 - **劣势**: 跟主播这一波具体高光的契合度有上限(模板池预生成, 不是 per-高光 customize)
-- 适合什么时候: 第二阶段收入流(厂商 CPI / 联运)还在爬坡, 不烧 LLM 钱时
+- 适合什么时候: 第二阶段收入流(厂商 CPI / 联运)还在爬坡, 严控 LLM 支出
 
-**方案 B · 中等 (~$30-50K / 月)** · **Haiku 实时 + prompt cache**
+**方案 B · 中等 (~$30-50K / 月)** · **中等池子 + Haiku 兜底**
 
-- 路径: 每个高光过 Claude 3 Haiku, system prompt(模板定义 + V2G schema + few-shot 例子)缓存 90%
-- 实际 input 等效 ~500 tokens, output ~500 tokens
-- 单条成本: Haiku $0.25/M in + $1.25/M out → ~$0.0005 / 高光
-- 全量 75M 高光/月 × $0.0005 ≈ **~$37K/月**, 加监控 / 失败重试 overhead → 实际 30-50K
-- **优势**: 每个高光都有 LLM 看一眼, 契合度比模板工厂高一档
-- **劣势**: 每条都 LLM call, runtime 5s 窗口要 trade-off; 延迟 + 成本都比 A 高
+- 路径: offline batch 生成 **5 万级别**模板入库, 命中率约 **99%**
+- 1% miss → 实时调 Claude 3 Haiku, system prompt 缓存 90%
+- 成本拆解: 离线 batch ~$5K + runtime fall-through 1% × 4B × $0.0008 ≈ $32K
+- **优势**: 每个 miss 都有 Haiku 实时兜底; 池子比 A 小, 投入少, 适合 ramp up
+- **劣势**: 每条 miss 都要 LLM call, 5s 窗口的延迟控制需要工程优化
 - 适合什么时候: 厂商投放 + 月卡跑通后, 想给观众更好契合度
 
-**方案 C · 较高 (~$75-95K / 月)** · **智能分级(Sonnet for top 10% + Haiku for rest)**
+**方案 C · 较高 (~$60-95K / 月)** · **智能分级(Sonnet for top tier + Haiku for rest)**
 
-- 路径: 先用 Haiku 给 highlight 打分(ace / clutch / comeback 这种"顶级"还是普通), top 10% 路由到 Sonnet 出最高质量游戏参数, 90% 走 Haiku
-- 平均: 0.1 × Sonnet $0.005 + 0.9 × Haiku $0.0005 ≈ **~$0.001 / 高光**
-- 全量 75M × $0.001 ≈ **~$75K / 月**, 加 overhead → 75-95K
-- **优势**: 顶级高光时刻有 Sonnet 级别玩法; 大部分用 Haiku 控本
+- 路径: offline batch 生成 **10 万级别**模板, 命中率 ~99%, miss 中再分级
+- Miss 中 10% 是"顶级高光"(ace / clutch / comeback, 由 Haiku 打分)→ 路由到 Sonnet 出最高质量参数
+- Miss 中 90% 是普通 miss → Haiku 兜底
+- 成本拆解: 离线 batch ~$10K + Haiku miss (0.9% × 4B × $0.0008) ≈ $29K + Sonnet top tier (0.1% × 4B × $0.005) ≈ $20K
+- **优势**: 顶级高光时刻拿 Sonnet 级别玩法; 大部分 miss 走 Haiku 控本
 - **劣势**: 工程复杂(双模型路由 + 打分模型); 监控双指标
 - 适合什么时候: 第二阶段收入稳定后, 追求最高契合度
 
