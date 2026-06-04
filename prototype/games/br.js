@@ -234,58 +234,80 @@
     c.beginPath(); c.moveTo(sx - TW, sy + TH); c.lineTo(sx, sy); c.lineTo(sx + TW, sy + TH); c.stroke();
   }
 
-  // Sub-voxel humanoid (player / bot body). Shoulder-tall block + head + helmet.
+  // Pixel-art survivor (player / bot). A readable humanoid — head, vest torso with
+  // a chest strap, two arms (front arm forward to hold the gun), two legs+boots,
+  // combat helmet — instead of the old diamond + square-head "block". Hard-edge
+  // pixels, fixed upper-left light → 3 tone steps (Roblox-meets-Minecraft house
+  // style). Same signature so both callsites (player/bot) are untouched.
   function drawVoxelMan(c, sx, sy, bodyColor, headColor, facing, helmetColor) {
     const Iso = $Iso();
-    const TW = Iso.TW * 0.42, TH = Iso.TH * 0.42;
-    const bodyH = 16;
     sx = Math.round(sx); sy = Math.round(sy);
-    // Shadow
-    c.fillStyle = 'rgba(0,0,0,0.45)';
+    const f = (facing < 0) ? -1 : 1;                       // gun / look direction
+
+    // 3-tone palettes (fixed light from upper-left)
+    const bHi = tint(bodyColor, 0.20), bMid = bodyColor, bLo = shade(bodyColor, 0.32);
+    const pants = shade(bodyColor, 0.58), pantsLo = shade(bodyColor, 0.72);
+    const skHi = tint(headColor, 0.14), sk = headColor, skLo = shade(headColor, 0.24);
+
+    // Ground shadow (iso ellipse, sits at the feet)
+    c.fillStyle = 'rgba(0,0,0,0.40)';
     c.beginPath();
-    c.ellipse(sx, sy + Iso.TH * 0.55, TW * 1.1, TH * 0.95, 0, 0, Math.PI*2);
+    c.ellipse(sx, sy + Iso.TH * 0.42, Iso.TW * 0.5, Iso.TH * 0.40, 0, 0, Math.PI * 2);
     c.fill();
-    // Body voxel
-    c.fillStyle = bodyColor;
-    c.beginPath();
-    c.moveTo(sx, sy - bodyH);
-    c.lineTo(sx + TW, sy - bodyH + TH);
-    c.lineTo(sx, sy - bodyH + 2*TH);
-    c.lineTo(sx - TW, sy - bodyH + TH);
-    c.closePath(); c.fill();
-    c.fillStyle = shade(bodyColor, 0.22);
-    c.beginPath();
-    c.moveTo(sx + TW, sy - bodyH + TH);
-    c.lineTo(sx + TW, sy + TH);
-    c.lineTo(sx, sy + 2*TH);
-    c.lineTo(sx, sy - bodyH + 2*TH);
-    c.closePath(); c.fill();
-    c.fillStyle = shade(bodyColor, 0.38);
-    c.beginPath();
-    c.moveTo(sx - TW, sy - bodyH + TH);
-    c.lineTo(sx - TW, sy + TH);
-    c.lineTo(sx, sy + 2*TH);
-    c.lineTo(sx, sy - bodyH + 2*TH);
-    c.closePath(); c.fill();
-    // Head
-    const hx = Math.round(sx - 3), hy = Math.round(sy - bodyH - 6);
-    c.fillStyle = headColor;
-    c.fillRect(hx, hy, 6, 6);
-    c.strokeStyle = 'rgba(0,0,0,0.35)';
-    c.lineWidth = 1;
-    c.strokeRect(hx + 0.5, hy + 0.5, 6, 6);
-    // Combat helmet — a rounded cap over the top of the head (reads as a soldier)
+
+    // Vertical layout — feet at sy, built upward
+    const legH = 6, torsoH = 9, headH = 8;
+    const torsoTop = sy - legH - torsoH;
+    const headTop = torsoTop - headH;
+
+    // Back arm (behind torso, away from camera-front)
+    c.fillStyle = bLo;
+    c.fillRect(sx - f * 6, torsoTop + 1, 2, 7);
+
+    // Legs + boots
+    c.fillStyle = pants;
+    c.fillRect(sx - 4, sy - legH, 3, legH);
+    c.fillRect(sx + 1, sy - legH, 3, legH);
+    c.fillStyle = pantsLo;
+    c.fillRect(sx - 4, sy - 2, 3, 2);
+    c.fillRect(sx + 1, sy - 2, 3, 2);
+
+    // Torso (tactical vest) — base + lit left edge + shaded right edge + top sheen
+    c.fillStyle = bMid; c.fillRect(sx - 5, torsoTop, 10, torsoH);
+    c.fillStyle = bHi;  c.fillRect(sx - 5, torsoTop, 2, torsoH);
+    c.fillStyle = bLo;  c.fillRect(sx + 3, torsoTop, 2, torsoH);
+    c.fillStyle = tint(bodyColor, 0.34); c.fillRect(sx - 5, torsoTop, 10, 1);
+    // vest detail: zipper + chest strap
+    c.fillStyle = shade(bodyColor, 0.5);
+    c.fillRect(sx - 1, torsoTop + 1, 1, torsoH - 1);
+    c.fillRect(sx - 4, torsoTop + 3, 8, 1);
+
+    // Front arm (toward facing) + hand — reads as "holding" the gun the caller draws
+    c.fillStyle = bMid; c.fillRect(sx + (f > 0 ? 4 : -6), torsoTop + 2, 2, 6);
+    c.fillStyle = skLo; c.fillRect(sx + (f > 0 ? 4 : -6), torsoTop + 7, 2, 2);
+
+    // Neck
+    c.fillStyle = skLo; c.fillRect(sx - 1, headTop + headH - 1, 2, 1);
+
+    // Head (cube head, Roblox/MC style) + face
+    c.fillStyle = sk;   c.fillRect(sx - 4, headTop, 8, headH);
+    c.fillStyle = skHi; c.fillRect(sx - 4, headTop, 2, headH);
+    c.fillStyle = skLo; c.fillRect(sx + 2, headTop, 2, headH);
+    c.fillStyle = tint(headColor, 0.3); c.fillRect(sx - 4, headTop, 8, 1);
+    // eyes look toward facing
+    c.fillStyle = '#1c1c26';
+    c.fillRect(sx + (f > 0 ? 0 : -2), headTop + 3, 1, 2);
+    c.fillRect(sx + (f > 0 ? 2 : 0), headTop + 3, 1, 2);
+
+    // Combat helmet
     if (helmetColor) {
       c.fillStyle = helmetColor;
-      c.beginPath(); c.ellipse(sx, hy + 1, 5, 4, 0, Math.PI, 0); c.fill();   // dome
-      c.fillRect(hx - 1, hy, 8, 2);                                          // brim
-      c.fillStyle = tint(helmetColor, 0.25);
-      c.fillRect(hx + 1, hy - 1, 2, 2);                                      // highlight
-    }
-    // Facing marker (gun side)
-    if (facing) {
-      c.fillStyle = shade(bodyColor, 0.55);
-      c.fillRect(Math.round(sx + facing * 4), Math.round(sy - bodyH - 2), 3, 2);
+      c.fillRect(sx - 5, headTop - 1, 10, 3);   // band
+      c.fillRect(sx - 4, headTop - 3, 8, 2);    // crown
+      c.fillStyle = tint(helmetColor, 0.28);
+      c.fillRect(sx - 4, headTop - 3, 4, 1);    // sheen
+      c.fillStyle = shade(helmetColor, 0.32);
+      c.fillRect(sx + f * 3, headTop, 2, 2);    // side clip
     }
   }
 
