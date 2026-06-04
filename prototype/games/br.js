@@ -135,6 +135,10 @@
     moveResponseExp:  0.78,   // R3: 0.85→0.78 低位更跟手(轻推也走)
     sprintMul:        1.55,   // Q sprint speed multiplier
     adsSlowMin:       0.45,   // slowest move factor at full aim-down-sights (was 0.40)
+    // Procedural walk cycle for lingyi's static front/back sprites (kills the
+    // ice-skating). Cadence is driven by ACTUAL ground distance, never time, so
+    // the gait can't out-run the feet; amp eases in/out so idle never animates.
+    walk:             { stride: 58, bob: 3.2, sway: 0.05, squash: 0.06, easeIn: 9, easeOut: 11 },
 
     // normal gun (AR) — the shooting core stays as-is (user approved it)
     gunDmg:           18,
@@ -901,6 +905,7 @@
     // Apply movement + cover collision
     const Iso = $Iso();
     const statusMul = ((b.treeT > 0 || b.iceT > 0) ? 0 : 1) * (b.shrinkT > 0 ? 0.6 : 1) * (b.duckT > 0 ? 0.45 : 1) * (b.floatT > 0 ? 0.4 : 1);   // 树/冰=生根0, 缩小=0.6, 鸭=0.45, 气球=0.4 飘
+    const _bpx = b.wx, _bpy = b.wy;
     let nx = b.wx + mvx * b.speed * spdMul * evtSpd * statusMul * dt;
     let ny = b.wy + mvy * b.speed * spdMul * evtSpd * statusMul * dt;
     for (const c of s.covers) {
@@ -908,6 +913,10 @@
     }
     b.wx = Math.max(10, Math.min(s.mapW * Iso.WS - 10, nx));
     b.wy = Math.max(10, Math.min(s.mapH * Iso.WS - 10, ny));
+    // walk-cycle cadence tied to actual ground distance moved (anti-skate)
+    const _bmv = Math.abs(b.wx - _bpx) + Math.abs(b.wy - _bpy);
+    b.walkPhase = (b.walkPhase || 0) + _bmv / TUNING.walk.stride;
+    b.walkAmp = Math.max(0, Math.min(1, (b.walkAmp || 0) + (_bmv > 0.3 ? dt * TUNING.walk.easeIn : -dt * TUNING.walk.easeOut)));
 
     // Storm DoT on bot when outside zone (kept for parity with player rules)
     const dzAfterMove = Math.hypot(b.wx - s.zone.cx, b.wy - s.zone.cy);
@@ -1876,6 +1885,10 @@
       if (Math.abs(mv.x) > 0.1) p.facing = mv.x > 0 ? 1 : -1;
       if (mvMag > 0.1) p.moveScreenAng = Math.atan2(mv.y, mv.x);   // for sprint streaks
       p.movingNow = (moveSpd > 0 && res.moved > 0.5);
+      // Walk cadence tied to ACTUAL ground distance moved (anti-skate): the gait
+      // can't run faster than the feet cover ground; idle → phase frozen, amp eases out.
+      p.walkPhase = (p.walkPhase || 0) + res.moved / TUNING.walk.stride;
+      p.walkAmp = Math.max(0, Math.min(1, (p.walkAmp || 0) + (p.movingNow ? dt * TUNING.walk.easeIn : -dt * TUNING.walk.easeOut)));
 
       // 冲刺撞人: 冲刺中贴脸 bot → 击退 50wu + 轻伤(进攻位移; 翻滚是防御闪避, 二者区分)
       if (p.spdBuff > 0 && p.movingNow) {
@@ -2419,12 +2432,22 @@
     }
     // I-frame highlight ring during the dodge (clear "I'm invincible right now")
     const body = p.iframeT > 0 ? '#cfe8ff' : (p.flashT > 0 ? '#ffffff' : theme.playerBody);
+    // Procedural walk cycle — wraps the (static) sprite/fallback draw so the
+    // character bobs + sways + squashes as it covers ground instead of sliding.
+    const _wph = (p.walkPhase || 0) * Math.PI * 2, _wamp = p.walkAmp || 0;
+    const _bob = Math.abs(Math.sin(_wph)) * TUNING.walk.bob * _wamp;     // body lifts mid-step (2/stride)
+    const _sway = Math.sin(_wph) * TUNING.walk.sway * _wamp;             // small per-step sway
+    const _sqz = 1 - Math.abs(Math.cos(_wph)) * TUNING.walk.squash * _wamp;  // squash at footfall
+    try { window.__brWalk = { phase: p.walkPhase || 0, amp: _wamp, bob: +_bob.toFixed(2), moving: !!p.movingNow }; } catch (_) {}
+    c.save(); c.translate(sx, sy); c.rotate(_sway); c.scale(1, _sqz); c.translate(-sx, -sy);
+    const _psy = sy - _bob;
     const face = brFacingSprite('hero.br', p.aimAng);
-    drawBrAtlasSprite(c, face.slot, sx, sy, face.flipX, () => {
-      drawBrAtlasSprite(c, 'hero.br', sx, sy, face.flipX, () => {
-        drawVoxelMan(c, sx, sy, body, theme.playerHead, p.facing, p.iframeT > 0 ? '#cfe8ff' : theme.playerHelmet);
+    drawBrAtlasSprite(c, face.slot, sx, _psy, face.flipX, () => {
+      drawBrAtlasSprite(c, 'hero.br', sx, _psy, face.flipX, () => {
+        drawVoxelMan(c, sx, _psy, body, theme.playerHead, p.facing, p.iframeT > 0 ? '#cfe8ff' : theme.playerHelmet);
       });
     });
+    c.restore();
     if (p.frozenT > 0) drawPhone(c, sx, sy);
 
     // Weapon overlay (gun barrel or knife blade) toward aim direction
@@ -2561,12 +2584,20 @@
     const shrunk = b.shrinkT > 0;
     if (shrunk) { c.save(); c.translate(sx, sy); c.scale(0.32, 0.32); c.translate(-sx, -sy); }   // 缩成小不点(0.32 更夸张)
     const botSlot = 'bot.br.' + (b.squadId == null ? (b.id % 3) : b.squadId);
+    // Procedural walk cycle (same as player) — no more sliding bots.
+    const _bph = (b.walkPhase || 0) * Math.PI * 2, _bamp = b.walkAmp || 0;
+    const _bbob = Math.abs(Math.sin(_bph)) * TUNING.walk.bob * _bamp;
+    const _bsway = Math.sin(_bph) * TUNING.walk.sway * _bamp;
+    const _bsqz = 1 - Math.abs(Math.cos(_bph)) * TUNING.walk.squash * _bamp;
+    c.save(); c.translate(sx, sy); c.rotate(_bsway); c.scale(1, _bsqz); c.translate(-sx, -sy);
+    const _bsy = sy - _bbob;
     const face = brFacingSprite(botSlot, b.aimAng);
-    drawBrAtlasSprite(c, face.slot, sx, sy, face.flipX, () => {
-      drawBrAtlasSprite(c, botSlot, sx, sy, face.flipX, () => {
-        drawVoxelMan(c, sx, sy, bodyCol, '#ffa080', 0, (theme.botHelmet && theme.botHelmet[b.id % 3]) || '#7a2a1a');
+    drawBrAtlasSprite(c, face.slot, sx, _bsy, face.flipX, () => {
+      drawBrAtlasSprite(c, botSlot, sx, _bsy, face.flipX, () => {
+        drawVoxelMan(c, sx, _bsy, bodyCol, '#ffa080', 0, (theme.botHelmet && theme.botHelmet[b.id % 3]) || '#7a2a1a');
       });
     });
+    c.restore();
     if (shrunk) c.restore();
     if (b.iceT > 0) drawIce(c, sx, sy);          // 冻成冰块
     if (b.frozenT > 0) drawPhone(c, sx, sy);
