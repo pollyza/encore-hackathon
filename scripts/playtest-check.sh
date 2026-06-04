@@ -178,6 +178,31 @@ else
 fi
 
 # ──────────────────────────────────────────────────────────────────────────────
+section "CHECK 6 · Text overlap (字幕遮挡 / 叠字)"
+# Static smell: a game that fires the SAME text through BOTH the DOM banner
+# (showBanner) AND a canvas popup (Juice.popup) double-prints it → it stacks on
+# screen. We can't measure pixel overlap statically, so flag the smell + point at
+# the runtime gate, which captures every canvas+DOM text box and fails on overlap.
+GAMES_DIR="$(dirname "$TARGET")/games"
+[[ -d "$GAMES_DIR" ]] || GAMES_DIR="prototype/games"
+if [[ -d "$GAMES_DIR" ]]; then
+    for f in "$GAMES_DIR"/*.js; do
+        [[ -f "$f" ]] || continue
+        # same applyGiftBoost/region calling both a banner and a popup is the smell
+        if grep -qE 'showBanner' "$f" && grep -qE '\.popup\(' "$f"; then
+            if grep -nE '(showBanner|\.popup)\([^)]*\b(g\.name|name|label|title)\b' "$f" | grep -q .; then
+                warn "$(basename "$f"): shows banner + popup with a name/label — verify it's not the SAME text double-printed (run the text-overlap gate)"
+            fi
+        fi
+    done
+    note "runtime gate (real pixel-overlap check, canvas+DOM):"
+    note "  QA_BASE=http://127.0.0.1:8799 node ~/encore-qa/qa-text-overlap.js <tpl> <theme> [gift]"
+    note "  → must report '0 overlap(s)' for baseline AND every gift, on all 3 games"
+else
+    note "no games dir found next to target — skipping"
+fi
+
+# ──────────────────────────────────────────────────────────────────────────────
 echo
 if (( EXIT_CODE == 0 )); then
     echo "${BOLD}${GREEN}Playtest check passed.${RESET} No automatic ❌ found. You still need to apply judgment to checks 3-5 (the math, the parity vibe). The evidence is above."

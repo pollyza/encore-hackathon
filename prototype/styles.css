@@ -88,14 +88,19 @@
   .pill.kit { border-color: #90ff90; color: #90ff90; }
   .pill.hidden { display: none; }
 
+  /* Floating joystick — positioned by JS where the thumb lands; hidden at rest.
+     pointer-events:none because the #wrap-level router handles all touches. */
   #joy {
-    position: absolute; bottom: 30px; left: 30px;
-    width: 130px; height: 130px;
+    position: absolute; left: 30px; top: 50%;
+    width: 120px; height: 120px;
     border-radius: 50%;
-    background: rgba(255,255,255,0.06);
-    border: 2px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.05);
+    border: 2px solid rgba(255,255,255,0.18);
     z-index: 15;
     touch-action: none;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.12s ease;
   }
   #joy-knob {
     position: absolute; top: 50%; left: 50%;
@@ -120,7 +125,9 @@
   #aimpad.hidden { display: none; }
 
   #skills {
-    position: absolute; bottom: 30px; right: 20px;
+    position: absolute;
+    bottom: calc(30px + env(safe-area-inset-bottom, 0px));
+    right: calc(20px + env(safe-area-inset-right, 0px));
     width: 180px; height: 180px;
     z-index: 16;
   }
@@ -169,10 +176,109 @@
   #s-w { top: 0; left: 60px; }
   #s-e { top: 0; left: 120px; }
   #s-r { top: 70px; left: 116px; }
+  /* [PR] .br-mode (BR only): top-mobile-game right-thumb layout (FF/PUBGM/CODM).
+     Abilities = a tidy 2×2 cluster up-left of the big FIRE button (canvas-drawn
+     at W-84,H-188 in br.js drawHUD). br-mode-scoped → roblox/gta unaffected. */
+  body.br-mode #skills { bottom: calc(150px + env(safe-area-inset-bottom, 0px)); right: calc(158px + env(safe-area-inset-right, 0px)); width: 132px; height: 132px; transform: none; }
+  body.br-mode .skill  { width: 56px; height: 56px; }
+  body.br-mode #s-w { top: 0;    left: 0;    }   /* 回血 */
+  body.br-mode #s-e { top: 0;    left: 76px; }   /* 速建墙 */
+  body.br-mode #s-q { top: 76px; left: 0;    }   /* 冲刺 */
+  body.br-mode #s-r { top: 76px; left: 76px; }   /* 翻滚 */
+  /* Live sheet compact HUD: keep the battle center clear. BR's full standalone
+     layout has room for a 2x2 cluster; inside the TikTok sheet it covers the
+     player, zone and enemies. Compact mode removes the duplicate movement
+     button and parks the remaining utilities on the lower-left edge. */
+  body.br-mode.embedded-mode #skills {
+    left: calc(14px + env(safe-area-inset-left, 0px));
+    right: auto;
+    bottom: calc(22px + env(safe-area-inset-bottom, 0px));
+    width: 132px;
+    height: 106px;
+  }
+  body.br-mode.embedded-mode .skill {
+    width: 48px;
+    height: 48px;
+    border-width: 2px;
+    background: rgba(7,11,18,0.46);
+    box-shadow: 0 5px 12px rgba(0,0,0,0.22);
+  }
+  body.br-mode.embedded-mode .skill .ico { font-size: 15px; }
+  body.br-mode.embedded-mode .skill .lbl { font-size: 8px; letter-spacing: 0; margin-top: 1px; }
+  body.br-mode.embedded-mode #s-w { top: 0;  left: 0;  }     /* KIT */
+  body.br-mode.embedded-mode #s-e { top: 0;  left: 56px; }   /* Gloo */
+  body.br-mode.embedded-mode #s-q { top: 58px; left: 28px; } /* Sprint */
+  body.br-mode.embedded-mode #s-r { display: none; }         /* Dodge kept on keyboard, hidden in live compact */
+  body.br-mode.embedded-mode #banner {
+    top: 34%;
+    padding: 0 42px;
+    font-size: 17px;
+    line-height: 1.34;
+    letter-spacing: 2px;
+  }
+  @media (max-width: 430px), (max-height: 680px) {
+    body.br-mode #skills {
+      left: calc(14px + env(safe-area-inset-left, 0px));
+      right: auto;
+      bottom: calc(22px + env(safe-area-inset-bottom, 0px));
+      width: 132px;
+      height: 106px;
+    }
+    body.br-mode .skill {
+      width: 48px;
+      height: 48px;
+      border-width: 2px;
+      background: rgba(7,11,18,0.46);
+      box-shadow: 0 5px 12px rgba(0,0,0,0.22);
+    }
+    body.br-mode .skill .ico { font-size: 15px; }
+    body.br-mode .skill .lbl { font-size: 8px; letter-spacing: 0; margin-top: 1px; }
+    body.br-mode #s-w { top: 0;  left: 0;  }
+    body.br-mode #s-e { top: 0;  left: 56px; }
+    body.br-mode #s-q { top: 58px; left: 28px; }
+    body.br-mode #s-r { display: none; }
+    body.br-mode #banner {
+      top: 34%;
+      padding: 0 42px;
+      font-size: 17px;
+      line-height: 1.34;
+      letter-spacing: 2px;
+    }
+  }
+
+  /* Dedicated platformer JUMP button — chunky Roblox plastic part. Visual only
+     (pointer-events:none): the #wrap touch router turns any right-side touch into
+     the jump, so the whole right half is a generous hit area and this just shows
+     where to press + reacts via .held. Shown (display:flex) only in platformer mode
+     (toggled inline in startGame); hidden otherwise. */
+  #jumpbtn {
+    position: absolute;
+    right: calc(24px + env(safe-area-inset-right, 0px));
+    bottom: calc(48px + env(safe-area-inset-bottom, 0px));
+    width: 110px; height: 110px;
+    border-radius: 24px;
+    display: none;
+    flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+    background: linear-gradient(180deg, #8be86f 0%, #57c23e 54%, #3e9e2c 100%);
+    border: 3px solid rgba(0,0,0,0.30);
+    box-shadow: inset 0 6px 0 rgba(255,255,255,0.48), inset 0 -8px 0 rgba(0,0,0,0.22), 0 6px 14px rgba(0,0,0,0.42);
+    color: #173410;
+    z-index: 16;
+    touch-action: none;
+    pointer-events: auto;
+    -webkit-user-select: none; user-select: none;
+    transition: transform 0.06s ease, filter 0.06s ease, box-shadow 0.06s ease;
+  }
+  #jumpbtn .jb-arrow { font-size: 30px; line-height: 1; text-shadow: 0 1px 0 rgba(255,255,255,0.45); }
+  #jumpbtn .jb-txt { font-family: 'Arial Black', system-ui, monospace; font-weight: 800; font-size: 15px; letter-spacing: 2px; }
+  #jumpbtn.held {
+    transform: translateY(4px) scale(0.95); filter: brightness(0.9);
+    box-shadow: inset 0 3px 0 rgba(255,255,255,0.32), inset 0 -3px 0 rgba(0,0,0,0.25), 0 2px 6px rgba(0,0,0,0.4);
+  }
 
   #hud-game, #joy, #skills, #bars, #hud-top, #brand, #pills, #aimpad { display: none; }
   body.playing #joy, body.playing #skills,
-  body.playing #bars, body.playing #brand, body.playing #pills { display: block; }
+  body.playing #bars, body.playing #pills { display: block; }   /* #brand hidden in-play — it overlapped the centered timer (硬伤) */
   body.playing #hud-top { display: flex; }
   body.playing #aimpad { display: block; }
 
@@ -187,53 +293,115 @@
   .overlay.on { display: flex; }
 
   #splash .splash-inner {
-    width: 100%; max-width: 380px;
+    width: 100%; max-width: 430px;
     text-align: center;
   }
   #splash h1 {
-    color: #ff4655; margin: 0 0 4px;
-    letter-spacing: 6px; font-size: 32px;
+    color: #ff5668; margin: 0 0 6px;
+    letter-spacing: 8px; font-size: 34px;
+    text-shadow: 0 0 24px rgba(255,70,85,0.28);
   }
   #splash .tag {
-    color: #ffcd75; font-size: 11px;
-    letter-spacing: 4px; margin-bottom: 6px;
+    color: #d8b36c; font-size: 10px;
+    letter-spacing: 4px; margin-bottom: 8px;
   }
   #splash .sub {
-    color: #888; font-size: 12px; margin-bottom: 24px;
+    color: #8b8790; font-size: 12px; margin-bottom: 26px;
   }
   .template-card {
-    background: #1a1f2e;
-    border: 2px solid #333;
-    border-radius: 8px;
-    padding: 16px;
+    --accent: #71f5dc;
+    --accent-rgb: 113,245,220;
+    --accent-2: #e4c069;
+    position: relative;
+    overflow: hidden;
+    background:
+      linear-gradient(135deg, rgba(var(--accent-rgb),0.13), rgba(255,255,255,0.025) 34%, rgba(10,12,20,0.88) 100%),
+      #171d2b;
+    border: 1px solid rgba(255,255,255,0.13);
+    border-left: 3px solid var(--accent);
+    border-radius: 10px;
+    padding: 15px 16px 15px 17px;
     margin-bottom: 12px;
     cursor: pointer;
     text-align: left;
     display: flex; align-items: center; gap: 14px;
-    transition: all 0.15s;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.08),
+      0 14px 34px rgba(0,0,0,0.24);
+    transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+  }
+  .template-card::after {
+    content: '';
+    position: absolute;
+    right: -40px; top: -48px;
+    width: 150px; height: 150px;
+    background: radial-gradient(circle, rgba(var(--accent-rgb),0.20) 0%, rgba(var(--accent-rgb),0.08) 34%, transparent 68%);
+    pointer-events: none;
   }
   .template-card:active { transform: scale(0.98); }
-  .template-card.fps { border-color: #5af5e0; }
-  .template-card.moba { border-color: #ff8800; }
-  .template-card.br { border-color: #a044ff; }
+  .template-card:hover {
+    transform: translateY(-1px);
+    border-color: rgba(255,255,255,0.24);
+    border-left-color: var(--accent);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.1),
+      0 18px 42px rgba(0,0,0,0.34),
+      0 0 22px rgba(var(--accent-rgb),0.12);
+  }
+  .template-card.fps { --accent:#5af5e0; --accent-rgb:90,245,224; }
+  .template-card.moba { --accent:#ff9a48; --accent-rgb:255,154,72; }
+  .template-card.br { --accent:#a986ff; --accent-rgb:169,134,255; --accent-2:#f1c96b; }
+  .template-card.gta { --accent:#ff6c8d; --accent-rgb:255,108,141; --accent-2:#e9b45f; }
+  .template-card.roblox { --accent:#65e6a8; --accent-rgb:101,230,168; --accent-2:#72c6ff; }
   .template-card .ico-box {
-    width: 56px; height: 56px;
-    border-radius: 8px;
+    width: 58px; height: 58px;
+    border-radius: 12px;
     display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
-    font-size: 18px; font-weight: bold;
+    position: relative;
+    z-index: 1;
+    background:
+      linear-gradient(180deg, rgba(var(--accent-rgb),0.16), rgba(8,11,18,0.68)),
+      rgba(255,255,255,0.035);
+    color: #f8efe8;
+    border: 1px solid rgba(var(--accent-rgb),0.62);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+    font-size: 17px; font-weight: bold;
     letter-spacing: 1px;
   }
-  .fps .ico-box { background: #5af5e022; color: #5af5e0; border: 1px solid #5af5e0; }
-  .moba .ico-box { background: #ff880022; color: #ff8800; border: 1px solid #ff8800; }
-  .br .ico-box { background: #a044ff22; color: #a044ff; border: 1px solid #a044ff; }
-  .template-card .t-name { font-size: 15px; font-weight: bold; letter-spacing: 2px; }
-  .template-card .t-desc { font-size: 11px; color: #999; margin-top: 4px; line-height: 1.4; }
-  .template-card .t-feel { font-size: 10px; color: #5af5e0; margin-top: 4px; font-style: italic; }
-  .fps .t-name { color: #5af5e0; }
-  .moba .t-name { color: #ff8800; }
-  .br .t-name { color: #a044ff; }
-  #splash .footer { color: #555; font-size: 10px; margin-top: 16px; letter-spacing: 1px; }
+  .template-card .t-copy {
+    position: relative;
+    z-index: 1;
+    min-width: 0;
+  }
+  .template-card .t-kicker {
+    color: var(--accent-2);
+    font-size: 9px;
+    line-height: 1;
+    letter-spacing: 2.5px;
+    margin-bottom: 7px;
+  }
+  .template-card .t-name {
+    color: #f6f1ea;
+    font-size: 15px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    line-height: 1.15;
+  }
+  .template-card .t-desc {
+    font-size: 11px;
+    color: #a9a7ad;
+    margin-top: 6px;
+    line-height: 1.45;
+  }
+  .template-card .t-feel {
+    font-size: 10px;
+    color: #67f4dd;
+    margin-top: 7px;
+    line-height: 1.35;
+    font-style: normal;
+  }
+  #splash .footer { color: #5b5660; font-size: 10px; margin-top: 18px; letter-spacing: 2px; }
 
   /* Per-template "HOW TO PLAY" coach card. Shown after startGame() and before
      the round clock starts; dismissed on any input or auto after 4s in V2G

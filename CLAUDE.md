@@ -7,6 +7,30 @@
 
 我是 TikTok Gaming PM, 这个目录是我个人为部门 AI 产品 hackathon 准备的参赛项目。
 
+## 跟我沟通的语言风格 (重要)
+
+**用大白话, 不要用内部术语。** 这是 v0.9 之后定下的:任何写给我看、写进 brief / slides / onepager / 飞书文档、或者口头讲给我的内容,都用正常人能听懂的中文 / 英文表达,不要用下面这些行话 (左边 ❌ / 右边 ✅):
+
+- SKU 栈 / SKU 矩阵 → 现有功能 / 功能列表
+- 并行 agency 层 → 让观众也能上手玩 / 多开一个维度
+- non-interference 第一原则 → 不打扰主播打游戏 (硬规则)
+- gift-gate → 礼物门槛
+- MVP / Phase 1 → 第一版
+- Phase 2 / Phase 3 → 第二阶段 / 第三阶段
+- C2C / B2B → 观众付费 / 厂商付费
+- LTV 阶梯 → 长期变现路径
+- viral 杠杆 / viral 系数 → 社交传播 / 传播放大
+- split-screen secondary distribution → 上下分屏短视频回流
+- post owner → 谁是发布者
+- enabler / hero feature → 辅助 / 主角
+- co-presence → 同时在场
+- 心智 → 用户感觉 / 心理动机
+- value proposition → 对谁有价值
+
+**例外**:跟工程相关的术语 (Canvas / WebGL / Vision API / CPI / ffmpeg / Vercel 等) 可以保留,这些是技术名词不是行话。
+
+代码注释、commit message、PR 描述、内部技术对齐用英文术语 OK。但**给我看的产品/商业内容必须大白话**。
+
 ## 项目是什么
 
 **Encore (安可)** 是一个 LIVE-native 的 Video-to-Game (V2G) 玩法引擎。当游戏主播在 LIVE 中打出高光时刻, AI 自动把这一时刻**结构化重构**成一个 30 秒像素风 mini game, 通过底部 sheet overlay 推送给当时在场的所有观众。观众玩完后, AI 自动剪成 15 秒短视频回流到直播间, 主播实时锐评 Top 3 录像——形成"看 → 玩 → 播"三元闭环。
@@ -17,7 +41,7 @@
 - **美术**: 抽象像素风 (Roblox / MC 系), 规避所有游戏 IP 风险, 千元机兼容
 - **入口位置**: LIVE-first。M12 之前不做短视频流入口 (转化率塌方)
 - **UX 形态**: TikTok 原生 bottom sheet 上滑, **永不挤压 LIVE 主画面**, 8 状态有限状态机
-- **变现**: 4 层礼物经济 (Enhance / Spotlight / Sponsor / Loot), **禁止"送礼换试玩"** gating
+- **变现**: MVP 仅 **Enhance + Spotlight** (Phase 2 加 Remix);Sponsor / Loot **不做** (违反 non-interference / 监管风险)。**铁律**: 基础 Encore 玩 / 看 winner clip / 被动 collab **永远 free**, 不可 gate;**付费功能 entrance** 可走主播 gift-gate (OFF / 50 / 200 / 500 金币软档)
 - **模板覆盖**: 必须做 3 套 (FPS + MOBA + BR), 覆盖 TikTok 游戏 LIVE 约 60-70% 内容供给
 - **主播分成铁律**: Encore 礼物中主播分成 ≥ 普通 LIVE 礼物分成
 

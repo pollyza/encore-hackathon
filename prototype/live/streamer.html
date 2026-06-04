@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 
 <link rel="stylesheet" href="css/live-shell.css">
-<link rel="stylesheet" href="css/ai-panel.css">
+<link rel="stylesheet" href="css/ai-panel.css?v=3">
 <link rel="stylesheet" href="css/mini-games.css">
 </head>
 <body>
@@ -31,18 +31,31 @@
     </span>
   </div>
 
-  <!-- ── Stream background ───────────────────────────────────────────── -->
+  <!-- ── Stream background ───────────────────────────────────────────────
+       3 game modes, randomly picked on load via data-game-mode:
+       · fps    → Canvas2D wasteland scene + FPS HUD
+       · gta    → Canvas2D top-down city scene + driving HUD
+       · roblox → Canvas2D side-view platforms + parkour HUD
+       Picked mode also drives Encore template selection (br/gta/roblox)
+       so the highlight → mini-game flow is genre-consistent.
+       NOTE: real game footage was tried first but reference/videos/*.mp4
+       is gitignored (423MB) and not mirrored to /tmp/encore-preview, so
+       both local preview and Vercel deploy 404'd. Canvas-only is the
+       hackathon-pragmatic choice; swap in real footage post-M9.
+       ──────────────────────────────────────────────────────────────────── -->
   <div id="stream-bg">
-    <video id="live-video" muted playsinline loop preload="metadata">
-      <!-- Absolute path so both /tmp/encore-preview/live/ and
-           /Users/.../prototype/live/ resolve correctly (servers run from
-           their own repo root or mirror root). -->
-      <source src="/reference/videos/encore_test2.mp4" type="video/mp4">
-    </video>
+    <!-- Inert video tag — kept so live-room.js's cfg.video.play() doesn't
+         null-deref; never displayed. All 3 modes render via canvas below. -->
+    <video id="live-video" muted playsinline loop preload="none"
+           style="display:none;"></video>
+    <!-- Canvas2D procedural scene for all 3 modes (D's #23 — supersedes the
+         404'ing gitignored LIVE clip; this is the proper fix for that issue). -->
+    <canvas id="live-canvas" style="display:none;"></canvas>
     <div class="atmosphere"></div>
 
-    <!-- Stylised in-game HUD (purely decorative on top of the video) -->
-    <div class="stream-minimap">
+    <!-- Stylised in-game HUD — each block .visible-in shows in matching modes -->
+    <!-- FPS HUD: minimap + compass + weapon + joystick + fire button -->
+    <div class="stream-minimap" data-show-in="fps">
       <svg viewBox="0 0 78 78" width="78" height="78" xmlns="http://www.w3.org/2000/svg">
         <path d="M0 40 Q20 30 40 36 T78 32 L78 78 L0 78Z" fill="#3d4f2a"/>
         <circle cx="40" cy="40" r="3" fill="#ff3535"/>
@@ -53,32 +66,40 @@
       <div class="label">CẢNH BÁO</div>
     </div>
 
-    <div class="stream-compass">
+    <div class="stream-compass" data-show-in="fps">
       <span>NE</span><span>60</span><span>75</span><span>E</span><span>105</span>
       <span class="active">125</span><span>150</span><span>S</span><span>195</span>
     </div>
 
-    <div class="stream-weapon">
+    <div class="stream-weapon" data-show-in="fps">
       <div class="ammo">8<span class="of">/167</span></div>
       <div class="reload">Thay đạn</div>
       <div class="row"><div>61</div><div>0%</div><div>∞</div></div>
     </div>
 
-    <div class="stream-joystick"></div>
-    <div class="stream-fire">✊</div>
-    <div class="stream-hp"><div></div></div>
+    <div class="stream-joystick" data-show-in="fps gta"></div>
+    <div class="stream-fire" data-show-in="fps">✊</div>
+    <div class="stream-hp" data-show-in="fps gta"><div></div></div>
 
-    <!-- Character silhouette -->
-    <div class="character">
-      <svg viewBox="0 0 56 88" width="56" height="88" xmlns="http://www.w3.org/2000/svg">
-        <ellipse cx="28" cy="84" rx="22" ry="5" fill="#ff9d3a" opacity=".55"/>
-        <path d="M22 18 Q28 10 34 18 L36 38 L40 60 L34 78 L22 78 L16 60 L20 38 Z" fill="#e8e3d6"/>
-        <circle cx="28" cy="14" r="9" fill="#f1ddb6"/>
-        <path d="M19 12 Q28 4 37 12 L36 10 Q28 6 20 10Z" fill="#dcd2c0"/>
-        <rect x="36" y="28" width="22" height="3" rx="1" fill="#3a3026" transform="rotate(20 36 28)"/>
-        <circle cx="22" cy="78" r="2" fill="#ffce6a"/>
-        <circle cx="34" cy="78" r="1.5" fill="#fff1c0"/>
-      </svg>
+    <!-- (FPS soldier silhouette previously here was an SVG overlay on top
+         of the video; now drawn into #live-canvas by drawFpsScene.) -->
+
+    <!-- GTA HUD: speedometer + wanted level + nitro button -->
+    <div class="stream-speedo" data-show-in="gta">
+      <div class="speed-num">87<span class="of">mph</span></div>
+      <div class="wanted">
+        <span class="star on">★</span><span class="star on">★</span><span class="star">★</span>
+      </div>
+    </div>
+    <div class="stream-nitro" data-show-in="gta">N₂O</div>
+
+    <!-- Roblox HUD: jump counter + checkpoint indicator -->
+    <div class="stream-jumps" data-show-in="roblox">
+      <div class="jumps-num">12<span class="of">/18</span></div>
+      <div class="jumps-label">PLATFORMS</div>
+    </div>
+    <div class="stream-checkpoint" data-show-in="roblox">
+      <span class="flag">⛳</span> NEXT: 4
     </div>
   </div>
 
@@ -204,40 +225,139 @@
       <div class="phase" id="phase-game"></div>
 
       <!-- PHASE: RESULT -->
+      <!-- v0.8 split-screen second-distribution mock:
+           - winner state (won=true && rank<=3):  big rank chip + clip preview + caption + auto-publish countdown
+           - non-winner state (rank>3 or lost):   ghost rank chip + Spotlight "Make my clip" card -->
       <div class="phase" id="phase-result">
-        <div class="label-top" id="result-label">Encore complete</div>
-        <div class="headline" id="result-headline">Nice run!</div>
-        <div class="score-chip">
-          <div class="col you">
-            <div class="key">YOUR SCORE</div>
-            <div class="val"><span id="result-score">0</span><span class="of">/<span id="result-max">0</span></span></div>
+        <!-- BIG rank chip (replaces v0.7 label-top + headline) -->
+        <div class="sheet-result-rank-chip" id="result-rank-chip">
+          <div class="sheet-result-rank-medal" id="result-rank-medal">🥈</div>
+          <div class="sheet-result-rank-body">
+            <div class="sheet-result-rank-label">RANK</div>
+            <div class="sheet-result-rank-num">#<span id="result-rank-num-big">2</span></div>
           </div>
-          <div class="divider"></div>
-          <div class="col host">
-            <div class="key">HOST</div>
-            <div class="val">TK Sói</div>
-            <div class="sub"><span id="host-score">0</span>/<span id="host-max">0</span></div>
+          <div class="sheet-result-rank-meta">
+            <div class="row"><span class="k">Score</span><span class="v"><span id="result-score">0</span>/<span id="result-max">0</span></span></div>
+            <div class="row"><span class="k">Host</span><span class="v">TK Sói <span id="host-score">0</span>/<span id="host-max">0</span></span></div>
           </div>
         </div>
-        <div class="pills">
+
+        <!-- WINNER ONLY: split-screen clip preview
+             Live preview = on-screen split (host canvas + viewer canvas).
+             In parallel, ClipComposer (js/clip-composer.js) draws both halves
+             into an offscreen 540×960 composite canvas and runs MediaRecorder
+             on its captureStream → real .webm Blob the viewer can download
+             or Web-Share. -->
+        <div class="sheet-result-clip-wrap" id="result-clip-wrap">
+          <div class="sheet-result-section-label">Your Split-Screen Clip</div>
+          <div class="sheet-result-clip" id="result-clip-preview">
+            <!-- top: Canvas2D LIVE scene matching current host mode
+                 (fps/gta/roblox), drawn by window.LiveScenes exported from
+                 the streamer.html IIFE. Was a <video src="encore_test2.mp4">
+                 but that file is 423MB + gitignored → 404 on every deploy. -->
+            <div class="sheet-result-clip-half host">
+              <canvas class="sheet-result-clip-video" id="result-clip-host-canvas"></canvas>
+              <div class="sheet-result-clip-tag tl">⏵ LIVE</div>
+              <div class="sheet-result-clip-tag tr">@TK_Soi</div>
+              <div class="sheet-result-clip-caption" id="result-clip-host-caption">1v3 retake</div>
+            </div>
+            <!-- middle divider: ⚡ ENCORE -->
+            <div class="sheet-result-clip-divider"><span>⚡ ENCORE</span></div>
+            <!-- bottom: Canvas 2D simulated pixel encore (animated by JS in encore-sheet.js) -->
+            <div class="sheet-result-clip-half viewer">
+              <canvas class="sheet-result-clip-canvas" id="result-clip-canvas"></canvas>
+              <div class="sheet-result-clip-tag tl" id="result-clip-viewer-tag">⊕ FPS</div>
+              <div class="sheet-result-clip-tag tr">@you · 🥈 #2</div>
+              <div class="sheet-result-clip-caption" id="result-clip-vscore">2,840</div>
+            </div>
+            <!-- brand corner -->
+            <div class="sheet-result-clip-brand">⚡ Encore</div>
+            <!-- play overlay (autoplay muted in real impl) -->
+            <div class="sheet-result-clip-play" id="result-clip-play"><span>▶</span></div>
+          </div>
+          <!-- Offscreen composite canvas — 540×960 (TikTok 9:16) — drawn by
+               ClipComposer in parallel with the on-screen preview. Pushed
+               off-viewport rather than display:none, because Chrome's
+               canvas.captureStream() does NOT emit frames for canvases
+               with display:none (verified: blob came out as 110 bytes
+               with the hidden attribute set). -->
+          <canvas id="result-clip-composite" width="540" height="960"
+                  style="position:fixed; left:-9999px; top:0; pointer-events:none;"
+                  aria-hidden="true"></canvas>
+          <!-- Recorded output player — hidden until ClipComposer finishes
+               (~12s after winner state opens). Shown in place of the
+               live preview once a real Blob is available. -->
+          <video id="result-clip-output" hidden controls muted playsinline></video>
+          <div class="sheet-result-clip-actions">
+            <button class="sheet-result-clip-action" id="result-clip-download" disabled>⬇ recording…</button>
+            <button class="sheet-result-clip-action" id="result-clip-share" disabled>↗ share</button>
+            <button class="sheet-result-clip-action" id="result-clip-regen">↻ regenerate</button>
+          </div>
+        </div>
+
+        <!-- WINNER ONLY: caption (AI-generated, editable) -->
+        <div class="sheet-result-caption-wrap" id="result-caption-wrap">
+          <div class="sheet-result-section-label">Caption <button class="sheet-result-caption-edit" id="result-caption-edit">edit</button></div>
+          <div class="sheet-result-caption" id="result-caption-text">Played @TK_Soi's 1v3 clutch in CS — ranked #2 🎮 ▶ Play CS → #Encore #CSgaming</div>
+        </div>
+
+        <!-- WINNER ONLY: auto-publish countdown -->
+        <div class="sheet-result-publish-wrap" id="result-publish-wrap">
+          <div class="sheet-result-publish-bar">
+            <div class="sheet-result-publish-msg">
+              Auto-publishing to TikTok in <span id="result-publish-countdown">3</span>…
+            </div>
+            <div class="sheet-result-publish-buttons">
+              <button class="sheet-result-publish-cancel" id="result-publish-cancel">Cancel</button>
+              <button class="sheet-result-publish-now" id="result-publish-now">Publish now ⚡</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- NON-WINNER ONLY: "Almost there" retry card (replaces v0.8 Spotlight per v0.8.1) -->
+        <div class="sheet-result-retry-wrap" id="result-retry-wrap">
+          <div class="sheet-result-retry">
+            <div class="sheet-result-retry-head">
+              <div class="sheet-result-retry-icon">🎯</div>
+              <div class="sheet-result-retry-titles">
+                <div class="title">Almost there</div>
+                <div class="sub">Top 3 auto-publishes a clip. Play again to claim a slot.</div>
+              </div>
+            </div>
+            <div class="sheet-result-retry-stats" id="result-retry-stats">
+              <span class="k">You're</span>
+              <span class="v"><strong id="result-retry-gap">12</strong> spots from #3</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- PERSISTENT (both states): Enhance upsell card -->
+        <div class="sheet-result-enhance-wrap" id="result-enhance-wrap">
+          <button class="sheet-result-enhance" id="result-enhance-cta">
+            <span class="ico">⚡</span>
+            <div class="body">
+              <div class="head">Enhance · next round</div>
+              <div class="sub">🔥 Fire bullets · ❤️ Double HP · ➕ Extra life</div>
+            </div>
+            <span class="price">$0.5</span>
+          </button>
+          <div class="sheet-result-enhance-gate" id="result-enhance-gate" hidden>
+            <span>Host requires</span>
+            <button class="gift-btn">🪙 50 gift</button>
+            <span>to unlock</span>
+          </div>
+        </div>
+
+        <!-- SECONDARY actions (kept from v0.7) -->
+        <div class="pills sheet-result-secondary">
           <button class="ext-pill" id="rank-pill">
             <span class="ico">🏆</span> Encore Rank
             <span class="num">#<span id="rank-num">234</span></span>
             <span class="qual">· in this LIVE</span>
             <span class="chev">›</span>
           </button>
-          <button class="ext-pill" id="share-pill">
-            <span>↗</span> Share clip
-          </button>
         </div>
-        <div class="gift-remix">
-          <div class="ico">🎁</div>
-          <div class="body">
-            <div class="head">Send as Gift Remix</div>
-            <div class="sub">Send TK Sói your run + a Rose · 5 coins</div>
-          </div>
-          <button class="send">Send</button>
-        </div>
+
         <div class="feedback-block">
           <div class="label">How was it?</div>
           <div class="row">
@@ -323,9 +443,11 @@
      Bump the value when editing any of these modules.
      Note: mini-games.js (Aim/Rhythm/Dodge demos) is retained on disk but
      no longer loaded — the game phase now renders Mario's iframe templates
-     (FPS/MOBA/BR) via the V2G postMessage protocol. -->
+     (GTA/Roblox/Free Fire BR) via the V2G postMessage protocol. -->
 <script src="js/observer-client.js?v=8"></script>
-<script src="js/encore-sheet.js?v=8"></script>
+<script src="js/player-recorder.js?v=1"></script>
+<script src="js/clip-composer.js?v=1"></script>
+<script src="js/encore-sheet.js?v=15"></script>
 <script src="js/live-room.js?v=8"></script>
 <script>
 (() => {
@@ -352,11 +474,44 @@
     costLine:   document.querySelector('#sheet-body .meta span:last-child'),
   };
 
+  // ── LIVE game-mode selection ────────────────────────────────────────
+  // 3 modes, picked once on load (fps/gta/roblox). Drives:
+  //  · which background renders (video for fps, Canvas for gta/roblox)
+  //  · which HUD blocks show (data-show-in attribute)
+  //  · which Encore template launches when highlight triggers (genre match)
+  const GAME_MODES = ['fps', 'gta', 'roblox'];
+  // FPS LIVE → Mario 'br' (Free Fire BR) template (closest shooter feel)
+  // GTA / Roblox LIVE → matching Encore template
+  const TEMPLATE_FOR_MODE = { fps: 'br', gta: 'gta', roblox: 'roblox' };
+  // Allow ?mode=fps|gta|roblox URL override for demo / verification.
+  // Falls back to random pick when no (or invalid) override given.
+  const modeParam = (new URLSearchParams(location.search).get('mode') || '').toLowerCase();
+  const currentMode = GAME_MODES.includes(modeParam)
+    ? modeParam
+    : GAME_MODES[Math.floor(Math.random() * GAME_MODES.length)];
+
+  // Set data attribute for CSS hooks (HUD blocks visibility, etc.)
+  document.getElementById('host').dataset.gameMode = currentMode;
+
+  // All 3 modes render via Canvas2D (see note above the <video> tag for why
+  // we dropped real footage). liveCanvasRAF is declared before any call to
+  // startLiveCanvasScene to avoid a TDZ ReferenceError on first paint.
+  const liveCanvas = document.getElementById('live-canvas');
+  let liveCanvasRAF = null;
+  dom.video.style.display = 'none';
+  liveCanvas.style.display = '';
+  startLiveCanvasScene(currentMode);
+
+  // Show only HUD blocks matching this mode (via data-show-in attribute)
+  document.querySelectorAll('#stream-bg [data-show-in]').forEach(el => {
+    const modes = el.dataset.showIn.split(/\s+/);
+    el.style.display = modes.includes(currentMode) ? '' : 'none';
+  });
+
   // Vision detection cache — observer-client populates this when a real
   // V2G highlight is detected. encore-sheet calls pickConfig() to decide
   // which Mario template to launch; if no cached detection is available
-  // it falls back to a random fps/moba/br config (handled internally).
-  // This is the seam where real Vision will plug in later.
+  // we now FORCE a template match with the current LIVE game-mode (v2 — was random).
   let cachedDetection = null;
   function setEncoreDetection(config, notify = true) {
     if (!config) {
@@ -378,8 +533,340 @@
       cachedDetection = null;
       return c;
     }
-    return null; // null → encore-sheet generates a random one
+    // Genre-match: LIVE 在播什么 → Encore 也开什么
+    return buildConfigForTemplate(TEMPLATE_FOR_MODE[currentMode]);
   };
+
+  // Build a V2GResponse config for a specific template
+  // (mirrors encore-sheet.js makeRandomConfig logic but with template forced)
+  function buildConfigForTemplate(template) {
+    const THEMES = {
+      fps:    ['desert', 'snow', 'cyber',  'jungle'],
+      moba:   ['grass',  'lava', 'ice',    'twilight'],
+      br:     ['forest', 'desert', 'island','wasteland'],
+      roblox: ['grass',  'snow', 'lava',   'space'],
+      gta:    ['night',  'rain', 'sunset', 'snownight'],
+    };
+    const DESC = {
+      fps: '1vN clutch', moba: 'dragon pit fight', br: 'free fire final circle',
+      roblox: 'platform parkour', gta: 'shop heist run',
+    };
+    const themes = THEMES[template] || THEMES.br;
+    const theme = themes[Math.floor(Math.random() * themes.length)];
+    let scenario;
+    if (template === 'roblox') {
+      scenario = { platform_count: 18, gap_range_min: 80, gap_range_max: 220,
+                   seed: Math.floor(Math.random()*100000), description: DESC[template] };
+    } else if (template === 'gta') {
+      scenario = { shop_count: 4, cop_spawn_rate: 0.2, map_size: 1500, description: DESC[template] };
+    } else if (template === 'br') {
+      // Free Fire is a 10-player lobby — 9 bots, NOT the 2-4 legacy-FPS count
+      // (that trimmed the lobby to 2 and made 清场吃鸡 impossible).
+      scenario = { enemy_count: 9, hp_start: 100,
+                   weapon: ['pistol','smg','rifle','sniper'][Math.floor(Math.random()*4)],
+                   description: DESC[template] };
+    } else {
+      const weapons = ['pistol','smg','rifle','sniper'];
+      scenario = { enemy_count: 2 + Math.floor(Math.random()*3),
+                   hp_start: [60,80,100][Math.floor(Math.random()*3)],
+                   description: DESC[template] };
+      if (template === 'fps') scenario.weapon = weapons[Math.floor(Math.random()*4)];
+    }
+    return {
+      highlight: true, confidence: 1.0, template, theme, scenario,
+      _meta: { tokens_in: 0, tokens_out: 0, model: 'live-mode-match' }
+    };
+  }
+
+  // ── Canvas2D LIVE scene renderers (procedural placeholder until real
+  //    game footage is sourced for all 3 modes). Each scene runs at 60fps
+  //    via requestAnimationFrame, designed to fill #live-canvas.
+  //    Note: liveCanvasRAF is declared earlier (above the call to
+  //    startLiveCanvasScene) to avoid a TDZ ReferenceError.
+  function startLiveCanvasScene(mode) {
+    if (liveCanvasRAF) cancelAnimationFrame(liveCanvasRAF);
+    const cv = liveCanvas;
+    const fit = () => {
+      const r = cv.getBoundingClientRect();
+      if (r.width === 0) return false;
+      cv.width  = Math.round(r.width);
+      cv.height = Math.round(r.height);
+      return true;
+    };
+    if (!fit()) { requestAnimationFrame(() => startLiveCanvasScene(mode)); return; }
+    const ctx = cv.getContext('2d');
+    const start = performance.now();
+    const draw = (now) => {
+      const t = now - start;
+      if (mode === 'fps')    drawFpsScene(ctx, cv.width, cv.height, t);
+      if (mode === 'gta')    drawGtaScene(ctx, cv.width, cv.height, t);
+      if (mode === 'roblox') drawRobloxScene(ctx, cv.width, cv.height, t);
+      liveCanvasRAF = requestAnimationFrame(draw);
+    };
+    liveCanvasRAF = requestAnimationFrame(draw);
+  }
+
+  // FPS mode: third-person wasteland scene — dusk sky + ruined skyline +
+  // dune ground + pixel soldier (back view, rifle) + crosshair +
+  // intermittent muzzle flash + distant enemy silhouette + drifting dust.
+  function drawFpsScene(ctx, w, h, t) {
+    // Dusk sky gradient
+    const sky = ctx.createLinearGradient(0, 0, 0, h * 0.6);
+    sky.addColorStop(0,   '#1a1410');
+    sky.addColorStop(0.5, '#7a3a1c');
+    sky.addColorStop(1,   '#d97a2b');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, w, h * 0.6);
+    // Sun haze
+    const sun = ctx.createRadialGradient(w * 0.7, h * 0.5, 0, w * 0.7, h * 0.5, w * 0.45);
+    sun.addColorStop(0, 'rgba(255,200,120,0.45)');
+    sun.addColorStop(1, 'rgba(255,200,120,0)');
+    ctx.fillStyle = sun;
+    ctx.fillRect(0, 0, w, h);
+    // Distant ruined skyline
+    const horizonY = h * 0.55;
+    ctx.fillStyle = '#1c0e08';
+    const ruins = [60, 110, 40, 130, 70, 90, 50, 120, 80, 100];
+    for (let i = 0; i < ruins.length; i++) {
+      const bx = i * (w / ruins.length);
+      const bh = ruins[i] * 0.55;
+      // Jagged top
+      ctx.fillRect(bx, horizonY - bh, w / ruins.length - 4, bh);
+      // Notch out a "broken" gap
+      if (i % 2 === 0) {
+        ctx.fillStyle = 'rgba(122,58,28,0.6)';
+        ctx.fillRect(bx + 6, horizonY - bh + 6, 4, 12);
+        ctx.fillStyle = '#1c0e08';
+      }
+    }
+    // Wasteland ground (sandy → dark)
+    const ground = ctx.createLinearGradient(0, horizonY, 0, h);
+    ground.addColorStop(0,   '#7a5230');
+    ground.addColorStop(0.5, '#4f3520');
+    ground.addColorStop(1,   '#2c1d12');
+    ctx.fillStyle = ground;
+    ctx.fillRect(0, horizonY, w, h - horizonY);
+    // Dune ripples (scrolling slowly toward player)
+    const dy = (t * 0.04) % 24;
+    ctx.fillStyle = 'rgba(255,200,120,0.08)';
+    for (let i = 0; i < 12; i++) {
+      const y = horizonY + 16 + i * 24 + dy;
+      if (y < h) ctx.fillRect(0, y, w, 2);
+    }
+    // Distant enemy silhouette (walks left ↔ right)
+    const enX = w * 0.5 + Math.sin(t * 0.0007) * (w * 0.25);
+    const enY = horizonY + 18;
+    ctx.fillStyle = '#0a0604';
+    ctx.fillRect(enX - 3, enY - 14, 6, 10);   // body
+    ctx.fillRect(enX - 2, enY - 18, 4, 4);    // head
+    ctx.fillRect(enX - 3, enY - 4,  2, 5);    // leg L
+    ctx.fillRect(enX + 1, enY - 4,  2, 5);    // leg R
+    // Pixel soldier (back view, lower-center)
+    const sx = w * 0.5;
+    const sy = h * 0.78;
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fillRect(sx - 18, sy + 26, 36, 5);
+    // Backpack
+    ctx.fillStyle = '#3a2818';
+    ctx.fillRect(sx - 10, sy - 18, 20, 22);
+    // Helmet
+    ctx.fillStyle = '#4a4032';
+    ctx.fillRect(sx - 9, sy - 30, 18, 8);
+    ctx.fillRect(sx - 10, sy - 25, 20, 3);   // strap
+    // Shoulders / arms
+    ctx.fillStyle = '#5a4a32';
+    ctx.fillRect(sx - 14, sy - 16, 4, 18);
+    ctx.fillRect(sx + 10, sy - 16, 4, 18);
+    // Rifle (extending forward + slightly right)
+    ctx.fillStyle = '#1c1410';
+    ctx.fillRect(sx + 8, sy - 10, 28, 3);
+    ctx.fillRect(sx + 30, sy - 12, 6, 7);    // muzzle block
+    // Legs / boots
+    ctx.fillStyle = '#3c2e1c';
+    ctx.fillRect(sx - 8, sy + 4, 6, 22);
+    ctx.fillRect(sx + 2, sy + 4, 6, 22);
+    ctx.fillStyle = '#1a120a';
+    ctx.fillRect(sx - 9, sy + 24, 8, 3);
+    ctx.fillRect(sx + 1, sy + 24, 8, 3);
+    // Muzzle flash (intermittent — ~3 per second)
+    const flashPhase = (t % 320);
+    if (flashPhase < 60) {
+      const fa = 1 - (flashPhase / 60);
+      ctx.fillStyle = `rgba(255,220,120,${0.9 * fa})`;
+      ctx.beginPath();
+      ctx.moveTo(sx + 36, sy - 8);
+      ctx.lineTo(sx + 50, sy - 12);
+      ctx.lineTo(sx + 46, sy - 8);
+      ctx.lineTo(sx + 50, sy - 4);
+      ctx.closePath();
+      ctx.fill();
+      // Flash glow on scene
+      ctx.fillStyle = `rgba(255,200,80,${0.15 * fa})`;
+      ctx.fillRect(0, 0, w, h);
+    }
+    // Crosshair (center-screen, dim)
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.lineWidth = 1;
+    const cx = w * 0.5, cy = h * 0.45;
+    ctx.beginPath();
+    ctx.moveTo(cx - 8, cy); ctx.lineTo(cx - 2, cy);
+    ctx.moveTo(cx + 2, cy); ctx.lineTo(cx + 8, cy);
+    ctx.moveTo(cx, cy - 8); ctx.lineTo(cx, cy - 2);
+    ctx.moveTo(cx, cy + 2); ctx.lineTo(cx, cy + 8);
+    ctx.stroke();
+    // Drifting dust particles
+    ctx.fillStyle = 'rgba(255,220,160,0.4)';
+    for (let i = 0; i < 14; i++) {
+      const px = ((i * 73 + t * 0.05) % w);
+      const py = horizonY + ((i * 37 + t * 0.08) % (h - horizonY));
+      ctx.fillRect(px, py, 2, 2);
+    }
+  }
+
+  // GTA mode: top-down city night scene with cars + neon
+  function drawGtaScene(ctx, w, h, t) {
+    // Asphalt + sky
+    const sky = ctx.createLinearGradient(0, 0, 0, h);
+    sky.addColorStop(0,    '#1a0e1f');
+    sky.addColorStop(0.4,  '#2c1840');
+    sky.addColorStop(1,    '#0a060f');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, w, h);
+    // Distant city skyline
+    const horizonY = h * 0.45;
+    ctx.fillStyle = '#0e0820';
+    for (let i = 0; i < 10; i++) {
+      const bx = i * (w/10);
+      const bh = 30 + Math.sin(i * 1.3) * 20;
+      ctx.fillRect(bx, horizonY - bh, w/10 - 2, bh);
+      // Lit windows
+      ctx.fillStyle = (i % 2 === 0) ? '#ffd23f' : '#25F4EE';
+      for (let y = horizonY - bh + 4; y < horizonY - 4; y += 6) {
+        if ((y + i) % 12 < 4) ctx.fillRect(bx + 2, y, 2, 2);
+      }
+      ctx.fillStyle = '#0e0820';
+    }
+    // Road
+    const roadTop = h * 0.55;
+    ctx.fillStyle = '#1a1820';
+    ctx.fillRect(0, roadTop, w, h - roadTop);
+    // Lane stripes scrolling
+    const stripeSpeed = (t * 0.4) % 60;
+    ctx.fillStyle = '#ffd23f';
+    for (let i = -1; i < 10; i++) {
+      const y = roadTop + 20 + i * 60 + stripeSpeed;
+      if (y > roadTop && y < h - 10) ctx.fillRect(w/2 - 3, y, 6, 24);
+    }
+    // Cars passing (2 lanes)
+    const carY1 = roadTop + 80 + Math.sin(t * 0.001) * 30;
+    const carY2 = roadTop + 180 + Math.cos(t * 0.0008) * 30;
+    drawPixelCar(ctx, w * 0.3, carY1, '#FE2C55');
+    drawPixelCar(ctx, w * 0.65, carY2, '#25F4EE');
+    // Player car (center)
+    drawPixelCar(ctx, w * 0.48, h * 0.78, '#ffd23f', true);
+    // Neon glow overlay
+    const glow = ctx.createRadialGradient(w/2, h*0.8, 0, w/2, h*0.8, w*0.4);
+    glow.addColorStop(0, 'rgba(255,210,63,0.12)');
+    glow.addColorStop(1, 'rgba(255,210,63,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, w, h);
+    // Police flash (intermittent)
+    if ((t % 2000) < 200) {
+      ctx.fillStyle = 'rgba(254,44,85,0.25)';
+      ctx.fillRect(0, 0, w, h);
+    } else if ((t % 2000) > 1000 && (t % 2000) < 1200) {
+      ctx.fillStyle = 'rgba(37,244,238,0.25)';
+      ctx.fillRect(0, 0, w, h);
+    }
+  }
+  function drawPixelCar(ctx, x, y, color, isPlayer) {
+    const w = isPlayer ? 24 : 18;
+    const h = isPlayer ? 36 : 28;
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(x - w/2 + 2, y - h/2 + 4, w, h);
+    // Body
+    ctx.fillStyle = color;
+    ctx.fillRect(x - w/2, y - h/2, w, h);
+    // Roof
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.fillRect(x - w/2 + 3, y - h/4, w - 6, h/2);
+    // Headlights
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(x - w/2 + 2, y - h/2 + 1, 3, 2);
+    ctx.fillRect(x + w/2 - 5, y - h/2 + 1, 3, 2);
+  }
+
+  // Roblox mode: side-view chunky pixel platforms + jumping character
+  function drawRobloxScene(ctx, w, h, t) {
+    // Sky gradient (blue → pink, Roblox feel)
+    const sky = ctx.createLinearGradient(0, 0, 0, h);
+    sky.addColorStop(0, '#5cb3ff');
+    sky.addColorStop(0.5, '#ffb3d9');
+    sky.addColorStop(1, '#7ed957');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, w, h);
+    // Clouds (parallax)
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    for (let i = 0; i < 4; i++) {
+      const cx = ((t * 0.03 + i * 200) % (w + 100)) - 50;
+      const cy = 40 + (i % 2) * 30;
+      ctx.fillRect(cx, cy, 50, 16);
+      ctx.fillRect(cx + 10, cy - 8, 30, 8);
+    }
+    // Platforms scrolling left → right
+    const scrollX = (t * 0.08) % 150;
+    const platforms = [
+      { x: 100, y: h * 0.85, w: 80, c: '#8b4513' },
+      { x: 250, y: h * 0.72, w: 70, c: '#228b22' },
+      { x: 400, y: h * 0.82, w: 90, c: '#8b4513' },
+      { x: 550, y: h * 0.65, w: 70, c: '#228b22' },
+      { x: 700, y: h * 0.80, w: 80, c: '#8b4513' },
+    ];
+    platforms.forEach(p => {
+      const x = (p.x - scrollX);
+      const adjX = x < -100 ? x + 750 : x;
+      // Block
+      ctx.fillStyle = p.c;
+      ctx.fillRect(adjX, p.y, p.w, 30);
+      // Top grass/edge
+      ctx.fillStyle = p.c === '#228b22' ? '#4caf50' : '#a0522d';
+      ctx.fillRect(adjX, p.y, p.w, 4);
+    });
+    // Pixel character (Roblox blocky)
+    const charY = h * 0.6 + Math.sin(t * 0.004) * 30; // bouncing
+    const charX = w * 0.4;
+    // Body (blocky)
+    ctx.fillStyle = '#ff6b35';  // orange shirt
+    ctx.fillRect(charX - 8, charY - 4, 16, 16);
+    // Head
+    ctx.fillStyle = '#ffd9a5';
+    ctx.fillRect(charX - 7, charY - 18, 14, 14);
+    // Eyes
+    ctx.fillStyle = '#000';
+    ctx.fillRect(charX - 4, charY - 13, 2, 2);
+    ctx.fillRect(charX + 2, charY - 13, 2, 2);
+    // Legs
+    ctx.fillStyle = '#1565c0';  // blue pants
+    ctx.fillRect(charX - 6, charY + 12, 5, 10);
+    ctx.fillRect(charX + 1, charY + 12, 5, 10);
+    // Trail particles
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    for (let i = 1; i < 5; i++) {
+      ctx.fillRect(charX - 8 - i * 4, charY + 20, 3, 3);
+    }
+    // Checkpoint flag in distance
+    const flagX = w * 0.85 - (scrollX * 0.3) % 100 + 50;
+    ctx.fillStyle = '#888';
+    ctx.fillRect(flagX, h * 0.55, 2, 60);
+    ctx.fillStyle = '#FE2C55';
+    ctx.beginPath();
+    ctx.moveTo(flagX, h * 0.55);
+    ctx.lineTo(flagX + 20, h * 0.6);
+    ctx.lineTo(flagX, h * 0.65);
+    ctx.fill();
+  }
 
   // Initialize sheet first (so live-room can call into it)
   EncoreSheet.init({
@@ -422,6 +909,49 @@
   }
 
   window.setEncoreDetection = setEncoreDetection;
+
+  // ── v0.8 URL-hash demo driver ────────────────────────────────────────
+  // Allows direct preview of the split-screen result page without playing
+  // a full game. Used for design review, judge demo backup, and screenshot
+  // generation. Strips after applying so a refresh doesn't re-trigger.
+  //
+  //   streamer.html#result-winner  → Top-3 winner state (clip + caption + countdown)
+  //   streamer.html#result-lost    → Non-winner state (💎 Spotlight pay card)
+  //   streamer.html#result-gate    → Any state + Enhance gift-gate ON (host requires gift)
+  function applyHashDriver() {
+    const h = (location.hash || '').toLowerCase();
+    if (!h.startsWith('#result-')) return;
+    // Dismiss autoplay shim so the sheet is visible
+    if (dom.shim) dom.shim.style.display = 'none';
+    // Make chrome visible enough for context (without full live-room init flow)
+    if (dom.chat) dom.chat.classList.remove('hidden');
+    // Stamp result via public API
+    requestAnimationFrame(() => {
+      if (h === '#result-winner') {
+        EncoreSheet.forceResult({ won: true, score: 7, max: 8 });
+      } else if (h === '#result-lost') {
+        EncoreSheet.forceResult({ won: false, score: 4, max: 8 });
+      } else if (h === '#result-gate') {
+        EncoreSheet.forceResult({ won: false, score: 4, max: 8 });
+        const gate = document.getElementById('result-enhance-gate');
+        if (gate) gate.hidden = false;
+      }
+    });
+  }
+  // Run on initial load + on hash change (live preview iteration)
+  applyHashDriver();
+  window.addEventListener('hashchange', applyHashDriver);
+
+  // ── Export LIVE scene renderers + current mode so encore-sheet.js can
+  //    paint the matching host scene into the winner-clip composer.
+  //    (Genre-match: the clip's top half mirrors what the streamer was
+  //    actually playing when the highlight triggered.)
+  window.LiveScenes = {
+    fps:    drawFpsScene,
+    gta:    drawGtaScene,
+    roblox: drawRobloxScene,
+  };
+  window.LiveMode = currentMode;
 })();
 </script>
 
