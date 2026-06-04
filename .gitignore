@@ -26,6 +26,10 @@ __pycache__/
 # Vercel CLI artifacts (created when deploying from /tmp/encore-deploy)
 .vercel/
 
+# Local verification harness (Playwright). Kept out of the repo — node_modules is
+# ~17M and the project keeps QA scripts in ~/encore-qa/, not in-tree.
+qa/
+
 # Sprite pipeline scratch — regenerable via pack.py / process.py
 prototype/assets/raw/
 prototype/assets/sprites/
