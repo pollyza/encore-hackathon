@@ -35,6 +35,11 @@
     background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
   }
   .badge {
+    /* Hidden on purpose. The red "OBBY · GRASS / GTA · LOS SANTOS / BR · FOREST"
+       map label read as demo scaffolding and overlapped the HUD. Standalone +
+       streamer-embedded both render this same #mode-badge element, so one rule
+       removes it everywhere. Styles kept for easy re-enable if ever wanted. */
+    display: none;
     background: rgba(255,70,85,0.15);
     border: 1px solid #ff4655;
     color: #ff4655;
@@ -282,242 +287,197 @@
   body.playing #hud-top { display: flex; }
   body.playing #aimpad { display: block; }
 
+  /* ===== Deck-aligned pixel-CRT overlays (match docs/encore_slides.html) =====
+     Dark #050810 + corner neon glows, teal grid + scanline texture, pixel fonts
+     (Press Start 2P titles/buttons · VT323 body · JetBrains Mono labels). Replaces
+     the earlier glassy look so the game UI is harmonious with the pixel game + deck. */
   .overlay {
     position: absolute; inset: 0;
-    background: rgba(0,0,0,0.92);
+    background:
+      radial-gradient(ellipse 80% 50% at 0% 0%,    rgba(255,70,85,0.10),  transparent),
+      radial-gradient(ellipse 70% 50% at 100% 0%,  rgba(255,205,117,0.07), transparent),
+      radial-gradient(ellipse 60% 40% at 0% 100%,  rgba(160,68,255,0.10),  transparent),
+      radial-gradient(ellipse 70% 40% at 100% 100%,rgba(90,245,224,0.07),  transparent),
+      #050810;
     display: none; align-items: center; justify-content: center;
-    z-index: 100;
-    flex-direction: column;
-    padding: 20px;
+    z-index: 100; flex-direction: column; padding: 20px; overflow: hidden;
   }
   .overlay.on { display: flex; }
+  /* shared CRT texture: faint teal grid + scanlines (also used by #howto) */
+  .overlay::before, #howto::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 0;
+    background-image:
+      linear-gradient(rgba(90,245,224,0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(90,245,224,0.045) 1px, transparent 1px);
+    background-size: 34px 34px;
+  }
+  .overlay::after, #howto::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 0;
+    background: repeating-linear-gradient(180deg, rgba(0,0,0,0) 0, rgba(0,0,0,0) 2px, rgba(0,0,0,0.11) 3px);
+  }
 
-  #splash .splash-inner {
-    width: 100%; max-width: 430px;
-    text-align: center;
-  }
+  #splash .splash-inner { width: 100%; max-width: 430px; text-align: center; position: relative; z-index: 1; }
   #splash h1 {
-    color: #ff5668; margin: 0 0 6px;
-    letter-spacing: 8px; font-size: 34px;
-    text-shadow: 0 0 24px rgba(255,70,85,0.28);
+    font-family: 'Press Start 2P', 'Courier New', monospace;
+    color: #ff4655; margin: 0 0 14px; letter-spacing: 1px;
+    font-size: clamp(22px, 7.5vw, 32px); line-height: 1.1;
+    text-shadow: 0 0 18px rgba(255,70,85,0.5), 3px 3px 0 rgba(0,0,0,0.55);
   }
-  #splash .tag {
-    color: #d8b36c; font-size: 10px;
-    letter-spacing: 4px; margin-bottom: 8px;
-  }
-  #splash .sub {
-    color: #8b8790; font-size: 12px; margin-bottom: 26px;
-  }
+  #splash .tag { font-family: 'JetBrains Mono', monospace; color: #ffcd75; font-size: 10px; letter-spacing: 4px; margin-bottom: 8px; }
+  #splash .sub { font-family: 'VT323', 'Courier New', monospace; color: #8b94a6; font-size: 18px; letter-spacing: 1px; margin-bottom: 24px; }
+
   .template-card {
-    --accent: #71f5dc;
-    --accent-rgb: 113,245,220;
-    --accent-2: #e4c069;
-    position: relative;
-    overflow: hidden;
-    background:
-      linear-gradient(135deg, rgba(var(--accent-rgb),0.13), rgba(255,255,255,0.025) 34%, rgba(10,12,20,0.88) 100%),
-      #171d2b;
-    border: 1px solid rgba(255,255,255,0.13);
-    border-left: 3px solid var(--accent);
-    border-radius: 10px;
-    padding: 15px 16px 15px 17px;
-    margin-bottom: 12px;
-    cursor: pointer;
-    text-align: left;
+    --accent: #5af5e0; --accent-rgb: 90,245,224;
+    position: relative; overflow: hidden; z-index: 1;
+    background: #0e1422;
+    border: 2px solid #1a2030;
+    border-left: 4px solid var(--accent);
+    border-radius: 4px;
+    padding: 13px 16px; margin-bottom: 11px; cursor: pointer; text-align: left;
     display: flex; align-items: center; gap: 14px;
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.08),
-      0 14px 34px rgba(0,0,0,0.24);
-    transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.4), 0 8px 22px rgba(0,0,0,0.35);
+    transition: transform 0.14s ease, box-shadow 0.14s ease;
   }
-  .template-card::after {
-    content: '';
-    position: absolute;
-    right: -40px; top: -48px;
-    width: 150px; height: 150px;
-    background: radial-gradient(circle, rgba(var(--accent-rgb),0.20) 0%, rgba(var(--accent-rgb),0.08) 34%, transparent 68%);
-    pointer-events: none;
+  .template-card::before {   /* per-card scanlines */
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(180deg, rgba(0,0,0,0) 0, rgba(0,0,0,0) 2px, rgba(0,0,0,0.13) 3px);
+  }
+  .template-card::after {     /* corner accent glow */
+    content: ''; position: absolute; right: -40px; top: -48px; width: 150px; height: 150px;
+    background: radial-gradient(circle, rgba(var(--accent-rgb),0.18) 0%, transparent 64%); pointer-events: none;
   }
   .template-card:active { transform: scale(0.98); }
-  .template-card:hover {
-    transform: translateY(-1px);
-    border-color: rgba(255,255,255,0.24);
-    border-left-color: var(--accent);
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.1),
-      0 18px 42px rgba(0,0,0,0.34),
-      0 0 22px rgba(var(--accent-rgb),0.12);
-  }
-  .template-card.fps { --accent:#5af5e0; --accent-rgb:90,245,224; }
-  .template-card.moba { --accent:#ff9a48; --accent-rgb:255,154,72; }
-  .template-card.br { --accent:#a986ff; --accent-rgb:169,134,255; --accent-2:#f1c96b; }
-  .template-card.gta { --accent:#ff6c8d; --accent-rgb:255,108,141; --accent-2:#e9b45f; }
-  .template-card.roblox { --accent:#65e6a8; --accent-rgb:101,230,168; --accent-2:#72c6ff; }
+  .template-card:hover { transform: translateY(-1px); box-shadow: 0 0 0 1px var(--accent), 0 10px 26px rgba(0,0,0,0.45), 0 0 20px rgba(var(--accent-rgb),0.2); }
+  .template-card.fps    { --accent:#5af5e0; --accent-rgb:90,245,224; }
+  .template-card.moba   { --accent:#ff8800; --accent-rgb:255,136,0; }
+  .template-card.br     { --accent:#a044ff; --accent-rgb:160,68,255; }
+  .template-card.gta    { --accent:#ff4655; --accent-rgb:255,70,85; }
+  .template-card.roblox { --accent:#5ff5a0; --accent-rgb:95,245,160; }
   .template-card .ico-box {
-    width: 58px; height: 58px;
-    border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-    position: relative;
-    z-index: 1;
-    background:
-      linear-gradient(180deg, rgba(var(--accent-rgb),0.16), rgba(8,11,18,0.68)),
-      rgba(255,255,255,0.035);
-    color: #f8efe8;
-    border: 1px solid rgba(var(--accent-rgb),0.62);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
-    font-size: 17px; font-weight: bold;
-    letter-spacing: 1px;
+    width: 52px; height: 52px; border-radius: 4px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; position: relative; z-index: 1;
+    background: #0a0d14; color: var(--accent); border: 2px solid var(--accent);
+    font-family: 'Press Start 2P', monospace; font-size: 10px; letter-spacing: 0;
+    box-shadow: inset 0 0 12px rgba(var(--accent-rgb),0.3);
   }
-  .template-card .t-copy {
-    position: relative;
-    z-index: 1;
-    min-width: 0;
-  }
-  .template-card .t-kicker {
-    color: var(--accent-2);
-    font-size: 9px;
-    line-height: 1;
-    letter-spacing: 2.5px;
-    margin-bottom: 7px;
-  }
-  .template-card .t-name {
-    color: #f6f1ea;
-    font-size: 15px;
-    font-weight: bold;
-    letter-spacing: 2px;
-    line-height: 1.15;
-  }
-  .template-card .t-desc {
-    font-size: 11px;
-    color: #a9a7ad;
-    margin-top: 6px;
-    line-height: 1.45;
-  }
-  .template-card .t-feel {
-    font-size: 10px;
-    color: #67f4dd;
-    margin-top: 7px;
-    line-height: 1.35;
-    font-style: normal;
-  }
-  #splash .footer { color: #5b5660; font-size: 10px; margin-top: 18px; letter-spacing: 2px; }
+  .template-card .t-copy { position: relative; z-index: 1; min-width: 0; }
+  .template-card .t-kicker { font-family: 'JetBrains Mono', monospace; color: var(--accent); font-size: 9px; letter-spacing: 2px; margin-bottom: 6px; opacity: .85; }
+  .template-card .t-name { font-family: 'VT323', 'Courier New', monospace; color: #f4f4f4; font-size: 21px; letter-spacing: .5px; line-height: 1.05; }
+  .template-card .t-desc { font-family: 'VT323', 'Courier New', monospace; font-size: 16px; color: #b3bccc; margin-top: 4px; line-height: 1.15; }
+  .template-card .t-feel { font-family: 'VT323', 'Courier New', monospace; font-size: 15px; color: var(--accent); margin-top: 2px; line-height: 1.15; opacity: .9; }
+  #splash .footer { font-family: 'JetBrains Mono', monospace; color: #3a4458; font-size: 9px; margin-top: 16px; letter-spacing: 2px; position: relative; z-index: 1; }
 
   /* Per-template "HOW TO PLAY" coach card. Shown after startGame() and before
      the round clock starts; dismissed on any input or auto after 4s in V2G
      embedded mode (where the bottom sheet has limited dwell time). */
+  /* TikTok-native glass card. Native font stack (no web font → works on LAN /
+     offline; SF Pro + PingFang SC are already premium on the demo devices). */
   #howto {
     position: absolute; inset: 0;
-    background: rgba(0,0,0,0.78);
+    background:
+      radial-gradient(ellipse 80% 50% at 0% 0%, rgba(255,70,85,0.08), transparent),
+      radial-gradient(ellipse 70% 50% at 100% 100%, rgba(90,245,224,0.06), transparent),
+      rgba(5,8,16,0.93);
     display: none; align-items: center; justify-content: center;
-    z-index: 90;
-    padding: 20px;
-    backdrop-filter: blur(2px);
-    -webkit-backdrop-filter: blur(2px);
+    z-index: 90; padding: 22px; overflow: hidden;
   }
   #howto.on { display: flex; }
   #howto .card {
-    background: #1a1f2e;
-    border: 2px solid #333;
-    border-radius: 10px;
-    padding: 22px 24px 18px;
-    max-width: 360px;
-    width: 100%;
-    text-align: center;
-    box-shadow: 0 0 50px rgba(0,0,0,0.6);
-    animation: howto-pop 0.22s ease-out;
+    --accent: #5af5e0;
+    position: relative; z-index: 1; overflow: hidden;
+    background: #0e1422;
+    border: 2px solid #1a2030; border-top: 3px solid var(--accent);
+    border-radius: 6px;
+    padding: 22px 22px 16px;
+    max-width: 340px; width: 100%; text-align: center;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.5), 0 18px 50px rgba(0,0,0,0.6), 0 0 30px rgba(0,0,0,0.4);
+    animation: howto-pop 0.26s cubic-bezier(.2,.8,.2,1);
   }
-  #howto.fps .card { border-color: #5af5e0; box-shadow: 0 0 50px #5af5e033; }
-  #howto.moba .card { border-color: #ff8800; box-shadow: 0 0 50px #ff880033; }
-  #howto.br .card { border-color: #a044ff; box-shadow: 0 0 50px #a044ff33; }
+  #howto .card::before {   /* inset CRT scanlines */
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(180deg, rgba(0,0,0,0) 0, rgba(0,0,0,0) 2px, rgba(0,0,0,0.14) 3px);
+  }
+  /* per-game accent (deck palette) */
+  #howto.fps .card    { --accent:#5af5e0; }
+  #howto.moba .card   { --accent:#ff8800; }
+  #howto.br .card     { --accent:#a044ff; }
+  #howto.roblox .card { --accent:#5ff5a0; }
+  #howto.gta .card    { --accent:#ff4655; }
   @keyframes howto-pop {
-    from { opacity: 0; transform: scale(0.94); }
-    to { opacity: 1; transform: scale(1); }
+    from { opacity: 0; transform: translateY(10px) scale(0.98); }
+    to   { opacity: 1; transform: none; }
   }
   #howto h2 {
-    margin: 0 0 4px;
-    font-size: 11px;
-    letter-spacing: 5px;
-    color: #888;
+    position: relative; z-index: 1; margin: 0 0 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; letter-spacing: 4px; color: #6a7588;
   }
   #howto h1 {
-    margin: 0 0 16px;
-    font-size: 20px;
-    letter-spacing: 3px;
+    position: relative; z-index: 1; margin: 0 0 2px;
+    font-family: 'Press Start 2P', 'Courier New', monospace;   /* Latin = pixel; CJK auto-substitutes */
+    font-size: 14px; letter-spacing: 0; line-height: 1.45; color: var(--accent);
   }
-  #howto.fps h1 { color: #5af5e0; }
-  #howto.moba h1 { color: #ff8800; }
-  #howto.br h1 { color: #a044ff; }
-  #howto ul {
-    list-style: none;
-    padding: 0; margin: 0 0 16px;
-    text-align: left;
+  #howto .card h1::after {   /* accent rule under the title */
+    content: ''; display: block; width: 40px; height: 3px;
+    background: var(--accent); margin: 12px auto 16px; box-shadow: 0 0 12px var(--accent);
   }
-  #howto li {
-    font-size: 12px;
-    color: #cfd2db;
-    line-height: 1.55;
-    padding: 6px 0;
-    border-bottom: 1px dashed #2a2f3e;
-    display: flex; gap: 10px;
+  /* ONE big plain-language goal line + ONE tiny control hint (replaces the row list) */
+  #howto-list { position: relative; z-index: 1; list-style: none; padding: 0; margin: 0 0 16px; }
+  #howto .howto-goal {
+    font-family: 'VT323', 'Courier New', monospace;
+    font-size: 27px; line-height: 1.15; letter-spacing: .5px; color: #f4f4f4; margin-bottom: 10px;
   }
-  #howto li:last-child { border-bottom: none; }
-  #howto .key {
-    flex-shrink: 0;
-    min-width: 64px;
-    color: #ffcd75;
-    font-weight: bold;
-    letter-spacing: 1px;
-    font-size: 11px;
+  #howto .howto-ctrl {
+    font-family: 'VT323', 'Courier New', monospace;
+    font-size: 17px; line-height: 1.25; letter-spacing: .3px; color: #9aa3b4;
   }
   #howto .cta {
-    margin-top: 6px;
-    padding: 10px 14px;
-    background: transparent;
-    border: 1px solid #5af5e0;
-    color: #5af5e0;
-    font-family: inherit;
-    font-size: 12px;
-    letter-spacing: 3px;
-    cursor: pointer;
-    border-radius: 6px;
-    width: 100%;
-    transition: all 0.15s;
+    position: relative; z-index: 1; margin-top: 6px; padding: 12px 14px;
+    background: var(--accent); border: none; color: #050810;
+    font-family: 'Press Start 2P', 'Courier New', monospace;
+    font-size: 10px; letter-spacing: 1px; cursor: pointer; border-radius: 4px; width: 100%;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.4);
+    transition: transform .1s ease, filter .12s ease;
   }
-  #howto .cta:hover { background: #5af5e022; }
-  #howto .cta:active { transform: scale(0.97); }
+  #howto .cta:hover { filter: brightness(1.08); }
+  #howto .cta:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,0.4); }
   #howto .auto {
-    margin-top: 10px;
-    font-size: 10px;
-    color: #555;
-    letter-spacing: 2px;
+    position: relative; z-index: 1; margin-top: 12px;
+    font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1px; color: #4a5468;
   }
-  #howto .auto b { color: #888; }
+  #howto .auto b { color: #8b94a6; font-weight: 700; }
 
+  /* End screen — same deck pixel-CRT panel as #howto. finishGame() sets the
+     VICTORY=teal / DEFEAT=red title color + border inline (matches deck palette). */
   .panel {
-    background: #1a1f2e;
-    border: 2px solid #ff4655;
-    border-radius: 8px;
-    padding: 28px;
-    max-width: 360px;
-    text-align: center;
-    box-shadow: 0 0 60px #ff465555;
+    position: relative; overflow: hidden;
+    background: #0e1422;
+    border: 2px solid #1a2030;
+    border-radius: 6px;
+    padding: 26px 24px;
+    max-width: 340px; text-align: center;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.5), 0 18px 50px rgba(0,0,0,0.6);
   }
-  .panel h1 { color: #ff4655; margin: 0 0 8px; letter-spacing: 3px; font-size: 22px; }
-  .panel h2 { color: #ffcd75; margin: 0 0 16px; font-size: 14px; letter-spacing: 2px; }
-  .panel p { font-size: 13px; line-height: 1.6; color: #ccc; }
-  .panel .stat { color: #5af5e0; font-size: 12px; margin: 12px 0; }
+  .panel::before {   /* inset CRT scanlines */
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(180deg, rgba(0,0,0,0) 0, rgba(0,0,0,0) 2px, rgba(0,0,0,0.14) 3px);
+  }
+  .panel > * { position: relative; z-index: 1; }
+  .panel h1 { font-family: 'Press Start 2P', 'Courier New', monospace; color: #5af5e0; margin: 0 0 12px; letter-spacing: 1px; font-size: 22px; line-height: 1.2; }
+  .panel h2 { font-family: 'VT323', 'Courier New', monospace; color: #ffcd75; margin: 0 0 12px; font-size: 22px; letter-spacing: .5px; }
+  .panel p { font-family: 'VT323', 'Courier New', monospace; font-size: 18px; line-height: 1.35; color: #b3bccc; }
+  .panel .stat { color: #5af5e0; font-size: 17px; margin: 12px 0; }
   .btn {
-    display: inline-block;
-    background: #ff4655; color: #fff;
-    border: none; padding: 12px 24px;
-    font-family: inherit; font-size: 13px;
-    font-weight: bold; letter-spacing: 2px;
-    border-radius: 4px; cursor: pointer;
-    margin: 8px 4px 0;
+    display: inline-block; background: #ff4655; color: #fff;
+    border: none; padding: 12px 22px;
+    font-family: 'Press Start 2P', 'Courier New', monospace; font-size: 10px; letter-spacing: 1px;
+    border-radius: 4px; cursor: pointer; margin: 8px 4px 0;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.4);
+    transition: transform .1s ease, filter .12s ease;
   }
-  .btn.ghost { background: transparent; border: 1px solid #888; }
-  .btn:active { transform: scale(0.96); }
+  .btn:hover { filter: brightness(1.08); }
+  .btn.ghost { background: #1a2030; color: #b3bccc; box-shadow: 0 4px 0 rgba(0,0,0,0.4); }
+  .btn:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,0.4); }
 
   #fct-layer {
     position: absolute; inset: 0; pointer-events: none;
