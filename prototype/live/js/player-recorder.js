@@ -34,6 +34,12 @@ window.PlayerRecorder = (() => {
   let timeoutId = null;
   let lastBlobUrl = null;             // most recent finalized clip
   let lastBlob = null;
+  // Tracks the in-flight "stop → onstop → blob ready" handoff. encore_done
+  // arrives synchronously and we want to show the winner sheet IMMEDIATELY,
+  // but MediaRecorder.onstop fires later (event-queue). Callers can await
+  // this promise (or use the global pendingStopPromise via waitForReady())
+  // to know when the URL is actually ready.
+  let pendingStopPromise = null;
 
   function pickMime() {
     const candidates = [
@@ -65,10 +71,8 @@ window.PlayerRecorder = (() => {
       recorder.ondataavailable = e => {
         if (e.data && e.data.size > 0) chunks.push(e.data);
       };
-      recorder.onstop = () => {
-        lastBlob = new Blob(chunks, { type: mimeType });
-        lastBlobUrl = URL.createObjectURL(lastBlob);
-      };
+      // onstop handler is set in stop() so we can hand the resolver
+      // back to whoever called stop().
       activeCanvas = canvas;
       startedAt = performance.now();
       recorder.start();
@@ -83,14 +87,41 @@ window.PlayerRecorder = (() => {
     }
   }
 
+  // Returns a Promise that resolves to { blob, url } once MediaRecorder
+  // finishes flushing chunks (its onstop event fires). If there's no
+  // active recording, resolves to null immediately.
   function stop() {
     if (timeoutId) { clearTimeout(timeoutId); timeoutId = null; }
-    if (recorder && recorder.state === 'recording') {
-      try { recorder.stop(); } catch (_) {}
+    if (!recorder || recorder.state !== 'recording') {
+      // Nothing in flight — return any pending stop promise OR null
+      const p = pendingStopPromise || Promise.resolve(null);
+      recorder = null;
+      activeCanvas = null;
+      return p;
     }
+    pendingStopPromise = new Promise((resolve) => {
+      recorder.onstop = () => {
+        lastBlob = new Blob(chunks, { type: mimeType });
+        lastBlobUrl = URL.createObjectURL(lastBlob);
+        const out = { blob: lastBlob, url: lastBlobUrl };
+        pendingStopPromise = null;
+        resolve(out);
+      };
+      try { recorder.stop(); } catch (_) {
+        // If stop throws, resolve null so callers don't hang forever
+        pendingStopPromise = null;
+        resolve(null);
+      }
+    });
     recorder = null;
     activeCanvas = null;
+    return pendingStopPromise;
   }
+
+  // For callers that didn't keep the stop() promise — returns the current
+  // in-flight promise (if recording is finalizing) or null if there's no
+  // pending finalization.
+  function waitForReady() { return pendingStopPromise; }
 
   function revokeLastUrl() {
     if (lastBlobUrl) {
@@ -128,5 +159,5 @@ window.PlayerRecorder = (() => {
     }, 80);
   }
 
-  return { start, stop, getLastUrl, getLastBlob, findCanvasInIframe };
+  return { start, stop, waitForReady, getLastUrl, getLastBlob, findCanvasInIframe };
 })();
