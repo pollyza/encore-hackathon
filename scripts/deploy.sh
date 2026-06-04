@@ -135,7 +135,13 @@ if [[ -f "$REPO_ROOT/prototype/live/streamer.html" ]]; then
     for target_dir in "$DEPLOY_DIR/prototype" "$PREVIEW_DIR/prototype"; do
         [[ -d "$target_dir" ]] || continue
         mkdir -p "$target_dir/live"
-        sync_file "$REPO_ROOT/prototype/live/streamer.html" "$target_dir/live/streamer.html"
+        # Mirror every *.html under prototype/live/ (streamer.html + feed.html
+        # + any future room shells). Earlier passes hardcoded streamer.html
+        # only — adding a sibling like feed.html silently 404'd in preview.
+        for html in "$REPO_ROOT/prototype/live/"*.html; do
+            [[ -f "$html" ]] || continue
+            sync_file "$html" "$target_dir/live/$(basename "$html")"
+        done
         for src in "$REPO_ROOT/prototype/live/css/"*.css "$REPO_ROOT/prototype/live/js/"*.js; do
             [[ -f "$src" ]] || continue
             rel="${src#$REPO_ROOT/prototype/live/}"
