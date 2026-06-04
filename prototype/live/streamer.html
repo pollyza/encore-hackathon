@@ -313,15 +313,15 @@
           <div class="sheet-result-caption" id="result-caption-text">Played @TK_Soi's 1v3 clutch in CS — ranked #2 🎮 ▶ Play CS → #Encore #CSgaming</div>
         </div>
 
-        <!-- WINNER ONLY: auto-publish countdown -->
+        <!-- WINNER ONLY: publish bar — user-initiated, NOT auto. -->
         <div class="sheet-result-publish-wrap" id="result-publish-wrap">
           <div class="sheet-result-publish-bar">
             <div class="sheet-result-publish-msg">
-              Auto-publishing to TikTok in <span id="result-publish-countdown">3</span>…
+              Ready to publish to TikTok?
             </div>
             <div class="sheet-result-publish-buttons">
-              <button class="sheet-result-publish-cancel" id="result-publish-cancel">Cancel</button>
-              <button class="sheet-result-publish-now" id="result-publish-now">Publish now ⚡</button>
+              <button class="sheet-result-publish-cancel" id="result-publish-cancel">Maybe later</button>
+              <button class="sheet-result-publish-now" id="result-publish-now">Publish ⚡</button>
             </div>
           </div>
         </div>
@@ -375,7 +375,8 @@
           <div class="row">
             <button class="fb-btn" data-fb="fun"><span class="emoji">🔥</span><span>Fun</span></button>
             <button class="fb-btn" data-fb="hard"><span class="emoji">😵</span><span>Too hard</span></button>
-            <button class="fb-btn" data-fb="remix"><span class="emoji">🎲</span><span>Remix</span></button>
+            <!-- Remix is a Phase 2 (M11+) paid SKU, not in MVP. Hidden until built. -->
+            <!-- <button class="fb-btn" data-fb="remix"><span class="emoji">🎲</span><span>Remix</span></button> -->
           </div>
           <button class="play-again" id="play-again">Play again</button>
         </div>
@@ -423,6 +424,17 @@
     <div class="lbl">TAP TO ENTER LIVE</div>
     <div class="sub">browser autoplay policy</div>
   </div>
+  <!-- Feed mode: feed.html embeds streamer.html as one of N stacked iframes.
+       The shim's "TAP TO ENTER LIVE" prompt is meaningless inside the feed
+       (user already gestured to enter at the feed level), and flashing it
+       during iframe load looks broken. This inline script runs during HTML
+       parsing — earlier than the main IIFE — so the shim never paints. -->
+  <script>
+    if (new URLSearchParams(location.search).get('feed') === '1') {
+      var __shim = document.getElementById('autoplay-shim');
+      if (__shim) __shim.style.display = 'none';
+    }
+  </script>
 
 </div> <!-- /#host -->
 </div> <!-- /#host-frame -->
@@ -457,10 +469,10 @@
      no longer loaded — the game phase now renders Mario's iframe templates
      (GTA/Roblox/Free Fire BR) via the V2G postMessage protocol. -->
 <script src="js/observer-client.js?v=8"></script>
-<script src="js/player-recorder.js?v=1"></script>
+<script src="js/player-recorder.js?v=3"></script>
 <script src="js/clip-composer.js?v=1"></script>
-<script src="js/encore-sheet.js?v=15"></script>
-<script src="js/live-room.js?v=8"></script>
+<script src="js/encore-sheet.js?v=17"></script>
+<script src="js/live-room.js?v=9"></script>
 <script>
 (() => {
   // ── Wire all modules together ──────────────────────────────────────
@@ -482,6 +494,8 @@
     sheet:      document.getElementById('sheet'),
     sheetBackdrop: document.getElementById('sheet-backdrop'),
     sheetClose: document.getElementById('sheet-close'),
+    statusLine: document.querySelector('#sheet-body .status-line'),
+    costLine:   document.querySelector('#sheet-body .meta span:last-child'),
   };
 
   // ── LIVE game-mode selection ────────────────────────────────────────
@@ -502,6 +516,39 @@
 
   // Set data attribute for CSS hooks (HUD blocks visibility, etc.)
   document.getElementById('host').dataset.gameMode = currentMode;
+
+  // feed.html embeds streamer.html in 3 stacked iframes (one per room).
+  // It passes per-room overrides via URL params — top-bar host name, hearts,
+  // viewer count — and `feed=1` to auto-dismiss the initial autoplay shim
+  // (the parent feed page already requires user interaction to enter).
+  (() => {
+    const qp = new URLSearchParams(location.search);
+    const host    = qp.get('host');
+    const hearts  = qp.get('hearts');
+    const viewers = qp.get('viewers');
+    if (host) {
+      const n = document.querySelector('#top-bar .host-pill .name');
+      if (n) n.textContent = host;
+    }
+    if (hearts) {
+      const el = document.querySelector('#top-bar .host-pill .hearts');
+      if (el) el.innerHTML = `<span class="hi">♥</span> ${hearts}`;
+    }
+    if (viewers) {
+      const c = document.querySelector('#top-bar .viewer-pill .count');
+      if (c) c.textContent = viewers;
+    }
+    if (qp.get('feed') === '1') {
+      const shim = document.getElementById('autoplay-shim');
+      if (shim) shim.style.display = 'none';
+      // Hide the cosmetic iOS status bar in feed mode — the feed shell
+      // already has its own top chrome (FOR YOU · LIVE brand) and the
+      // outer OS status bar is the real one. Showing 9:41 inside each
+      // iframe duplicates it and visually clashes.
+      const sb = document.getElementById('status-bar-ios');
+      if (sb) sb.style.display = 'none';
+    }
+  })();
 
   // liveCanvasRAF is declared before any call to startLiveCanvasScene to avoid a
   // TDZ ReferenceError on first paint. The canvas is the always-drawing fallback;
@@ -554,6 +601,20 @@
   // which Mario template to launch; if no cached detection is available
   // we now FORCE a template match with the current LIVE game-mode (v2 — was random).
   let cachedDetection = null;
+  function setEncoreDetection(config, notify = true) {
+    if (!config) {
+      cachedDetection = null;
+      return;
+    }
+    const prev = cachedDetection;
+    cachedDetection = config;
+    if (notify) {
+      const sameTemplate = prev && prev.template === config.template && prev.theme === config.theme;
+      if (!sameTemplate) {
+        LiveRoom.pushAck('AI Encore ready');
+      }
+    }
+  }
   const pickConfig = () => {
     if (cachedDetection) {
       const c = cachedDetection;
@@ -924,9 +985,27 @@
     onEncoreOpen: () => EncoreSheet.open(),
   });
 
-  // Observer (background V2G sampling — pre-fetches highlight detection
-  // but does NOT auto-open. The user opens via highlight popup / Encore btn)
-  // Currently dormant unless explicitly resumed by future code.
+  // Feed mode: the autoplay shim is hidden (parent feed.html already
+  // captured the user gesture), so LiveRoom's onShimTap handler — which
+  // also seeds the chat — never fires. Dispatch the click manually now
+  // that LiveRoom.init has wired up its once-listener.
+  if (new URLSearchParams(location.search).get('feed') === '1' && dom.shim) {
+    dom.shim.dispatchEvent(new Event('click'));
+  }
+
+  // Observer (background V2G sampling)
+  if (window.ObserverClient) {
+    window.ObserverClient.start({
+      video: dom.video,
+      onHighlight: (config) => {
+        setEncoreDetection(config);
+      },
+      onStatus: (status, msg) => LiveRoom.setStatus(status, msg),
+      onCost: (cost) => LiveRoom.setCost(cost),
+    });
+  }
+
+  window.setEncoreDetection = setEncoreDetection;
 
   // ── v0.8 URL-hash demo driver ────────────────────────────────────────
   // Allows direct preview of the split-screen result page without playing

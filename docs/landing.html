@@ -215,10 +215,10 @@
 <div class="subtag">AI Hackathon · Polly · Mario · Zihui · Lingyi</div>
 
 <div class="grid">
-  <a class="card primary" href="/prototype/live/streamer.html">
+  <a class="card primary" href="/prototype/live/feed.html">
     <span class="eyebrow">⚡ Audience demo (start here)</span>
-    <div class="title">TikTok LIVE · Encore sheet</div>
-    <div class="desc">High-fidelity LIVE room with Highlight popup → AI-generation loading → Mario's 3 game templates (GTA / Roblox / Free Fire BR) randomly selected → Result + Ranking + Feedback.</div>
+    <div class="title">TikTok LIVE feed · 3 rooms, swipe up/down</div>
+    <div class="desc">Swipe between 3 game LIVE rooms — TK Sói (FPS) · RoadKing88 (GTA) · PixelMax (Roblox) — each with its own host, viewer count, chat tone, and Encore flow. Tap the Highlight popup to play a 30s mini-game forked from that room's gameplay.</div>
     <div class="arrow">Open demo →</div>
   </a>
 
@@ -240,20 +240,21 @@
 <!-- Scan-to-play QR — for live judges on stage -->
 <div class="qr-block">
   <div class="qr-frame">
-    <a id="live-qr-link" href="/prototype/live/streamer.html" aria-label="Open the Encore LIVE demo">
-      <img id="live-qr" src="/qr-encore.svg" alt="Scan to open the Encore LIVE demo on your phone" loading="lazy">
+    <a id="live-qr-link" href="/prototype/live/feed.html" aria-label="Open the Encore LIVE feed demo">
+      <img id="live-qr" src="/qr-encore.svg" alt="Scan to open the Encore LIVE feed demo on your phone" loading="lazy">
     </a>
   </div>
   <div class="copy">
     <div class="eyebrow">📱 Try it on your phone</div>
-    <div class="title">Scan to play the LIVE demo</div>
+    <div class="title">Scan to swipe the LIVE feed</div>
     <div class="desc">
-      Point your phone camera at the QR code → the TikTok LIVE simulation opens
-      directly on your device. Tap to enter LIVE → ⚡ try the play yourself →
-      experience the full Highlight → AI generation → Game → Result → Ranking
-      flow with one of Mario's 3 real game templates: GTA, Roblox, or Free Fire BR.
+      Point your phone camera at the QR code → the 3-room TikTok LIVE feed
+      opens on your device. Swipe up/down to switch between TK Sói (FPS),
+      RoadKing88 (GTA), and PixelMax (Roblox). In any room, tap the Highlight
+      popup → AI generation → play a 30s mini-game forked from that room's
+      gameplay → Result + Ranking + Feedback.
     </div>
-    <div class="url" id="live-url">encore-deploy.vercel.app/prototype/live/streamer.html</div>
+    <div class="url" id="live-url">encore-deploy.vercel.app/prototype/live/feed.html</div>
   </div>
 </div>
 
@@ -264,7 +265,7 @@
 
 <script>
 (() => {
-  const livePath = '/prototype/live/streamer.html';
+  const livePath = '/prototype/live/feed.html';
   const liveUrl = new URL(livePath, window.location.origin).href;
   const qr = document.getElementById('live-qr');
   const link = document.getElementById('live-qr-link');

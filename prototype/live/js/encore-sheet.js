@@ -459,7 +459,7 @@
     const elMsg = document.querySelector('#result-publish-wrap .sheet-result-publish-msg');
     if (elMsg) {
       elMsg.classList.add('cancelled');
-      elMsg.innerHTML = 'Auto-publish cancelled — clip saved as draft';
+      elMsg.innerHTML = 'Saved as draft · you can publish anytime';
     }
   }
 
@@ -519,16 +519,35 @@
 
     // If we recorded real player gameplay, prefer that as the viewer-half
     // source. Otherwise fall back to the mock scene.
-    const playerUrl = window.PlayerRecorder && window.PlayerRecorder.getLastUrl();
+    //
+    // NOTE the race: encore_done arrives → PlayerRecorder.stop() called →
+    // recorder.onstop fires LATER (event-queue). Meanwhile showResult is
+    // synchronous and lands us here before the blob URL exists. Solution:
+    //   1) check getLastUrl() — usually null on first call
+    //   2) if PlayerRecorder is mid-finalize (waitForReady() returns a
+    //      Promise), await it and swap mock → playback when ready
+    //   3) if no recording in flight, stick with mock for the whole clip
     let usingPlayback = false;
-    if (playerUrl) {
+    function switchToPlayback(url) {
+      if (!url) return;
       const v = ensurePlaybackVideo();
-      if (v.src !== playerUrl) {
-        v.src = playerUrl;
+      if (v.src !== url) {
+        v.src = url;
         v.load();
       }
-      v.play().catch(() => { /* user gesture needed — won't affect drawImage */ });
+      v.play().catch(() => { /* user gesture needed — drawImage still works */ });
       usingPlayback = true;
+    }
+    const initialUrl = window.PlayerRecorder && window.PlayerRecorder.getLastUrl();
+    if (initialUrl) {
+      switchToPlayback(initialUrl);
+    } else if (window.PlayerRecorder && window.PlayerRecorder.waitForReady) {
+      const pending = window.PlayerRecorder.waitForReady();
+      if (pending && typeof pending.then === 'function') {
+        pending.then(out => {
+          if (out && out.url) switchToPlayback(out.url);
+        }).catch(() => { /* recording errored — keep mock */ });
+      }
     }
 
     clipCanvasStart = performance.now();
@@ -927,18 +946,19 @@
 
     wireResultPageOnce();
 
-    // Reset publish state + auto-start countdown (winner only)
+    // Reset publish state (winner only) — user-initiated, no auto-countdown.
+    // viewer taps "Publish ⚡" or "Maybe later"; "✓ Published" only shows
+    // after explicit click.
     cancelPublishCountdown();
     const publishMsg = document.querySelector('#result-publish-wrap .sheet-result-publish-msg');
     if (publishMsg) {
       publishMsg.classList.remove('cancelled', 'published');
-      publishMsg.innerHTML = 'Auto-publishing to TikTok in <span id="result-publish-countdown">3</span>…';
+      publishMsg.innerHTML = 'Ready to publish to TikTok?';
     }
     if (rinfo.isWinner) {
       // Reset clip state from any prior round (output blob / buttons /
       // hidden preview), then start a fresh recording.
       stopAllClipAnimations();
-      startPublishCountdown();
       const prev = document.getElementById('result-clip-preview');
       if (prev) prev.style.display = '';
       // Genre-match viewer tag emoji to current LIVE mode.
