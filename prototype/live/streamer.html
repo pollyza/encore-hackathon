@@ -12,6 +12,19 @@
 <link rel="stylesheet" href="css/live-shell.css?v=5">
 <link rel="stylesheet" href="css/ai-panel.css?v=3">
 <link rel="stylesheet" href="css/mini-games.css">
+
+<!-- Warm the mini-game cache before the user taps Play. The game loads lazily
+     in an iframe (encore_prototype.html + ~450KB of game modules); on a cold
+     cache that download is the dominant cause of the "black screen on load".
+     Prefetching here means the bytes are usually warm by tap time.
+     NOTE: keep the ?v= queries in sync with encore-sheet.js IFRAME_URL and the
+     <script src> tags in encore_prototype.html, or the prefetch just misses
+     (harmless, never wrong). -->
+<link rel="prefetch" as="document" href="../encore_prototype.html?embedded=1&v=v2g-ready-r4">
+<link rel="prefetch" as="script" href="../games/juice.js?v=r12a">
+<link rel="prefetch" as="script" href="../games/roblox.js?v=r23">
+<link rel="prefetch" as="script" href="../games/gta.js?v=r21">
+<link rel="prefetch" as="script" href="../games/br.js?v=r24">
 </head>
 <body>
 
@@ -486,7 +499,7 @@
 <script src="js/observer-client.js?v=9"></script>
 <script src="js/player-recorder.js?v=3"></script>
 <script src="js/clip-composer.js?v=1"></script>
-<script src="js/encore-sheet.js?v=16"></script>
+<script src="js/encore-sheet.js?v=17"></script>
 <script src="js/live-room.js?v=10"></script>
 <script>
 (() => {
@@ -574,12 +587,11 @@
     }
   })();
 
-  // All 3 modes render via Canvas2D (see note above the <video> tag for why
-  // we dropped real footage). liveCanvasRAF is declared before any call to
-  // startLiveCanvasScene to avoid a TDZ ReferenceError on first paint.
+  // liveCanvasRAF is declared before any call to startLiveCanvasScene to avoid a
+  // TDZ ReferenceError on first paint. The canvas is the always-drawing fallback;
+  // real footage (below) layers on top when available.
   const liveCanvas = document.getElementById('live-canvas');
   let liveCanvasRAF = null;
-
   const MODE_VIDEO = {
     br: '../../reference/videos/FF.mp4',
     gta: '../../reference/videos/GTA.mp4',
@@ -618,11 +630,15 @@
     showCanvas();
   }
 
-  // Show only HUD blocks matching this mode (via data-show-in attribute)
+  // Show only the HUD blocks matching this mode (relevant only on the canvas
+  // fallback; hidden below once real footage plays).
   document.querySelectorAll('#stream-bg [data-show-in]').forEach(el => {
     const modes = el.dataset.showIn.split(/\s+/);
     el.style.display = modes.includes(currentMode) ? '' : 'none';
   });
+
+  // (Real game-stream footage for the LIVE background is handled by the
+  // MODE_VIDEO / showVideo() block above — zihui's #37, GitHub-hosted clips.)
 
   // Vision detection cache — observer-client populates this when a real
   // V2G highlight is detected. encore-sheet calls pickConfig() to decide
@@ -711,6 +727,7 @@
     };
     if (!fit()) { requestAnimationFrame(() => startLiveCanvasScene(mode)); return; }
     const ctx = cv.getContext('2d');
+    if (!ctx) { requestAnimationFrame(() => startLiveCanvasScene(mode)); return; }  // ctx loss — retry rather than throw + kill the loop
     const start = performance.now();
     const draw = (now) => {
       const t = now - start;
