@@ -212,13 +212,17 @@
       //    wait a vanish back in / line up the lava hop. No more "all gone at once".
       //  · the block right after lava, and the last block before the finish, are
       //    always plain landings.
+      //  · never two moving platforms in a row — out-of-phase motion can stretch
+      //    a safe base gap into an unreachable live gap.
       //  · vanish capped per course (no crumbly-flavor wall of disappearing tiles).
       const prevRisky = (prev.kind === 'kill' || prev.kind === 'vanish');
+      const prevMove = prev.kind === 'move';
+      const prevStable = !prev.kind;
       if (i >= 4 && i < T.plat.count - 1 && prev.kind !== 'kill') {   // first FOUR + the last block stay plain; never an obstacle straight after lava
-        if (!prevRisky && r < 0.12 + 0.13 * prog) { blk.kind = 'kill'; w = 34; gap = Math.min(gap, 26); prevKill = true; }   // narrow lava brick — JUMP over it (tap clears)
+        if (prevStable && r < 0.12 + 0.13 * prog) { blk.kind = 'kill'; w = 34; gap = Math.min(gap, 26); prevKill = true; }   // narrow lava brick — JUMP over it (tap clears)
         else {
           prevKill = false;
-          if (r < 0.30 + 0.16 * prog + mB) { blk.kind = 'move'; blk.move = { axis: (rand() < 0.5 ? 'x' : 'y'), range: T.obby.moveRange, speed: T.obby.moveSpeed * (0.8 + rand() * 0.5), phase: rand() * 6.28 }; }
+          if (!prevMove && r < 0.30 + 0.16 * prog + mB) { blk.kind = 'move'; blk.move = { axis: (rand() < 0.5 ? 'x' : 'y'), range: T.obby.moveRange, speed: T.obby.moveSpeed * (0.8 + rand() * 0.5), phase: rand() * 6.28 }; }
           else if (!prevRisky && vanishCount < maxVanish && r < 0.46 + 0.16 * prog + mB + vB) { blk.kind = 'vanish'; blk.vanish = { period: T.obby.vanishPeriod, phase: rand() * T.obby.vanishPeriod }; vanishCount++; }
           else if (r < 0.56 + 0.10 * prog + mB + vB + bB) { blk.kind = 'bounce'; }
         }
