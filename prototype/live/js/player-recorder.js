@@ -25,7 +25,7 @@
 // ─────────────────────────────────────────────────────────────────────────
 
 window.PlayerRecorder = (() => {
-  const MAX_DURATION_MS = 30000;     // cap a runaway recording at 30s
+  const MAX_DURATION_MS = 60000;     // cap a runaway recording at 60s (was 30s)
   let activeCanvas = null;            // canvas currently being recorded
   let recorder = null;
   let chunks = [];
@@ -34,52 +34,96 @@ window.PlayerRecorder = (() => {
   let timeoutId = null;
   let lastBlobUrl = null;             // most recent finalized clip
   let lastBlob = null;
-  // Tracks the in-flight "stop → onstop → blob ready" handoff. encore_done
-  // arrives synchronously and we want to show the winner sheet IMMEDIATELY,
-  // but MediaRecorder.onstop fires later (event-queue). Callers can await
-  // this promise (or use the global pendingStopPromise via waitForReady())
-  // to know when the URL is actually ready.
   let pendingStopPromise = null;
+  // Mobile debug — surfaced via a floating chip when ?debug=1 in URL
+  // (see ensureDebugChip below). Each step writes here so we can SEE
+  // what failed on a phone without console access.
+  let debugState = 'idle';
+  function setDebug(s) {
+    debugState = s;
+    const chip = document.getElementById('encore-rec-debug');
+    if (chip) chip.textContent = '🎬 ' + s;
+  }
+  function ensureDebugChip() {
+    if (!/[?&]debug=1\b/.test(location.search)) return;
+    if (document.getElementById('encore-rec-debug')) return;
+    const c = document.createElement('div');
+    c.id = 'encore-rec-debug';
+    c.style.cssText = 'position:fixed;left:8px;top:8px;z-index:99999;padding:4px 8px;background:rgba(0,0,0,.7);color:#fff;border:1px solid #FE2C55;border-radius:4px;font:11px/1.4 monospace;pointer-events:none;max-width:80vw;';
+    c.textContent = '🎬 ' + debugState;
+    document.body.appendChild(c);
+  }
 
+  // Mime order matters: iOS Safari 14.3+ only supports mp4/H264. Android
+  // Chrome supports webm. Safari often returns false for `video/mp4`
+  // alone but true for the codec-qualified variant — list both.
   function pickMime() {
+    if (!window.MediaRecorder) return '';
     const candidates = [
+      'video/mp4;codecs=h264',         // iOS Safari primary
+      'video/mp4',                      // iOS Safari fallback
       'video/webm;codecs=vp9',
       'video/webm;codecs=vp8',
+      'video/webm;codecs=h264',
       'video/webm',
-      'video/mp4',
     ];
-    if (!window.MediaRecorder) return '';
-    return candidates.find(t => MediaRecorder.isTypeSupported(t)) || '';
+    for (const t of candidates) {
+      try { if (MediaRecorder.isTypeSupported(t)) return t; } catch (_) {}
+    }
+    return '';
   }
 
   // Start recording a specific canvas. Tears down any prior session +
   // revokes any prior blob URL.
   function start(canvas) {
+    ensureDebugChip();
     stop();
     revokeLastUrl();
-    if (!canvas) return false;
+    if (!canvas) { setDebug('no canvas'); return false; }
+    if (!canvas.width || !canvas.height) {
+      // Canvas exists but isn't sized yet — retry in a beat
+      setDebug('canvas 0x0, retrying');
+      setTimeout(() => start(canvas), 200);
+      return false;
+    }
     mimeType = pickMime();
-    if (!mimeType) return false;
+    if (!mimeType) { setDebug('no mime supported'); return false; }
+    setDebug('mime: ' + mimeType.replace('video/', ''));
 
     try {
+      if (typeof canvas.captureStream !== 'function') {
+        setDebug('no captureStream');
+        return false;
+      }
       const stream = canvas.captureStream(30);
+      const tracks = stream.getVideoTracks();
+      if (!tracks.length) { setDebug('no video track'); return false; }
       recorder = new MediaRecorder(stream, {
         mimeType,
         videoBitsPerSecond: 2_000_000,
       });
       chunks = [];
       recorder.ondataavailable = e => {
-        if (e.data && e.data.size > 0) chunks.push(e.data);
+        if (e.data && e.data.size > 0) {
+          chunks.push(e.data);
+          setDebug('rec ● ' + chunks.length + ' chunks · ' + canvas.width + 'x' + canvas.height);
+        }
       };
-      // onstop handler is set in stop() so we can hand the resolver
-      // back to whoever called stop().
+      recorder.onerror = (e) => {
+        setDebug('rec err: ' + (e.error && e.error.name || 'unknown'));
+        console.warn('[PlayerRecorder] recorder error:', e);
+      };
       activeCanvas = canvas;
       startedAt = performance.now();
-      recorder.start();
-      // Hard cap so a stuck game doesn't run forever
+      // timeslice 1000ms — flushes chunks every 1s. CRITICAL on mobile
+      // Safari which otherwise may not emit ondataavailable until stop().
+      // Also makes the recording survive mid-game crashes.
+      recorder.start(1000);
+      setDebug('started ' + canvas.width + 'x' + canvas.height);
       timeoutId = setTimeout(() => stop(), MAX_DURATION_MS);
       return true;
     } catch (e) {
+      setDebug('start err: ' + (e && e.message || e));
       console.warn('[PlayerRecorder] start failed:', e && e.message);
       recorder = null;
       activeCanvas = null;
@@ -104,11 +148,12 @@ window.PlayerRecorder = (() => {
         lastBlob = new Blob(chunks, { type: mimeType });
         lastBlobUrl = URL.createObjectURL(lastBlob);
         const out = { blob: lastBlob, url: lastBlobUrl };
+        setDebug('done: ' + Math.round(lastBlob.size/1024) + 'KB · ' + chunks.length + ' chunks');
         pendingStopPromise = null;
         resolve(out);
       };
       try { recorder.stop(); } catch (_) {
-        // If stop throws, resolve null so callers don't hang forever
+        setDebug('stop threw');
         pendingStopPromise = null;
         resolve(null);
       }
@@ -138,24 +183,35 @@ window.PlayerRecorder = (() => {
   // via a single <canvas> at the top level of the prototype's DOM. We
   // poll for it because the canvas is created after the iframe finishes
   // loading + after the "launch" postMessage is processed.
-  function findCanvasInIframe(iframe, { timeoutMs = 3000, onFound, onTimeout } = {}) {
+  function findCanvasInIframe(iframe, { timeoutMs = 10000, onFound, onTimeout } = {}) {
+    ensureDebugChip();
+    setDebug('looking for canvas in iframe');
     const t0 = performance.now();
     // setInterval, not rAF: rAF gets throttled to ~1fps when the tab is
-    // backgrounded, which would silently miss the canvas.
+    // backgrounded, which would silently miss the canvas. 10s timeout
+    // (was 3s) — mobile + slow networks need longer to load game assets
+    // before Mario's prototype creates and sizes the <canvas id="game">.
     const iv = setInterval(() => {
       const doc = iframe && iframe.contentDocument;
       if (doc) {
-        // Prefer the largest canvas on the page (the game's main one), in
-        // case there are HUD canvases too.
         const canvases = Array.from(doc.querySelectorAll('canvas'));
         let best = null, bestArea = 0;
         for (const c of canvases) {
           const a = (c.width || 0) * (c.height || 0);
           if (a > bestArea) { best = c; bestArea = a; }
         }
-        if (best && bestArea > 0) { clearInterval(iv); onFound && onFound(best); return; }
+        if (best && bestArea > 0) {
+          clearInterval(iv);
+          setDebug('canvas found ' + best.width + 'x' + best.height);
+          onFound && onFound(best);
+          return;
+        }
       }
-      if (performance.now() - t0 > timeoutMs) { clearInterval(iv); onTimeout && onTimeout(); }
+      if (performance.now() - t0 > timeoutMs) {
+        clearInterval(iv);
+        setDebug('canvas not found in ' + timeoutMs + 'ms');
+        onTimeout && onTimeout();
+      }
     }, 80);
   }
 
