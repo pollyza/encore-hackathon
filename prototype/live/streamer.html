@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 
-<link rel="stylesheet" href="css/live-shell.css">
+<link rel="stylesheet" href="css/live-shell.css?v=5">
 <link rel="stylesheet" href="css/ai-panel.css?v=3">
 <link rel="stylesheet" href="css/mini-games.css">
 </head>
@@ -104,19 +104,22 @@
   </div>
 
   <!-- ── Top bar (host + viewer pill) ───────────────────────────────── -->
+  <!-- TikTok-fidelity pass (Figma BGZQ3m9R...):
+       - host-pill avatar gets a small red online dot
+       - viewer-pill shows 3 stacked viewer avatars (was 2) + "±" prefix on count -->
   <div id="top-bar">
     <div class="host-pill">
-      <div class="avatar">🧑</div>
+      <div class="avatar"><span class="initial" id="host-initial">T</span><span class="live-dot"></span></div>
       <div class="meta">
-        <div class="name">TK Sói</div>
-        <div class="hearts"><span class="hi">♥</span> 118.1K</div>
+        <div class="name" id="host-name">TK Sói</div>
+        <div class="hearts"><span id="host-likes">118.1K</span> likes</div>
       </div>
       <button id="follow-btn" class="follow">+ Follow</button>
     </div>
     <div class="top-right">
       <div class="viewer-pill">
-        <div class="stack"><div></div><div>20+</div></div>
-        <span class="count">476</span>
+        <div class="stack"><div class="a1"></div><div class="a2"></div><div class="a3"></div></div>
+        <span class="count">± <span id="viewer-count">476</span></span>
       </div>
       <button id="close-btn" class="close">✕</button>
     </div>
@@ -153,16 +156,41 @@
   <!-- ── Chat overlay ────────────────────────────────────────────────── -->
   <div id="chat"></div>
 
-  <!-- ── Bottom bar (Type… + emoji + Encore + gift + share) ──────────── -->
+  <!-- ── Bottom bar (Figma TikTok fidelity pass) ─────────────────────────
+       Real TikTok bottom bar = pill input + bare 24px icons w/ 10px labels.
+       The old emoji-in-circle buttons were the #1 give-away that this wasn't
+       real TikTok. Replaced with inline SVG icons + Rose/Gift/Share labels.
+
+       Encore-btn (gradient pill) still slides in when a highlight fires —
+       takes the slot between input and Rose. Smile + audience buttons are
+       kept in markup (live-room.js still wires them up) but hidden via CSS
+       to match the simpler real-TikTok layout (only Rose/Gift/Share visible
+       in default state). -->
   <div id="bottom-bar">
-    <input id="chat-input" class="input" placeholder="Type…" />
-    <button class="icon-btn" data-action="smile">☺</button>
-    <button class="icon-btn" id="audience-btn" data-action="audience">🤝</button>
+    <input id="chat-input" class="input" placeholder="Say something…" />
+    <button class="icon-btn legacy-hidden" data-action="smile">☺</button>
+    <button class="icon-btn legacy-hidden" id="audience-btn" data-action="audience">🤝</button>
     <button class="encore-btn" id="encore-btn" style="display:none;">
       <span class="star">✦</span> Encore
     </button>
-    <button class="icon-btn" data-action="gift">🎁</button>
-    <button class="icon-btn" data-action="share">↗<span class="badge">12</span></button>
+    <!-- v0.9 Figma-fidelity round 3: use the actual TikTok icon assets
+         from the Figma design (rose = 3D illustration, gift = pink 3D box,
+         share = white outline arrow). Replaces the earlier line-SVG icons
+         that didn't match real TikTok's visual style. Asset paths point
+         at prototype/live/assets/icons/ which is synced by deploy.sh. -->
+    <button class="bb-icon" data-action="rose" aria-label="Rose">
+      <img class="ico" src="assets/icons/rose.png" alt="" />
+      <span class="lbl">Rose</span>
+    </button>
+    <button class="bb-icon" data-action="gift" aria-label="Gift">
+      <img class="ico" src="assets/icons/gift.png" alt="" />
+      <span class="lbl">Gift</span>
+    </button>
+    <button class="bb-icon" data-action="share" aria-label="Share">
+      <img class="ico" src="assets/icons/share.svg" alt="" />
+      <span class="lbl">Share</span>
+      <span class="badge">12</span>
+    </button>
   </div>
 
   <!-- ── Floating ack pills layer ────────────────────────────────────── -->
@@ -460,7 +488,7 @@
 <script src="js/player-recorder.js?v=3"></script>
 <script src="js/clip-composer.js?v=1"></script>
 <script src="js/encore-sheet.js?v=16"></script>
-<script src="js/live-room.js?v=9"></script>
+<script src="js/live-room.js?v=10"></script>
 <script>
 (() => {
   // ── Wire all modules together ──────────────────────────────────────
@@ -515,15 +543,24 @@
     const hearts  = qp.get('hearts');
     const viewers = qp.get('viewers');
     if (host) {
-      const n = document.querySelector('#top-bar .host-pill .name');
+      // v0.9 TikTok-fidelity: also set the avatar initial letter so each
+      // host pill reads as their own person (TK Sói→T, RoadKing88→R,
+      // PixelMax→P). Color theming for the avatar gradient is delegated
+      // to a data-mode-* attribute below.
+      const n = document.getElementById('host-name');
       if (n) n.textContent = host;
+      const init = document.getElementById('host-initial');
+      if (init) init.textContent = host.trim().charAt(0).toUpperCase() || '?';
     }
     if (hearts) {
-      const el = document.querySelector('#top-bar .host-pill .hearts');
-      if (el) el.innerHTML = `<span class="hi">♥</span> ${hearts}`;
+      // v0.9 format: <number> likes — no heart icon prefix
+      const el = document.getElementById('host-likes');
+      if (el) el.textContent = hearts;
     }
     if (viewers) {
-      const c = document.querySelector('#top-bar .viewer-pill .count');
+      // v0.9: viewer-pill count is "± <span id=viewer-count>N</span>", so
+      // only update the inner span — don't blow away the "±" prefix.
+      const c = document.getElementById('viewer-count');
       if (c) c.textContent = viewers;
     }
     if (qp.get('feed') === '1') {

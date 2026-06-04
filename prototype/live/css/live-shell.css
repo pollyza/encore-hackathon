@@ -228,43 +228,50 @@ button:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; 
   animation: encorePulse 1.4s ease-in-out infinite;
 }
 
-/* Mini-map (top-left HUD on game stream) */
+/* Mini-map (top-left HUD on game stream)
+   v0.9 TikTok-fidelity: pushed below the LIVE chrome top safe area
+   (status bar + host pill + activity rail end around y=128). This was
+   sitting at top:12px and visually crashed into the iOS status bar.
+   Also reduced 78→60 so it doesn't dominate the stream view. */
 .stream-minimap {
-  position: absolute; top: 12px; left: 10px;
-  width: 78px; height: 78px;
+  position: absolute; top: 140px; left: 10px;
+  width: 60px; height: 60px;
   border-radius: 6px; overflow: hidden;
   background: linear-gradient(135deg, #2c3922, #1f2a16);
   border: 1px solid rgba(255,255,255,.15);
   box-shadow: 0 2px 8px rgba(0,0,0,.3);
+  opacity: 0.85;
 }
+.stream-minimap svg { width: 100%; height: 100%; }
 .stream-minimap .label {
   position: absolute; top: 2px; left: 4px;
   font-size: 7px; color: #fff; font-weight: 600;
   opacity: .8; letter-spacing: .05em;
 }
 
-/* Compass strip */
+/* Compass strip
+   v0.9: hidden by default — a horizontal row of compass numbers across
+   the top conflicted hard with the iOS status bar. The compass is FPS
+   game flavor but the activity rail (Gaming Ranking + gift goal + timer)
+   already does the "this is a game stream" job. If we want it back, it
+   should live INSIDE the canvas drawFpsScene, not as DOM overlay. */
 .stream-compass {
-  position: absolute; top: 22px; left: 50%;
-  transform: translateX(-50%);
-  display: flex; gap: 14px;
-  color: #fff; font-size: 9px; font-weight: 600;
-  text-shadow: 0 1px 2px rgba(0,0,0,.6);
-  opacity: .85;
-  pointer-events: none;
+  display: none;
 }
-.stream-compass span { opacity: .6; }
-.stream-compass span.active { opacity: 1; }
 
-/* Weapon HUD top-right */
+/* Weapon HUD top-right
+   v0.9: was top:100px — sat right under the activity rail and stole
+   visual focus. Pushed to top:220px (below activity-rail + minimap row)
+   and reduced opacity. */
 .stream-weapon {
-  position: absolute; top: 100px; right: 10px;
-  width: 92px; height: 60px;
+  position: absolute; top: 220px; right: 10px;
+  width: 82px; height: 54px;
   background: rgba(0,0,0,.45);
   border-radius: 4px;
   padding: 6px 8px;
   border: 1px solid rgba(255,255,255,.1);
   color: #fff;
+  opacity: 0.8;
 }
 .stream-weapon .ammo { font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .stream-weapon .ammo .of { opacity: .55; font-size: 8px; }
@@ -280,28 +287,36 @@ button:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; 
 
 /* Bottom controls (joystick + fire + hp) */
 .stream-joystick {
-  position: absolute; bottom: 70px; left: 18px;
-  width: 70px; height: 70px;
+  position: absolute; bottom: 95px; left: 14px;
+  width: 60px; height: 60px;
   border-radius: 50%;
-  border: 2px solid rgba(255,255,255,.25);
+  border: 2px solid rgba(255,255,255,.18);
   pointer-events: none;
+  opacity: 0.5;
 }
 .stream-joystick::after {
   content: '';
   position: absolute; left: 50%; top: 50%;
   transform: translate(-50%,-50%);
-  width: 28px; height: 28px;
-  border-radius: 50%; background: rgba(255,255,255,.2);
+  width: 24px; height: 24px;
+  border-radius: 50%; background: rgba(255,255,255,.15);
 }
+/* v0.9 TikTok-fidelity: fire button + joystick are "in-game UI" — they
+   belong to the streamed game, not the LIVE chrome. Real TikTok LIVE
+   would show them inside the video (recorded). We render them as DOM
+   so they're still visible, but reduce opacity so they read as
+   background ambient detail rather than competing with the Share /
+   Gift / Rose action buttons in our actual LIVE chrome. */
 .stream-fire {
-  position: absolute; bottom: 90px; right: 18px;
-  width: 60px; height: 60px;
+  position: absolute; bottom: 95px; right: 14px;
+  width: 50px; height: 50px;
   border-radius: 50%;
-  background: rgba(255,255,255,.18);
-  border: 2px solid rgba(255,255,255,.3);
+  background: rgba(255,255,255,.12);
+  border: 2px solid rgba(255,255,255,.2);
   display: flex; align-items: center; justify-content: center;
-  color: rgba(255,255,255,.7); font-size: 22px;
+  color: rgba(255,255,255,.5); font-size: 18px;
   pointer-events: none;
+  opacity: 0.55;
 }
 .stream-hp {
   position: absolute; bottom: 50px; left: 50%;
@@ -335,19 +350,58 @@ button:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; 
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
+/* v0.9 TikTok-fidelity: host avatar was a dark unreadable gradient with
+   no contents — looked empty in screenshots. Now uses a warm bright
+   gradient + initial letter so it reads as "person photo placeholder"
+   like real TikTok LIVE creator avatars. */
 .host-pill .avatar {
+  position: relative;
   width: 32px; height: 32px; border-radius: 50%;
-  background: linear-gradient(135deg, #4a3a30, #2a1c14);
+  background: linear-gradient(135deg, #ff7a59, #c54aa3);
   display: flex; align-items: center; justify-content: center;
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,.3);
+  flex-shrink: 0;
 }
-.host-pill .meta { padding-right: 4px; }
-.host-pill .meta .name { font-size: 12px; font-weight: 700; line-height: 1.1; }
+/* Per-room avatar themes — match the room's game mode so each host's
+   initial letter has a recognizable color (FPS=Vietnamese red, GTA=neon
+   purple, OBBY=Roblox sky blue). */
+#host[data-game-mode="gta"] .host-pill .avatar {
+  background: linear-gradient(135deg, #8c4af0, #4a2a8c);
+}
+#host[data-game-mode="roblox"] .host-pill .avatar {
+  background: linear-gradient(135deg, #5cb3ff, #1a7acc);
+}
+.host-pill .avatar .initial {
+  line-height: 1;
+}
+/* TikTok-fidelity: small red online dot bottom-right of host avatar.
+   Real TikTok LIVE shows it on every host avatar — quick fidelity win. */
+.host-pill .avatar .live-dot {
+  position: absolute;
+  bottom: -1px; right: -1px;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid #000;
+}
+.host-pill .meta { padding-right: 4px; min-width: 0; }
+.host-pill .meta .name {
+  font-size: 13px; font-weight: 700; line-height: 1.15;
+  color: #fff;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 90px;
+}
+/* v0.9 TikTok-fidelity: dropped the ♥ icon prefix — real TikTok shows
+   plain "X likes" text under the username, not heart-prefixed. */
 .host-pill .meta .hearts {
-  font-size: 10px; color: rgba(255,255,255,.75);
-  display: flex; align-items: center; gap: 2px;
+  font-size: 10px; color: rgba(255,255,255,.7);
+  line-height: 1.2;
+  margin-top: 1px;
 }
-.host-pill .meta .hearts .hi { color: var(--accent); }
+.host-pill .meta .hearts #host-likes { color: rgba(255,255,255,.9); font-weight: 600; }
 .host-pill .follow {
   background: var(--accent);
   color: #fff;
@@ -372,20 +426,21 @@ button:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; 
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
+/* TikTok-fidelity: 3 stacked viewer avatars (was 2) — matches real LIVE.
+   Each avatar is a soft gradient + 2px dark border so they read as overlapping
+   bubbles. Count label gets a "±" prefix like the Figma. */
 .viewer-pill .stack { display: flex; }
 .viewer-pill .stack > div {
-  width: 22px; height: 22px;
+  width: 20px; height: 20px;
   border-radius: 50%;
   border: 1.5px solid #000;
 }
-.viewer-pill .stack > div:first-child { background: #3a5a2a; }
-.viewer-pill .stack > div:last-child {
-  background: #c8a884;
-  margin-left: -8px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 8px; font-weight: 700; color: #000;
-}
+.viewer-pill .stack > div + div { margin-left: -7px; }
+.viewer-pill .stack .a1 { background: linear-gradient(135deg, #5a8a4a, #2f5a2a); }
+.viewer-pill .stack .a2 { background: linear-gradient(135deg, #d4b495, #a67e58); }
+.viewer-pill .stack .a3 { background: linear-gradient(135deg, #8c6dc8, #4a3a8c); }
 .viewer-pill .count { font-size: 12px; font-weight: 600; margin-left: 6px; }
+.viewer-pill .count #viewer-count { color: #fff; }
 .top-right .close {
   background: transparent; border: 0;
   color: #fff; font-size: 22px; padding: 0; line-height: 1;
@@ -526,43 +581,72 @@ button:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; 
   mask-image: linear-gradient(180deg, transparent 0, #000 30%);
   pointer-events: none;
 }
+/* TikTok-fidelity: chat rows are no-bubble. Real TikTok LIVE chat = bare
+   text with a heavy text-shadow over the stream, 32×32 avatar, username
+   in muted pink/orange with a small LV.NN badge inline, message in solid
+   white. The old dark-bubble style was the 2nd-biggest tell that this
+   wasn't real TikTok. */
 .chat-row {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   animation: chatIn .35s ease-out both;
 }
 .chat-row .avatar {
-  width: 24px; height: 24px;
+  width: 32px; height: 32px;
   border-radius: 50%;
   flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  font-size: 12px; color: #fff;
+  font-size: 14px; color: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,.5);
 }
 .chat-row .bubble {
-  background: rgba(0,0,0,.35);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-radius: 14px;
-  padding: 5px 10px;
-  max-width: 260px;
+  /* No more bubble bg — just a flex column for name + text */
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-radius: 0;
+  padding: 0;
+  max-width: 240px;
+  min-width: 0;
+  flex: 1;
 }
 .chat-row .name {
-  font-size: 11px;
-  color: rgba(255,255,255,.7);
-  font-weight: 500;
-  display: flex; gap: 6px; align-items: center;
+  font-size: 12px;
+  color: rgba(255,200,170,.85);  /* TikTok-style warm muted pink */
+  font-weight: 600;
+  display: flex; gap: 5px; align-items: center;
+  text-shadow: 0 1px 2px rgba(0,0,0,.7);
+  margin-bottom: 1px;
 }
 .chat-row .name .host-tag {
-  background: rgba(255,255,255,.18);
-  font-size: 8px; padding: 1px 4px; border-radius: 3px; font-weight: 700;
+  background: rgba(255,255,255,.22);
+  font-size: 9px; padding: 1px 5px; border-radius: 3px; font-weight: 700;
+  color: #fff;
+}
+/* TikTok-fidelity: inline LV.NN badge — small 2-color pill next to username.
+   live-room.js can attach .lv elements to chat rows; styles are ready
+   whether or not the JS opts in. */
+.chat-row .name .lv {
+  display: inline-flex; align-items: center;
+  height: 13px; padding: 0 4px;
+  font-size: 9px; font-weight: 800; line-height: 1;
+  color: #fff;
+  background: linear-gradient(90deg, #6a4ab8, #c54aa3);
+  border-radius: 3px;
+  letter-spacing: 0.3px;
+  text-shadow: none;
 }
 .chat-row .text {
-  font-size: 13px; color: #fff; font-weight: 500; line-height: 1.25;
+  font-size: 14px;
+  color: #fff;
+  font-weight: 500;
+  line-height: 1.3;
+  text-shadow: 0 1px 3px rgba(0,0,0,.8), 0 0 1px rgba(0,0,0,.6);
 }
 .chat-row.joined .text {
-  font-size: 11.5px; color: rgba(255,255,255,.55); font-style: italic; font-weight: 500;
+  font-size: 12.5px; color: rgba(255,255,255,.65); font-style: italic; font-weight: 500;
 }
 
 /* System card variant */
@@ -607,20 +691,79 @@ button:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; 
   display: flex; align-items: center; gap: 8px;
   z-index: 5;
 }
+/* TikTok-fidelity: input pill is wider, semi-transparent dark (not white-15
+   which read as "frosted glass" — TikTok's is closer to translucent black
+   with a 1px white outline). 36px tall, 18px radius, font-weight 500. */
 #bottom-bar .input {
   flex: 1; height: 36px;
-  border-radius: var(--pill-radius);
-  background: rgba(255,255,255,.15);
+  border-radius: 18px;
+  background: rgba(0,0,0,.28);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.12);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   display: flex; align-items: center;
-  padding: 0 14px;
-  font-size: 13px;
-  color: rgba(255,255,255,.7);
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255,255,255,.95);
   border: 0;
   outline: none;
 }
-#bottom-bar .input::placeholder { color: rgba(255,255,255,.55); }
+#bottom-bar .input::placeholder { color: rgba(255,255,255,.7); font-weight: 500; }
+
+/* TikTok-fidelity: action icons — 24px bare line icons + 10px label below.
+   No circle background, no fill. Just white icons with a soft drop-shadow
+   so they read against any stream background. */
+#bottom-bar .bb-icon {
+  position: relative;
+  width: 36px; height: 36px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 1px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: #fff;
+  cursor: pointer;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.5));
+}
+#bottom-bar .bb-icon svg {
+  width: 22px; height: 22px;
+  stroke: #fff;
+  fill: none;
+}
+/* v0.9 Figma-fidelity: bb-icon now hosts a real raster/vector asset
+   from the Figma file (rose + gift = colored PNG illustrations,
+   share = white outline SVG). 24×24 to match Figma's `size-[24px]`
+   wrapper, with object-contain so the source's aspect ratio holds. */
+#bottom-bar .bb-icon .ico {
+  width: 24px; height: 24px;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+}
+#bottom-bar .bb-icon .lbl {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  color: rgba(255,255,255,.85);
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(0,0,0,.6);
+}
+#bottom-bar .bb-icon .badge {
+  position: absolute; top: -2px; right: -2px;
+  background: var(--accent); color: #fff;
+  font-size: 9px; font-weight: 700;
+  padding: 0 4px; border-radius: 8px; min-width: 12px;
+  text-align: center; border: 1px solid #000;
+  filter: none;
+}
+#bottom-bar .bb-icon:active svg { transform: scale(0.92); transition: transform .1s; }
+
+/* Hidden legacy emoji-in-circle buttons (smile, audience) — still in DOM
+   so live-room.js wiring keeps working, but visually replaced by the bare
+   SVG icons above. The audience-btn↔encore-btn swap logic still works. */
+#bottom-bar .icon-btn.legacy-hidden { display: none !important; }
 #bottom-bar .icon-btn {
   position: relative;
   width: 30px; height: 30px;
