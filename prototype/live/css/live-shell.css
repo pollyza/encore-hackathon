@@ -732,6 +732,16 @@ button:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; 
   stroke: #fff;
   fill: none;
 }
+/* v0.9 Figma-fidelity: bb-icon now hosts a real raster/vector asset
+   from the Figma file (rose + gift = colored PNG illustrations,
+   share = white outline SVG). 24×24 to match Figma's `size-[24px]`
+   wrapper, with object-contain so the source's aspect ratio holds. */
+#bottom-bar .bb-icon .ico {
+  width: 24px; height: 24px;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+}
 #bottom-bar .bb-icon .lbl {
   font-size: 9px;
   font-weight: 600;
