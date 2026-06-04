@@ -106,6 +106,15 @@ if [[ -f "$REPO_ROOT/docs/encore_slides.html" ]]; then
     [[ -d "$PREVIEW_DIR" ]] && sync_file "$REPO_ROOT/docs/encore_slides.html" "$PREVIEW_DIR/encore_slides.html"
 fi
 
+# vercel.json — defines the `/` → /docs/landing.html rewrite + qr-encore.svg
+# shortcut. Without this in the deploy bundle, Vercel serves the bare bundle
+# and `/` returns 404 NOT_FOUND (since there's no index.html at the root).
+# This was a real outage on 2026-06-04 after the icon-asset sync change —
+# the bundle was missing vercel.json entirely.
+if [[ -f "$REPO_ROOT/vercel.json" ]]; then
+    sync_file "$REPO_ROOT/vercel.json" "$DEPLOY_DIR/vercel.json"
+fi
+
 # Landing + QR — the Vercel root rewrite points at docs/landing.html. Keep the
 # local mirrors current so QR/link QA uses the same entry page as production.
 if [[ -f "$REPO_ROOT/docs/landing.html" ]]; then
