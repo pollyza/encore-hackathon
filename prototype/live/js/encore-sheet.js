@@ -441,7 +441,7 @@
     const elMsg = document.querySelector('#result-publish-wrap .sheet-result-publish-msg');
     if (elMsg) {
       elMsg.classList.add('cancelled');
-      elMsg.innerHTML = 'Auto-publish cancelled — clip saved as draft';
+      elMsg.innerHTML = 'Saved as draft · you can publish anytime';
     }
   }
 
@@ -899,18 +899,19 @@
 
     wireResultPageOnce();
 
-    // Reset publish state + auto-start countdown (winner only)
+    // Reset publish state (winner only) — user-initiated, no auto-countdown.
+    // viewer taps "Publish ⚡" or "Maybe later"; "✓ Published" only shows
+    // after explicit click.
     cancelPublishCountdown();
     const publishMsg = document.querySelector('#result-publish-wrap .sheet-result-publish-msg');
     if (publishMsg) {
       publishMsg.classList.remove('cancelled', 'published');
-      publishMsg.innerHTML = 'Auto-publishing to TikTok in <span id="result-publish-countdown">3</span>…';
+      publishMsg.innerHTML = 'Ready to publish to TikTok?';
     }
     if (rinfo.isWinner) {
       // Reset clip state from any prior round (output blob / buttons /
       // hidden preview), then start a fresh recording.
       stopAllClipAnimations();
-      startPublishCountdown();
       const prev = document.getElementById('result-clip-preview');
       if (prev) prev.style.display = '';
       // Genre-match viewer tag emoji to current LIVE mode.
