@@ -412,6 +412,17 @@
     <div class="lbl">TAP TO ENTER LIVE</div>
     <div class="sub">browser autoplay policy</div>
   </div>
+  <!-- Feed mode: feed.html embeds streamer.html as one of N stacked iframes.
+       The shim's "TAP TO ENTER LIVE" prompt is meaningless inside the feed
+       (user already gestured to enter at the feed level), and flashing it
+       during iframe load looks broken. This inline script runs during HTML
+       parsing — earlier than the main IIFE — so the shim never paints. -->
+  <script>
+    if (new URLSearchParams(location.search).get('feed') === '1') {
+      var __shim = document.getElementById('autoplay-shim');
+      if (__shim) __shim.style.display = 'none';
+    }
+  </script>
 
 </div> <!-- /#host -->
 </div> <!-- /#host-frame -->
@@ -449,7 +460,7 @@
 <script src="js/player-recorder.js?v=3"></script>
 <script src="js/clip-composer.js?v=1"></script>
 <script src="js/encore-sheet.js?v=16"></script>
-<script src="js/live-room.js?v=8"></script>
+<script src="js/live-room.js?v=9"></script>
 <script>
 (() => {
   // ── Wire all modules together ──────────────────────────────────────
@@ -493,6 +504,39 @@
 
   // Set data attribute for CSS hooks (HUD blocks visibility, etc.)
   document.getElementById('host').dataset.gameMode = currentMode;
+
+  // feed.html embeds streamer.html in 3 stacked iframes (one per room).
+  // It passes per-room overrides via URL params — top-bar host name, hearts,
+  // viewer count — and `feed=1` to auto-dismiss the initial autoplay shim
+  // (the parent feed page already requires user interaction to enter).
+  (() => {
+    const qp = new URLSearchParams(location.search);
+    const host    = qp.get('host');
+    const hearts  = qp.get('hearts');
+    const viewers = qp.get('viewers');
+    if (host) {
+      const n = document.querySelector('#top-bar .host-pill .name');
+      if (n) n.textContent = host;
+    }
+    if (hearts) {
+      const el = document.querySelector('#top-bar .host-pill .hearts');
+      if (el) el.innerHTML = `<span class="hi">♥</span> ${hearts}`;
+    }
+    if (viewers) {
+      const c = document.querySelector('#top-bar .viewer-pill .count');
+      if (c) c.textContent = viewers;
+    }
+    if (qp.get('feed') === '1') {
+      const shim = document.getElementById('autoplay-shim');
+      if (shim) shim.style.display = 'none';
+      // Hide the cosmetic iOS status bar in feed mode — the feed shell
+      // already has its own top chrome (FOR YOU · LIVE brand) and the
+      // outer OS status bar is the real one. Showing 9:41 inside each
+      // iframe duplicates it and visually clashes.
+      const sb = document.getElementById('status-bar-ios');
+      if (sb) sb.style.display = 'none';
+    }
+  })();
 
   // All 3 modes render via Canvas2D (see note above the <video> tag for why
   // we dropped real footage). liveCanvasRAF is declared before any call to
@@ -896,6 +940,14 @@
     ackLayer:    dom.ackLayer,
     onEncoreOpen: () => EncoreSheet.open(),
   });
+
+  // Feed mode: the autoplay shim is hidden (parent feed.html already
+  // captured the user gesture), so LiveRoom's onShimTap handler — which
+  // also seeds the chat — never fires. Dispatch the click manually now
+  // that LiveRoom.init has wired up its once-listener.
+  if (new URLSearchParams(location.search).get('feed') === '1' && dom.shim) {
+    dom.shim.dispatchEvent(new Event('click'));
+  }
 
   // Observer (background V2G sampling)
   if (window.ObserverClient) {
