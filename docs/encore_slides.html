@@ -1782,35 +1782,50 @@ h2.section-title .red { color: var(--c-red); }
 <section class="slide">
     <div class="slide-content">
         <div class="eyebrow reveal" style="--delay:0.05s">07 · 不抢谁的盘子</div>
-        <h2 class="section-title reveal" style="--delay:0.15s">跟互动游戏 / 弹幕游戏<span class="accent">不抢盘子。</span></h2>
-        <p class="lead reveal" style="--delay:0.25s">平台已有的<strong>互动游戏</strong>(萌宠快跑)和<strong>弹幕游戏</strong>跟 Encore 看起来像, 但底层逻辑不同 —— 服务不同主播、不同观众。</p>
-        <div class="vision-grid">
-            <div class="v-step reveal" style="--delay:0.4s">
-                <div class="step-num">A · 互动游戏</div>
-                <div class="ico">🎁</div>
-                <h3>萌宠快跑等</h3>
-                <p><strong>主播</strong>: 化身游戏角色,被观众礼物驱动加速 / 撞障碍。 全程 MC, 喊话求礼物。</p>
-                <p><strong>观众</strong>: 间接 — 送礼影响主播游戏。</p>
-                <p><strong>品类</strong>: 只接已经 mod 对接的合作游戏(目前 1-2 款)。FPS / MOBA / 吃鸡 接不进来。</p>
-            </div>
-            <div class="v-step reveal" style="--delay:0.55s">
-                <div class="step-num">B · 弹幕游戏</div>
-                <div class="ico">💬</div>
-                <h3>轻量弹幕版</h3>
-                <p><strong>主播</strong>: 反应 + 接事件,但游戏被弹幕推着走。</p>
-                <p><strong>观众</strong>: 间接 — 发弹幕 / 送礼影响事件。</p>
-                <p><strong>品类</strong>: 平台定制的轻量游戏。同样不覆盖核心游戏品类。</p>
-            </div>
-            <div class="v-step reveal" style="--delay:0.7s">
-                <div class="step-num">C · Encore</div>
-                <div class="ico">⚡</div>
-                <h3>观众自己玩</h3>
-                <p><strong>主播</strong>: 继续打 ranked, 什么都不变。 零参与也工作。</p>
-                <p><strong>观众</strong>: <strong>直接</strong> — 每个在场观众都能自己上手玩 30s。</p>
-                <p><strong>品类</strong>: <strong>覆盖任何游戏</strong>(FPS / MOBA / 吃鸡 / GTA / Roblox), 占 TikTok Gaming 60-70% 内容。</p>
-            </div>
+        <h2 class="section-title reveal" style="--delay:0.15s">跟互动 / 弹幕游戏<span class="accent">服务不同人,不抢盘子。</span></h2>
+
+        <!-- Compact 4-col comparison table (replaces 3 v-step cards which
+             overflowed). Encore column highlighted via accent border + bg. -->
+        <div class="reveal" style="--delay:0.3s; margin: 1.2rem 0 1rem;">
+          <table style="width:100%; border-collapse: separate; border-spacing: 0; font-size: clamp(0.78rem, 1vw, 0.95rem); table-layout: fixed;">
+            <colgroup>
+              <col style="width: 13%;">
+              <col style="width: 26%;">
+              <col style="width: 26%;">
+              <col style="width: 35%;">
+            </colgroup>
+            <thead>
+              <tr>
+                <th style="padding: 10px 8px; text-align:left; font-family: var(--font-mono); font-size: .72rem; opacity:.55; letter-spacing:.5px; border-bottom: 1px solid rgba(255,255,255,.1); font-weight: 600;">维度</th>
+                <th style="padding: 10px 12px; text-align:left; font-family: var(--font-mono); font-size: .78rem; color: rgba(255,255,255,.7); border-bottom: 1px solid rgba(255,255,255,.1); font-weight: 700;">🎁 互动游戏<br><span style="font-size:.68rem; opacity:.5; font-weight:500;">萌宠快跑等</span></th>
+                <th style="padding: 10px 12px; text-align:left; font-family: var(--font-mono); font-size: .78rem; color: rgba(255,255,255,.7); border-bottom: 1px solid rgba(255,255,255,.1); font-weight: 700;">💬 弹幕游戏<br><span style="font-size:.68rem; opacity:.5; font-weight:500;">轻量弹幕版</span></th>
+                <th style="padding: 10px 14px; text-align:left; font-family: var(--font-mono); font-size: .85rem; color: var(--accent); border-bottom: 2px solid var(--accent); border-top: 2px solid var(--accent); border-left: 2px solid var(--accent); border-right: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); border-radius: 8px 8px 0 0; font-weight: 800;">⚡ Encore<br><span style="font-size:.7rem; opacity:.75; font-weight:600; color:#fff;">观众自己玩</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding: 12px 8px; opacity:.6; font-size:.85rem; font-weight: 600;">主播</td>
+                <td style="padding: 12px;">化身游戏角色,被礼物驱动,<strong style="opacity:.85;">变 MC</strong></td>
+                <td style="padding: 12px;">反应 + 接弹幕事件,被弹幕推着走</td>
+                <td style="padding: 12px 14px; background: color-mix(in srgb, var(--accent) 8%, transparent); border-left: 2px solid var(--accent); border-right: 2px solid var(--accent); color: #fff;"><strong>继续打 ranked,零参与也工作</strong></td>
+              </tr>
+              <tr>
+                <td style="padding: 12px 8px; opacity:.6; font-size:.85rem; font-weight: 600;">观众</td>
+                <td style="padding: 12px;">间接 — 送礼影响主播游戏</td>
+                <td style="padding: 12px;">间接 — 发弹幕 / 送礼影响事件</td>
+                <td style="padding: 12px 14px; background: color-mix(in srgb, var(--accent) 8%, transparent); border-left: 2px solid var(--accent); border-right: 2px solid var(--accent); color: #fff;"><strong>直接 — 每个观众自己玩 30s</strong></td>
+              </tr>
+              <tr>
+                <td style="padding: 12px 8px; opacity:.6; font-size:.85rem; font-weight: 600;">品类</td>
+                <td style="padding: 12px;">只 1-2 款 mod 对接的合作游戏</td>
+                <td style="padding: 12px;">平台定制的轻量游戏</td>
+                <td style="padding: 12px 14px; background: color-mix(in srgb, var(--accent) 8%, transparent); border-left: 2px solid var(--accent); border-right: 2px solid var(--accent); border-bottom: 2px solid var(--accent); border-radius: 0 0 8px 8px; color: #fff;"><strong>FPS / MOBA / 吃鸡 / GTA / Roblox 全覆盖</strong></td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-        <p class="lead reveal" style="--delay:0.9s; margin-top:0.6rem;"><strong>一句话</strong>: 互动游戏服务"娱乐主播 + 想影响主播的观众"; Encore 服务"段位主播 + 想自己动手玩的观众"。 <span class="accent">不抢盘子, 是品类保护型产品。</span></p>
+
+        <p class="lead reveal" style="--delay:0.65s; margin-top: 0.6rem;">互动游戏服务<strong>娱乐主播 + 想影响主播的观众</strong>;Encore 服务<strong>段位主播 + 想自己动手玩的观众</strong>。 <span class="accent">不抢盘子,是品类保护型产品。</span></p>
     </div>
 </section>
 
