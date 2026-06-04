@@ -601,6 +601,7 @@
   const modeVid = MODE_VIDEO[vidKey];
 
   function showCanvas() {
+    dom.video.classList.remove('on');   // back to opacity:0 (CSS handles fade-out)
     dom.video.style.display = 'none';
     liveCanvas.style.display = '';
     if (!liveCanvasRAF) startLiveCanvasScene(currentMode);
@@ -612,7 +613,14 @@
     dom.video.style.display = '';
     dom.video.setAttribute('src', url);
     dom.video.load();
-    dom.video.play().catch(() => {});
+    // PR #43 CSS gives <video> default opacity:0 + transitions to opacity:1
+    // only when class "on" is present. Without this line the video plays
+    // invisibly underneath (display:block but opacity:0) — the bug PM saw.
+    // Add .on after the play() promise resolves OR on `playing` event so
+    // the fade-in doesn't reveal a frozen first frame.
+    const reveal = () => dom.video.classList.add('on');
+    dom.video.addEventListener('playing', reveal, { once: true });
+    dom.video.play().then(reveal).catch(() => { /* user-gesture pending */ });
   }
 
   if (modeVid) {
