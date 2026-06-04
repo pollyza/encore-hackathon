@@ -348,6 +348,8 @@
     sheet:      document.getElementById('sheet'),
     sheetBackdrop: document.getElementById('sheet-backdrop'),
     sheetClose: document.getElementById('sheet-close'),
+    statusLine: document.querySelector('#sheet-body .status-line'),
+    costLine:   document.querySelector('#sheet-body .meta span:last-child'),
   };
 
   // Vision detection cache — observer-client populates this when a real
@@ -356,6 +358,20 @@
   // it falls back to a random fps/moba/br config (handled internally).
   // This is the seam where real Vision will plug in later.
   let cachedDetection = null;
+  function setEncoreDetection(config, notify = true) {
+    if (!config) {
+      cachedDetection = null;
+      return;
+    }
+    const prev = cachedDetection;
+    cachedDetection = config;
+    if (notify) {
+      const sameTemplate = prev && prev.template === config.template && prev.theme === config.theme;
+      if (!sameTemplate) {
+        LiveRoom.pushAck('AI Encore ready');
+      }
+    }
+  }
   const pickConfig = () => {
     if (cachedDetection) {
       const c = cachedDetection;
@@ -393,9 +409,19 @@
     onEncoreOpen: () => EncoreSheet.open(),
   });
 
-  // Observer (background V2G sampling — pre-fetches highlight detection
-  // but does NOT auto-open. The user opens via highlight popup / Encore btn)
-  // Currently dormant unless explicitly resumed by future code.
+  // Observer (background V2G sampling)
+  if (window.ObserverClient) {
+    window.ObserverClient.start({
+      video: dom.video,
+      onHighlight: (config) => {
+        setEncoreDetection(config);
+      },
+      onStatus: (status, msg) => LiveRoom.setStatus(status, msg),
+      onCost: (cost) => LiveRoom.setCost(cost),
+    });
+  }
+
+  window.setEncoreDetection = setEncoreDetection;
 })();
 </script>
 

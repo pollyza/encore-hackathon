@@ -16,7 +16,7 @@
 (function (root) {
   'use strict';
 
-  const OBSERVER_URL = 'http://127.0.0.1:8081/analyze';
+  const OBSERVER_URL = 'http://127.0.0.1:3000/vision-detect';
   const SAMPLE_INTERVAL_MS    = 4000;
   const CONFIDENCE_THRESHOLD  = 0.6;
   const JPEG_QUALITY          = 0.6;
@@ -59,11 +59,11 @@
       const resp = await fetch(OBSERVER_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: dataUrl, t }),
+        body: JSON.stringify({ image_base64: dataUrl, timestamp: t, frame_index: Math.floor(t * 30) }),
       });
       const data = await resp.json();
-      if (data.busy) {
-        cfg.onStatus('sampling', `observer busy, will retry next tick`);
+      if (!resp.ok) {
+        cfg.onStatus('idle', 'vision error: ' + (data.detail || resp.status));
         return;
       }
       if (data._meta) {
@@ -71,10 +71,6 @@
         const cost = (m.tokens_in * 3 + m.tokens_out * 15) / 1_000_000;
         totalCost += cost;
         cfg.onCost('$' + totalCost.toFixed(4));
-      }
-      if (data.error) {
-        cfg.onStatus('idle', 'analyze error: ' + data.error);
-        return;
       }
       if (data.highlight && (data.confidence || 0) >= CONFIDENCE_THRESHOLD) {
         detectCount++;
