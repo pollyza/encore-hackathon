@@ -859,8 +859,140 @@ h2.section-title .red { color: var(--c-red); }
 }
 
 /* ===========================================
-   SLIDE — LIVE DEMO (embedded iframe)
-   Two-column: phone-aspect game iframe (left) + controls/FYI (right)
+   SLIDE — LIVE DEMO (redesign — QR + 3 game tiles + 2 outcomes)
+   Left: big scannable QR. Right: 3 game options + 2 outcome chips.
+   No iframe, no controls wall.
+   =========================================== */
+.demo-redesign {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: clamp(1.4rem, 3.5vw, 2.8rem);
+    align-items: center;
+    margin-top: clamp(0.8rem, 2vw, 1.4rem);
+    max-width: 1200px;
+}
+.demo-qr-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(0.6rem, 1.2vw, 0.9rem);
+    padding: clamp(1rem, 1.8vw, 1.4rem);
+    background: var(--bg-panel);
+    border: 2px solid var(--c-red);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(255,70,85,0.28);
+}
+.demo-qr-label {
+    font-family: var(--font-pixel);
+    font-size: clamp(0.65rem, 0.95vw, 0.8rem);
+    color: var(--c-red);
+    letter-spacing: 2px;
+}
+.demo-qr-large {
+    width: clamp(200px, 26vw, 320px);
+    height: clamp(200px, 26vw, 320px);
+    background: #fff;
+    padding: clamp(8px, 1vw, 14px);
+    border-radius: 6px;
+    image-rendering: pixelated;
+    display: block;
+}
+.demo-qr-url {
+    font-family: var(--font-mono);
+    font-size: clamp(0.8rem, 1.2vw, 1.05rem);
+    color: var(--text-primary);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.demo-redesign-right {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.5rem, 1vw, 0.8rem);
+    align-self: stretch;
+    justify-content: center;
+}
+.demo-section-label {
+    font-family: var(--font-pixel);
+    font-size: clamp(0.55rem, 0.85vw, 0.72rem);
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    margin-bottom: clamp(0.2rem, 0.5vw, 0.4rem);
+}
+.demo-game-tiles {
+    display: flex;
+    gap: clamp(0.5rem, 1.2vw, 0.9rem);
+    margin-bottom: clamp(0.6rem, 1.2vw, 1rem);
+}
+.demo-game-tile {
+    flex: 1;
+    background: var(--bg-panel);
+    border: 1px solid var(--bg-line);
+    border-radius: 8px;
+    padding: clamp(0.6rem, 1.2vw, 0.9rem);
+    border-top: 3px solid;
+}
+.demo-game-tile.gta  { border-top-color: var(--c-teal); }
+.demo-game-tile.obby { border-top-color: var(--c-gold); }
+.demo-game-tile.br   { border-top-color: var(--c-purple); }
+.demo-game-tile .tile-badge {
+    display: inline-block;
+    font-family: var(--font-pixel);
+    font-size: clamp(0.55rem, 0.8vw, 0.7rem);
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: rgba(255,255,255,0.06);
+    color: var(--text-secondary);
+    letter-spacing: 1.5px;
+    margin-bottom: clamp(0.4rem, 0.8vw, 0.6rem);
+}
+.demo-game-tile.gta  .tile-badge { color: var(--c-teal); }
+.demo-game-tile.obby .tile-badge { color: var(--c-gold); }
+.demo-game-tile.br   .tile-badge { color: var(--c-purple); }
+.demo-game-tile .tile-name {
+    font-family: var(--font-pixel);
+    font-size: clamp(0.7rem, 1.05vw, 0.95rem);
+    color: var(--text-primary);
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-bottom: clamp(0.2rem, 0.4vw, 0.35rem);
+}
+.demo-game-tile .tile-hint {
+    font-family: var(--font-mono);
+    font-size: clamp(0.65rem, 0.85vw, 0.78rem);
+    color: var(--text-secondary);
+}
+
+.demo-outcomes {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.4rem, 0.8vw, 0.65rem);
+}
+.demo-outcome {
+    display: flex;
+    align-items: flex-start;
+    gap: clamp(0.6rem, 1.2vw, 0.9rem);
+    padding: clamp(0.7rem, 1.3vw, 1rem) clamp(0.9rem, 1.6vw, 1.2rem);
+    background: var(--bg-panel);
+    border: 1px solid var(--bg-line);
+    border-radius: 8px;
+}
+.demo-outcome.video { border-left: 3px solid var(--c-red); }
+.demo-outcome.gift  { border-left: 3px solid var(--c-gold); }
+.demo-outcome .outcome-icon {
+    font-size: clamp(1.1rem, 1.6vw, 1.4rem);
+    line-height: 1;
+}
+.demo-outcome .outcome-text {
+    font-family: var(--font-mono);
+    font-size: clamp(0.75rem, 1vw, 0.92rem);
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+.demo-outcome .outcome-text strong { color: var(--text-primary); }
+
+/* ===========================================
+   OLD SLIDE — LIVE DEMO styles (kept for backwards compat / unused now)
    =========================================== */
 .demo-row {
     display: grid;
@@ -1553,58 +1685,57 @@ h2.section-title .red { color: var(--c-red); }
 </section>
 
 <!-- ============================================
-     SLIDE — LIVE DEMO (embedded iframe)
+     SLIDE — LIVE DEMO (rewrite: focused 3-info layout)
+     Old version had iframe + CONTROLS detail walls. Per PM: this slide
+     just needs to convey:
+       1) Scan to play (QR + URL)
+       2) 3 different game templates available
+       3) After playing: either auto-publish clip to TikTok, or
+          send Enhance gift to extend gameplay
+     No iframe / no instructions wall.
      ============================================ -->
 <section class="slide demo-slide">
     <div class="slide-content">
         <div class="eyebrow reveal" style="--delay:0.05s">⚡ 现场演示</div>
         <h2 class="section-title reveal" style="--delay:0.15s">扫码 <span class="accent">就能玩。</span></h2>
-        <p class="lead reveal" style="--delay:0.25s">选一个模板 30 秒玩完。 <strong>点击 iframe 进入游戏</strong>, 按键盘 <code class="key-inline">←</code> <code class="key-inline">→</code> 回到 deck。</p>
-        <div class="demo-row">
-            <div class="demo-frame reveal-scale" style="--delay:0.4s">
-                <div class="demo-frame-glow"></div>
-                <!-- iframe src is set by JS after probing multiple candidate paths,
-                     so this works whether slides are at /docs/, project root, or
-                     somewhere else. Falls back to a clear "open in new tab" if no
-                     candidate resolves. -->
-                <iframe id="demo-iframe"
-                        title="Encore mini game"
-                        allow="autoplay; fullscreen"
-                        loading="lazy"></iframe>
-                <div class="demo-fallback" id="demo-fallback" hidden>
-                    <div class="demo-fallback-icon">🎮</div>
-                    <div class="demo-fallback-title">无法在此环境内嵌运行</div>
-                    <div class="demo-fallback-text">
-                        当前 URL 找不到 <code>encore_prototype.html</code> 的相对路径。<br>
-                        新窗口打开就能玩:
-                    </div>
-                    <a id="demo-fallback-link" class="demo-fallback-btn" target="_blank" rel="noopener">▶ OPEN IN NEW TAB</a>
-                    <div class="demo-fallback-hint">
-                        要在 iframe 内运行,确保 <code>encore_prototype.html</code><br>
-                        和这份 slides 在同一个 HTTP 服务下可达。
-                    </div>
-                </div>
+        <div class="demo-redesign">
+            <!-- LEFT: Big QR + URL -->
+            <div class="demo-qr-hero reveal-scale" style="--delay:0.3s">
+                <div class="demo-qr-label">SCAN ME · 扫码体验</div>
+                <img src="qr-encore.svg" alt="QR · encore-deploy.vercel.app" class="demo-qr-large">
+                <div class="demo-qr-url">encore-deploy.vercel.app</div>
             </div>
-            <div class="demo-side reveal-right" style="--delay:0.55s">
-                <div class="demo-side-block demo-side-qr">
-                    <div class="demo-side-label">SCAN ME · 扫码玩</div>
-                    <div class="qr-wrap">
-                        <img src="qr-encore.svg" alt="QR · encore-deploy.vercel.app" class="qr-img">
-                        <div class="qr-url">encore-deploy.vercel.app</div>
+            <!-- RIGHT: 3 game tiles + outcome chips -->
+            <div class="demo-redesign-right">
+                <div class="demo-section-label reveal" style="--delay:0.4s">3 套游戏 · 开局随机一套</div>
+                <div class="demo-game-tiles">
+                    <div class="demo-game-tile gta reveal-left" style="--delay:0.5s">
+                        <div class="tile-badge">GTA</div>
+                        <div class="tile-name">GTA HEIST</div>
+                        <div class="tile-hint">抢店开车 · 30s</div>
+                    </div>
+                    <div class="demo-game-tile obby reveal-left" style="--delay:0.6s">
+                        <div class="tile-badge">OBBY</div>
+                        <div class="tile-name">OBBY PARKOUR</div>
+                        <div class="tile-hint">跳平台 · 30s</div>
+                    </div>
+                    <div class="demo-game-tile br reveal-left" style="--delay:0.7s">
+                        <div class="tile-badge">BR</div>
+                        <div class="tile-name">FREE FIRE BR</div>
+                        <div class="tile-hint">缩圈生还 · 30s</div>
                     </div>
                 </div>
-                <div class="demo-side-block">
-                    <div class="demo-side-label">CONTROLS</div>
-                    <ul class="demo-side-list">
-                        <li><span class="key-inline">←</span> <span class="key-inline">→</span> deck 翻页</li>
-                        <li>左侧虚拟摇杆 / WASD 移动</li>
-                        <li><strong>GTA Heist</strong>:开车 + 射击,长按氮气</li>
-                        <li><strong>Obby Parkour</strong>:右下 ▲ JUMP 跳平台</li>
-                        <li><strong>Free Fire BR</strong>:长按开镜 · 武器切换</li>
-                        <li>30 秒后自动结束</li>
-                    </ul>
+                <div class="demo-section-label reveal" style="--delay:0.8s" style="margin-top:1.2rem;">玩过之后</div>
+                <div class="demo-outcomes">
+                    <div class="demo-outcome video reveal-left" style="--delay:0.9s">
+                        <span class="outcome-icon">📹</span>
+                        <span class="outcome-text"><strong>进前 3</strong> → 自动剪上下分屏短视频, 发回你的 TikTok</span>
+                    </div>
+                    <div class="demo-outcome gift reveal-left" style="--delay:1.0s">
+                        <span class="outcome-icon">🎁</span>
+                        <span class="outcome-text"><strong>想再玩一把</strong> → $0.5 送 Enhance 给主播, 续命刷分</span>
+                    </div>
                 </div>
-                <a id="demo-open-link" class="demo-open-btn" target="_blank" rel="noopener" hidden>▶ Open game in new tab</a>
             </div>
         </div>
     </div>
