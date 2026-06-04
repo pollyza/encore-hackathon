@@ -1652,25 +1652,25 @@ h2.section-title .red { color: var(--c-red); }
     <div class="slide-content">
         <div class="eyebrow reveal" style="--delay:0.05s">07 · 成本三档</div>
         <h2 class="section-title reveal" style="--delay:0.15s">Phase 2 三档,<span class="accent">全部 ≤ $10 万/月。</span></h2>
-        <p class="lead reveal" style="--delay:0.22s">Phase 1 (M9) 复用平台高光信号 + 手工模板, <strong>~$0 增量</strong>。 Phase 2 (M14+) 接 LLM 时, 按收入流成熟度选下面任一档:</p>
+        <p class="lead reveal" style="--delay:0.22s">大盘 <strong>~4B 高光/月</strong>(每日 900K 主播 × 3h × 50 高光/h)。 Phase 1 (M9) 复用平台信号 + 手工模板 <strong>~$0 增量</strong>。 Phase 2 (M14+) 按收入成熟度选一档:</p>
         <div class="vision-grid">
             <div class="v-step reveal-scale" style="--delay:0.32s">
                 <div class="step-num">A · 最便宜</div>
                 <div class="ico">📦</div>
-                <h3>离线模板工厂<br>~$5-15K / 月</h3>
-                <p>每月 batch 跑 LLM 生成 10K+ 模板入库, runtime <strong>99% 命中</strong>查库, 1% Haiku 兜底。 runtime 零 LLM 延迟。</p>
+                <h3>极致命中模板池<br>~$15-25K / 月</h3>
+                <p>Offline batch 生成 <strong>20 万模板</strong>入库, runtime <strong>99.95% 命中</strong>, 0.05% Haiku 兜底。 runtime 零 LLM 延迟。</p>
             </div>
             <div class="v-step reveal-scale" style="--delay:0.47s">
                 <div class="step-num">B · 中等</div>
                 <div class="ico">⚡</div>
-                <h3>Haiku 实时 + cache<br>~$30-50K / 月</h3>
-                <p>每个高光过 Claude 3 Haiku, system prompt 缓存 90%, 单条 ~$0.0005。 每个高光都有 LLM 看一眼。</p>
+                <h3>池子 + Haiku 兜底<br>~$30-50K / 月</h3>
+                <p>5 万模板池, <strong>99% 命中</strong>, 1% miss → Haiku 实时(prompt cache 90%)。 池小, ramp up 投入少。</p>
             </div>
             <div class="v-step reveal-scale" style="--delay:0.62s">
                 <div class="step-num">C · 较高</div>
                 <div class="ico">🧠</div>
-                <h3>智能分级<br>~$75-95K / 月</h3>
-                <p>Haiku 给高光打分, top 10% (ace / clutch) 路由 Sonnet 出最高质量, 90% 走 Haiku。 平均 ~$0.001 / 高光。</p>
+                <h3>智能分级<br>~$60-95K / 月</h3>
+                <p>10 万模板 + 99% 命中。 Miss 中 10% 顶级(ace/clutch)→ Sonnet, 90% → Haiku。 顶级时刻拿 Sonnet 质量。</p>
             </div>
         </div>
     </div>
