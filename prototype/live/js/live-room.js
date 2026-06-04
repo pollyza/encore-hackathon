@@ -51,6 +51,8 @@
   let seenHighlight = false;
   let chatIntervalId = null;
   let hlTimeoutId = null;
+  let statusLine = null;
+  let costLine = null;
 
   // ── Entry visibility logic ────────────────────────────────────────────
   function applyEntryVisibility() {
@@ -159,6 +161,17 @@
     setTimeout(() => pill.remove(), 1400);
   }
 
+  function setStatus(state, message) {
+    if (!statusLine) return;
+    statusLine.dataset.state = state || 'sampling';
+    statusLine.textContent = message || '';
+  }
+
+  function setCost(value) {
+    if (!costLine) return;
+    costLine.textContent = value || '$0.0000';
+  }
+
   // ── Follow toggle ─────────────────────────────────────────────────────
   function wireFollow() {
     let following = false;
@@ -242,6 +255,9 @@
     wireFollow();
     wireChatInput();
     wireDecorativeIcons();
+    statusLine = cfg.statusLine || null;
+    statusLine = cfg.statusLine || document.getElementById('loading-status');
+    costLine = cfg.costLine || document.getElementById('loading-pct');
 
     // Close button — toast and call it a day
     cfg.closeBtn.addEventListener('click', () => pushAck('See you next LIVE'));
@@ -261,5 +277,5 @@
   function textNode(s) { return document.createTextNode(s); }
 
   // ── Export ────────────────────────────────────────────────────────────
-  window.LiveRoom = { init, pushAck };
+  window.LiveRoom = { init, pushAck, setStatus, setCost };
 })();
