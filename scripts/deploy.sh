@@ -142,7 +142,10 @@ if [[ -f "$REPO_ROOT/prototype/live/streamer.html" ]]; then
             [[ -f "$html" ]] || continue
             sync_file "$html" "$target_dir/live/$(basename "$html")"
         done
-        for src in "$REPO_ROOT/prototype/live/css/"*.css "$REPO_ROOT/prototype/live/js/"*.js; do
+        for src in "$REPO_ROOT/prototype/live/css/"*.css \
+                   "$REPO_ROOT/prototype/live/js/"*.js \
+                   "$REPO_ROOT/prototype/live/assets/icons/"*.png \
+                   "$REPO_ROOT/prototype/live/assets/icons/"*.svg; do
             [[ -f "$src" ]] || continue
             rel="${src#$REPO_ROOT/prototype/live/}"
             dst="$target_dir/live/$rel"
