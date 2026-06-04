@@ -228,43 +228,50 @@ button:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; 
   animation: encorePulse 1.4s ease-in-out infinite;
 }
 
-/* Mini-map (top-left HUD on game stream) */
+/* Mini-map (top-left HUD on game stream)
+   v0.9 TikTok-fidelity: pushed below the LIVE chrome top safe area
+   (status bar + host pill + activity rail end around y=128). This was
+   sitting at top:12px and visually crashed into the iOS status bar.
+   Also reduced 78→60 so it doesn't dominate the stream view. */
 .stream-minimap {
-  position: absolute; top: 12px; left: 10px;
-  width: 78px; height: 78px;
+  position: absolute; top: 140px; left: 10px;
+  width: 60px; height: 60px;
   border-radius: 6px; overflow: hidden;
   background: linear-gradient(135deg, #2c3922, #1f2a16);
   border: 1px solid rgba(255,255,255,.15);
   box-shadow: 0 2px 8px rgba(0,0,0,.3);
+  opacity: 0.85;
 }
+.stream-minimap svg { width: 100%; height: 100%; }
 .stream-minimap .label {
   position: absolute; top: 2px; left: 4px;
   font-size: 7px; color: #fff; font-weight: 600;
   opacity: .8; letter-spacing: .05em;
 }
 
-/* Compass strip */
+/* Compass strip
+   v0.9: hidden by default — a horizontal row of compass numbers across
+   the top conflicted hard with the iOS status bar. The compass is FPS
+   game flavor but the activity rail (Gaming Ranking + gift goal + timer)
+   already does the "this is a game stream" job. If we want it back, it
+   should live INSIDE the canvas drawFpsScene, not as DOM overlay. */
 .stream-compass {
-  position: absolute; top: 22px; left: 50%;
-  transform: translateX(-50%);
-  display: flex; gap: 14px;
-  color: #fff; font-size: 9px; font-weight: 600;
-  text-shadow: 0 1px 2px rgba(0,0,0,.6);
-  opacity: .85;
-  pointer-events: none;
+  display: none;
 }
-.stream-compass span { opacity: .6; }
-.stream-compass span.active { opacity: 1; }
 
-/* Weapon HUD top-right */
+/* Weapon HUD top-right
+   v0.9: was top:100px — sat right under the activity rail and stole
+   visual focus. Pushed to top:220px (below activity-rail + minimap row)
+   and reduced opacity. */
 .stream-weapon {
-  position: absolute; top: 100px; right: 10px;
-  width: 92px; height: 60px;
+  position: absolute; top: 220px; right: 10px;
+  width: 82px; height: 54px;
   background: rgba(0,0,0,.45);
   border-radius: 4px;
   padding: 6px 8px;
   border: 1px solid rgba(255,255,255,.1);
   color: #fff;
+  opacity: 0.8;
 }
 .stream-weapon .ammo { font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .stream-weapon .ammo .of { opacity: .55; font-size: 8px; }
@@ -280,28 +287,36 @@ button:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; 
 
 /* Bottom controls (joystick + fire + hp) */
 .stream-joystick {
-  position: absolute; bottom: 70px; left: 18px;
-  width: 70px; height: 70px;
+  position: absolute; bottom: 95px; left: 14px;
+  width: 60px; height: 60px;
   border-radius: 50%;
-  border: 2px solid rgba(255,255,255,.25);
+  border: 2px solid rgba(255,255,255,.18);
   pointer-events: none;
+  opacity: 0.5;
 }
 .stream-joystick::after {
   content: '';
   position: absolute; left: 50%; top: 50%;
   transform: translate(-50%,-50%);
-  width: 28px; height: 28px;
-  border-radius: 50%; background: rgba(255,255,255,.2);
+  width: 24px; height: 24px;
+  border-radius: 50%; background: rgba(255,255,255,.15);
 }
+/* v0.9 TikTok-fidelity: fire button + joystick are "in-game UI" — they
+   belong to the streamed game, not the LIVE chrome. Real TikTok LIVE
+   would show them inside the video (recorded). We render them as DOM
+   so they're still visible, but reduce opacity so they read as
+   background ambient detail rather than competing with the Share /
+   Gift / Rose action buttons in our actual LIVE chrome. */
 .stream-fire {
-  position: absolute; bottom: 90px; right: 18px;
-  width: 60px; height: 60px;
+  position: absolute; bottom: 95px; right: 14px;
+  width: 50px; height: 50px;
   border-radius: 50%;
-  background: rgba(255,255,255,.18);
-  border: 2px solid rgba(255,255,255,.3);
+  background: rgba(255,255,255,.12);
+  border: 2px solid rgba(255,255,255,.2);
   display: flex; align-items: center; justify-content: center;
-  color: rgba(255,255,255,.7); font-size: 22px;
+  color: rgba(255,255,255,.5); font-size: 18px;
   pointer-events: none;
+  opacity: 0.55;
 }
 .stream-hp {
   position: absolute; bottom: 50px; left: 50%;
@@ -335,12 +350,32 @@ button:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; 
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
+/* v0.9 TikTok-fidelity: host avatar was a dark unreadable gradient with
+   no contents — looked empty in screenshots. Now uses a warm bright
+   gradient + initial letter so it reads as "person photo placeholder"
+   like real TikTok LIVE creator avatars. */
 .host-pill .avatar {
   position: relative;
   width: 32px; height: 32px; border-radius: 50%;
-  background: linear-gradient(135deg, #4a3a30, #2a1c14);
+  background: linear-gradient(135deg, #ff7a59, #c54aa3);
   display: flex; align-items: center; justify-content: center;
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,.3);
+  flex-shrink: 0;
+}
+/* Per-room avatar themes — match the room's game mode so each host's
+   initial letter has a recognizable color (FPS=Vietnamese red, GTA=neon
+   purple, OBBY=Roblox sky blue). */
+#host[data-game-mode="gta"] .host-pill .avatar {
+  background: linear-gradient(135deg, #8c4af0, #4a2a8c);
+}
+#host[data-game-mode="roblox"] .host-pill .avatar {
+  background: linear-gradient(135deg, #5cb3ff, #1a7acc);
+}
+.host-pill .avatar .initial {
+  line-height: 1;
 }
 /* TikTok-fidelity: small red online dot bottom-right of host avatar.
    Real TikTok LIVE shows it on every host avatar — quick fidelity win. */
@@ -352,13 +387,21 @@ button:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; 
   background: var(--accent);
   border: 2px solid #000;
 }
-.host-pill .meta { padding-right: 4px; }
-.host-pill .meta .name { font-size: 12px; font-weight: 700; line-height: 1.1; }
-.host-pill .meta .hearts {
-  font-size: 10px; color: rgba(255,255,255,.75);
-  display: flex; align-items: center; gap: 2px;
+.host-pill .meta { padding-right: 4px; min-width: 0; }
+.host-pill .meta .name {
+  font-size: 13px; font-weight: 700; line-height: 1.15;
+  color: #fff;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 90px;
 }
-.host-pill .meta .hearts .hi { color: var(--accent); }
+/* v0.9 TikTok-fidelity: dropped the ♥ icon prefix — real TikTok shows
+   plain "X likes" text under the username, not heart-prefixed. */
+.host-pill .meta .hearts {
+  font-size: 10px; color: rgba(255,255,255,.7);
+  line-height: 1.2;
+  margin-top: 1px;
+}
+.host-pill .meta .hearts #host-likes { color: rgba(255,255,255,.9); font-weight: 600; }
 .host-pill .follow {
   background: var(--accent);
   color: #fff;

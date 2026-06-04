@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 
-<link rel="stylesheet" href="css/live-shell.css?v=2">
+<link rel="stylesheet" href="css/live-shell.css?v=4">
 <link rel="stylesheet" href="css/ai-panel.css?v=3">
 <link rel="stylesheet" href="css/mini-games.css">
 </head>
@@ -109,10 +109,10 @@
        - viewer-pill shows 3 stacked viewer avatars (was 2) + "±" prefix on count -->
   <div id="top-bar">
     <div class="host-pill">
-      <div class="avatar"><span class="live-dot"></span></div>
+      <div class="avatar"><span class="initial" id="host-initial">T</span><span class="live-dot"></span></div>
       <div class="meta">
-        <div class="name">TK Sói</div>
-        <div class="hearts"><span class="hi">♥</span> 118.1K</div>
+        <div class="name" id="host-name">TK Sói</div>
+        <div class="hearts"><span id="host-likes">118.1K</span> likes</div>
       </div>
       <button id="follow-btn" class="follow">+ Follow</button>
     </div>
@@ -551,15 +551,24 @@
     const hearts  = qp.get('hearts');
     const viewers = qp.get('viewers');
     if (host) {
-      const n = document.querySelector('#top-bar .host-pill .name');
+      // v0.9 TikTok-fidelity: also set the avatar initial letter so each
+      // host pill reads as their own person (TK Sói→T, RoadKing88→R,
+      // PixelMax→P). Color theming for the avatar gradient is delegated
+      // to a data-mode-* attribute below.
+      const n = document.getElementById('host-name');
       if (n) n.textContent = host;
+      const init = document.getElementById('host-initial');
+      if (init) init.textContent = host.trim().charAt(0).toUpperCase() || '?';
     }
     if (hearts) {
-      const el = document.querySelector('#top-bar .host-pill .hearts');
-      if (el) el.innerHTML = `<span class="hi">♥</span> ${hearts}`;
+      // v0.9 format: <number> likes — no heart icon prefix
+      const el = document.getElementById('host-likes');
+      if (el) el.textContent = hearts;
     }
     if (viewers) {
-      const c = document.querySelector('#top-bar .viewer-pill .count');
+      // v0.9: viewer-pill count is "± <span id=viewer-count>N</span>", so
+      // only update the inner span — don't blow away the "±" prefix.
+      const c = document.getElementById('viewer-count');
       if (c) c.textContent = viewers;
     }
     if (qp.get('feed') === '1') {
