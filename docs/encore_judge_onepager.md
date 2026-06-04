@@ -1,7 +1,7 @@
 # Encore · TikTok Gaming Hackathon 2026
 
 > **Encore 把 TikTok 游戏直播里"只能看"的观众变成"也能玩"的玩家 —— 不打扰主播打游戏的前提下, 把每个高光时刻自动变成 30 秒可玩小游戏, 让观众、主播、平台三方都拿到价值: 观众多了参与感和自己的短视频, 主播多了被动产出和打赏入口, 平台多了新 UGC 内容池和 install 漏斗。**
-> TikTok Gaming · 团队成员: Mario / Zihui / Lingyi / Polly · PM: Jason
+> TikTok Gaming · 团队成员: Mario / Zihui / Lingyi / Polly
 
 **Demo**: 🌐 https://encore-deploy.vercel.app · 📱 扫码体验见 landing page · 📦 https://github.com/pollyza/encore-hackathon · 🎥 90 秒演示视频(随交付)
 
