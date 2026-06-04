@@ -473,9 +473,9 @@
   let playbackVideoEl = null;
   let fallbackViewerVideoEl = null;
   const MODE_VIDEO = {
-    fps:    '../../reference/videos/FF hightlight.mp4',
-    gta:    '../../reference/videos/GTA Highlight.mp4',
-    roblox: '../../reference/videos/Roblox hightlight.mp4',
+    fps:    '../../reference/videos/FF.mp4',
+    gta:    '../../reference/videos/GTA.mp4',
+    roblox: '../../reference/videos/roblox.mp4',
   };
   function ensurePlaybackVideo() {
     if (playbackVideoEl) return playbackVideoEl;
