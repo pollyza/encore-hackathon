@@ -1777,40 +1777,67 @@ h2.section-title .red { color: var(--c-red); }
 
 <!-- ============================================
      SLIDE — 成本 + 风险 (criterion 4 — 可落地性)
-     Two-phase cost path:
-     - Phase 1 (M9 launch): reuse the platform's existing 高光识别 +
-       游戏识别 pipelines (free, already amortized) → match to pre-built
-       templates. AI cost per Encore launch ≈ $0.
-     - Phase 2 (M14+): same input signals + Sonnet/Gemini real-time
-       generation to tightly fit each highlight. Higher cost + latency,
-       long-term path.
-     Plus honest risk disclosure. Honest-disclosure is a PM-quality signal.
+     v0.9 cost recalc (2026-06-04, Lark doc CJd8dy2Bvom9RZxa2i1lEd45gSe):
+     - 4B/月 = 平台大盘, NOT Encore's model call volume
+     - 过滤层: 90 万主播 × 50% × 每天 3 次 × 30 天 = ~4050 万月候选
+     - M9: 5-20 templates, ~$0 (no model at runtime)
+     - 基础版: 80% template + 20% real-gen = 810 万真生成/月 → $70-72K
+     - 放量版: 真生成 ~30%, 日预算闸门, ≤$100K/月 capped
      ============================================ -->
 <section class="slide">
     <div class="slide-content">
-        <div class="eyebrow reveal" style="--delay:0.05s">07 · 成本三档</div>
-        <h2 class="section-title reveal" style="--delay:0.15s">Phase 2 三档,<span class="accent">全部 ≤ $10 万/月。</span></h2>
-        <p class="lead reveal" style="--delay:0.22s">大盘 <strong>~4B 高光/月</strong>(每日 900K 主播 × 3h × 50 高光/h)。 Phase 1 (M9) 复用平台信号 + 手工模板 <strong>~$0 增量</strong>。 Phase 2 (M14+) 按收入成熟度选一档:</p>
-        <div class="vision-grid">
-            <div class="v-step reveal-scale" style="--delay:0.32s">
-                <div class="step-num">A · 最便宜</div>
-                <div class="ico">📦</div>
-                <h3>极致命中模板池<br>~$15-25K / 月</h3>
-                <p>Offline batch 生成 <strong>20 万模板</strong>入库, runtime <strong>99.95% 命中</strong>, 0.05% Haiku 兜底。 runtime 零 LLM 延迟。</p>
+        <div class="eyebrow reveal" style="--delay:0.05s">07 · 成本 $100K/月封顶</div>
+        <h2 class="section-title reveal" style="--delay:0.15s">过滤层先压量,<span class="accent">日预算闸门兜底封顶。</span></h2>
+        <p class="lead reveal" style="--delay:0.22s">大盘 <strong>~4B 高光/月</strong> 是平台量,<strong>不是 Encore 模型调用量</strong>。 过滤层先压到月候选池, 第一阶段只走模板, 第二阶段才上模型且按日封顶:</p>
+
+        <!-- Funnel: 4B → 45万/天 → 4050万/月 -->
+        <div class="cost-funnel reveal" style="--delay:0.3s; display:flex; gap:8px; align-items:center; justify-content:center; flex-wrap:wrap; margin: 1.2rem 0 1.6rem; font-family: var(--font-mono); font-size: clamp(0.7rem, 0.9vw, 0.88rem);">
+            <div style="padding:8px 14px; background: rgba(255,255,255,.06); border-radius:8px; border:1px solid rgba(255,255,255,.1);">
+                <div style="opacity:.55; font-size:.85em;">平台大盘</div>
+                <div style="font-weight:800; color:#fff;">~4B 高光/月</div>
             </div>
-            <div class="v-step reveal-scale" style="--delay:0.47s">
-                <div class="step-num">B · 中等</div>
-                <div class="ico">⚡</div>
-                <h3>池子 + Haiku 兜底<br>~$30-50K / 月</h3>
-                <p>5 万模板池, <strong>99% 命中</strong>, 1% miss → Haiku 实时(prompt cache 90%)。 池小, ramp up 投入少。</p>
+            <span style="opacity:.4; font-size:1.4em;">→</span>
+            <div style="padding:8px 14px; background: rgba(255,255,255,.06); border-radius:8px; border:1px solid rgba(255,255,255,.1);">
+                <div style="opacity:.55; font-size:.85em;">90 万主播 × 50%</div>
+                <div style="font-weight:800; color:#fff;">45 万/天</div>
             </div>
-            <div class="v-step reveal-scale" style="--delay:0.62s">
-                <div class="step-num">C · 较高</div>
-                <div class="ico">🧠</div>
-                <h3>智能分级<br>~$60-95K / 月</h3>
-                <p>10 万模板 + 99% 命中。 Miss 中 10% 顶级(ace/clutch)→ Sonnet, 90% → Haiku。 顶级时刻拿 Sonnet 质量。</p>
+            <span style="opacity:.4; font-size:1.4em;">→</span>
+            <div style="padding:8px 14px; background: rgba(255,255,255,.06); border-radius:8px; border:1px solid rgba(255,255,255,.1);">
+                <div style="opacity:.55; font-size:.85em;">每天 ≤ 3 次</div>
+                <div style="font-weight:800; color:#fff;">135 万/天</div>
+            </div>
+            <span style="opacity:.4; font-size:1.4em;">→</span>
+            <div style="padding:8px 14px; background: linear-gradient(135deg, var(--c-teal), color-mix(in srgb, var(--c-teal) 60%, transparent)); border-radius:8px;">
+                <div style="opacity:.85; font-size:.85em; color:#0a0a0a;">月候选池</div>
+                <div style="font-weight:800; color:#0a0a0a;">~4050 万/月</div>
             </div>
         </div>
+
+        <div class="vision-grid">
+            <div class="v-step reveal-scale" style="--delay:0.42s">
+                <div class="step-num">M9 · 第一阶段</div>
+                <div class="ico">📦</div>
+                <h3>5-20 套模板<br>~$0 增量</h3>
+                <p>覆盖 Free Fire / Roblox / GTA / MLBB / PUBG / MC 等主流, 归 3-4 类玩法。 平台高光信号 → 匹配模板。 <strong>运行时不调模型</strong>。</p>
+            </div>
+            <div class="v-step reveal-scale" style="--delay:0.57s">
+                <div class="step-num">基础版 · 第二阶段</div>
+                <div class="ico">⚡</div>
+                <h3>80% 模板 + 20% 真生成<br>$70-72K / 月</h3>
+                <p>810 万次真生成/月, 路由 <strong>80% mini/Haiku + 15% Sonnet + 5% GPT-5.5/Opus</strong>。 模型调用 $55-57K + 模板刷新监控 $15K。</p>
+            </div>
+            <div class="v-step reveal-scale" style="--delay:0.72s">
+                <div class="step-num">放量版 · 第二阶段</div>
+                <div class="ico">🚦</div>
+                <h3>真生成 ~30%<br>≤ $100K / 月 封顶</h3>
+                <p>日预算 $3,333 自动闸门: <strong>&lt;70%</strong> 头部上贵模型 / <strong>70-90%</strong> 普通房降级 / <strong>&gt;90%</strong> 只走模板。 不靠口头承诺, 系统按日封顶。</p>
+            </div>
+        </div>
+
+        <!-- 回本线 footer note -->
+        <p class="lead reveal" style="--delay:0.92s; margin-top: 1rem; font-size: clamp(0.72rem, 0.9vw, 0.85rem); opacity: 0.75;">
+            <strong>回本线</strong>: 一次高光生成 1 份玩法参数, 整房间观众一起玩。 按 $0.5 Enhance, GPT-5.5 ≈ <strong>0.06 笔</strong> 回本, Sonnet ≈ <strong>0.03 笔</strong>, mini/Haiku ≈ <strong>0.01 笔</strong>。 模型只用在值得的房间。
+        </p>
     </div>
 </section>
 

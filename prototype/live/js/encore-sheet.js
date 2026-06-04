@@ -489,6 +489,12 @@
   // instead of running drawMockEncoreScene. Reused across rounds; lazily
   // built the first time a real recording is available.
   let playbackVideoEl = null;
+  let fallbackViewerVideoEl = null;
+  const MODE_VIDEO = {
+    fps:    '../../reference/videos/FF.mp4',
+    gta:    '../../reference/videos/GTA.mp4',
+    roblox: '../../reference/videos/roblox.mp4',
+  };
   function ensurePlaybackVideo() {
     if (playbackVideoEl) return playbackVideoEl;
     const v = document.createElement('video');
@@ -501,6 +507,34 @@
     document.body.appendChild(v);
     playbackVideoEl = v;
     return v;
+  }
+  function ensureFallbackViewerVideo() {
+    if (fallbackViewerVideoEl) return fallbackViewerVideoEl;
+    const v = document.createElement('video');
+    v.muted = true;
+    v.loop  = true;
+    v.playsInline = true;
+    v.autoplay = true;
+    v.preload = 'auto';
+    v.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;pointer-events:none;';
+    v.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(v);
+    fallbackViewerVideoEl = v;
+    return v;
+  }
+  function getViewerVideoEl() {
+    if (playbackVideoEl && playbackVideoEl.readyState >= 2) return playbackVideoEl;
+    const liveVideo = document.getElementById('live-video');
+    if (liveVideo && liveVideo.readyState >= 2) return liveVideo;
+    const mode = window.LiveMode || 'fps';
+    const url = MODE_VIDEO[mode] || MODE_VIDEO.fps;
+    const v = ensureFallbackViewerVideo();
+    if (v.src !== url) {
+      v.src = url;
+      v.load();
+      v.play().catch(() => {});
+    }
+    return v.readyState >= 2 ? v : null;
   }
 
   function startClipCanvasAnimation() {
@@ -553,9 +587,19 @@
     clipCanvasStart = performance.now();
     const draw = () => {
       const t = performance.now() - clipCanvasStart;
+      const viewerVideo = getViewerVideoEl();
       if (usingPlayback && playbackVideoEl && playbackVideoEl.readyState >= 2) {
-        // drawImage scaled to cover the viewer canvas (CSS object-fit:cover).
-        const v = playbackVideoEl, dw = cv.width, dh = cv.height;
+        const v = playbackVideoEl;
+        const dw = cv.width, dh = cv.height;
+        const sw = v.videoWidth || 1, sh = v.videoHeight || 1;
+        const dr = dw / dh, sr = sw / sh;
+        let sx = 0, sy = 0, cropW = sw, cropH = sh;
+        if (sr > dr) { cropW = sh * dr; sx = (sw - cropW) / 2; }
+        else         { cropH = sw / dr; sy = (sh - cropH) / 2; }
+        ctx.drawImage(v, sx, sy, cropW, cropH, 0, 0, dw, dh);
+      } else if (viewerVideo && viewerVideo.readyState >= 2) {
+        const v = viewerVideo;
+        const dw = cv.width, dh = cv.height;
         const sw = v.videoWidth || 1, sh = v.videoHeight || 1;
         const dr = dw / dh, sr = sw / sh;
         let sx = 0, sy = 0, cropW = sw, cropH = sh;
@@ -592,18 +636,21 @@
     if (!ctx) { setTimeout(startClipHostCanvasAnimation, 33); return; }   // ctx loss — retry, don't throw
     const mode = (window.LiveMode || 'fps');
     const sceneFn = (window.LiveScenes && window.LiveScenes[mode]) || null;
-    const liveVid = window.LiveStreamVideo || null;
+    const liveVideo = document.getElementById('live-video');
     clipHostCanvasStart = performance.now();
     const draw = () => {
       const t = performance.now() - clipHostCanvasStart;
-      const v = liveVid;
-      if (v && v.classList && v.classList.contains('on') && v.readyState >= 2 && v.videoWidth) {
-        // real game footage as the top half — same stream the audience watched
-        const dw = cv.width, dh = cv.height, sw = v.videoWidth, sh = v.videoHeight;
-        const sc = Math.max(dw / sw, dh / sh), cw = dw / sc, ch = dh / sc;
-        ctx.drawImage(v, (sw - cw) / 2, (sh - ch) / 2, cw, ch, 0, 0, dw, dh);
+      if (liveVideo && liveVideo.readyState >= 2) {
+        const v = liveVideo;
+        const dw = cv.width, dh = cv.height;
+        const sw = v.videoWidth || 1, sh = v.videoHeight || 1;
+        const dr = dw / dh, sr = sw / sh;
+        let sx = 0, sy = 0, cropW = sw, cropH = sh;
+        if (sr > dr) { cropW = sh * dr; sx = (sw - cropW) / 2; }
+        else         { cropH = sw / dr; sy = (sh - cropH) / 2; }
+        ctx.drawImage(v, sx, sy, cropW, cropH, 0, 0, dw, dh);
       } else if (sceneFn) {
-        sceneFn(ctx, cv.width, cv.height, t);   // procedural fallback (no clip yet)
+        sceneFn(ctx, cv.width, cv.height, t);
       }
     };
     // setInterval — keep drawing through backgrounded tabs so the recorder

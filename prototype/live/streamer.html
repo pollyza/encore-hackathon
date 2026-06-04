@@ -46,22 +46,22 @@
 
   <!-- ── Stream background ───────────────────────────────────────────────
        3 game modes, randomly picked on load via data-game-mode:
-       · fps    → Free Fire stream  (→ br template)
-       · gta    → GTA V stream      (→ gta template)
-       · roblox → Roblox obby stream(→ roblox template)
-       Picked mode drives Encore template selection so highlight → mini-game is
-       genre-consistent.
-       LAYERS (Task 1): real footage video (assets/streams/<mode>.mp4) over a
-       procedural Canvas2D scene. The video plays muted+looped and covers the
-       canvas; if the clip is missing or autoplay is blocked, the canvas stays
-       visible — the background is NEVER blank. Drop clips per
-       assets/streams/README.md. (Old 423MB gitignored clips are gone; these are
-       small, committed, mirrored by deploy.sh.)
+       · fps    → Canvas2D wasteland scene + FPS HUD
+       · gta    → Canvas2D top-down city scene + driving HUD
+       · roblox → Canvas2D side-view platforms + parkour HUD
+       Picked mode also drives Encore template selection (br/gta/roblox)
+       so the highlight → mini-game flow is genre-consistent.
+       NOTE: real game footage is now used for mode-specific preview when
+       the local sample asset exists. Canvas remains available as a fallback
+       for modes where a video asset isn't found or if the fetch fails.
        ──────────────────────────────────────────────────────────────────── -->
   <div id="stream-bg">
-    <!-- Real game-stream footage (covers the canvas when it plays). -->
-    <video id="live-video" muted playsinline loop preload="auto"></video>
-    <!-- Procedural Canvas2D scene — the always-drawing fallback under the video. -->
+    <!-- Video tag for mode-specific live preview. If the local MP4 exists,
+         it is shown; otherwise the procedural Canvas fallback is used. -->
+    <video id="live-video" muted playsinline loop preload="none"
+           style="display:none;"></video>
+    <!-- Canvas2D procedural scene for all 3 modes (D's #23 — supersedes the
+         404'ing gitignored LIVE clip; this is the proper fix for that issue). -->
     <canvas id="live-canvas" style="display:none;"></canvas>
     <div class="atmosphere"></div>
 
@@ -496,7 +496,7 @@
      Note: mini-games.js (Aim/Rhythm/Dodge demos) is retained on disk but
      no longer loaded — the game phase now renders Mario's iframe templates
      (GTA/Roblox/Free Fire BR) via the V2G postMessage protocol. -->
-<script src="js/observer-client.js?v=8"></script>
+<script src="js/observer-client.js?v=9"></script>
 <script src="js/player-recorder.js?v=3"></script>
 <script src="js/clip-composer.js?v=1"></script>
 <script src="js/encore-sheet.js?v=17"></script>
@@ -528,7 +528,7 @@
 
   // ── LIVE game-mode selection ────────────────────────────────────────
   // 3 modes, picked once on load (fps/gta/roblox). Drives:
-  //  · which background renders (video for fps, Canvas for gta/roblox)
+  //  · which background renders (mode-specific sample video when available)
   //  · which HUD blocks show (data-show-in attribute)
   //  · which Encore template launches when highlight triggers (genre match)
   const GAME_MODES = ['fps', 'gta', 'roblox'];
@@ -592,8 +592,43 @@
   // real footage (below) layers on top when available.
   const liveCanvas = document.getElementById('live-canvas');
   let liveCanvasRAF = null;
-  liveCanvas.style.display = '';
-  startLiveCanvasScene(currentMode);
+  const MODE_VIDEO = {
+    br: '../../reference/videos/FF.mp4',
+    gta: '../../reference/videos/GTA.mp4',
+    roblox: '../../reference/videos/roblox.mp4',
+  };
+  const vidKey = (currentMode === 'fps') ? 'br' : currentMode;
+  const modeVid = MODE_VIDEO[vidKey];
+
+  function showCanvas() {
+    dom.video.style.display = 'none';
+    liveCanvas.style.display = '';
+    if (!liveCanvasRAF) startLiveCanvasScene(currentMode);
+  }
+
+  function showVideo(url) {
+    if (liveCanvasRAF) { cancelAnimationFrame(liveCanvasRAF); liveCanvasRAF = null; }
+    liveCanvas.style.display = 'none';
+    dom.video.style.display = '';
+    dom.video.setAttribute('src', url);
+    dom.video.load();
+    dom.video.play().catch(() => {});
+  }
+
+  if (modeVid) {
+    fetch(modeVid, { method: 'HEAD' }).then(res => {
+      if (res.ok) {
+        if (liveCanvasRAF) { cancelAnimationFrame(liveCanvasRAF); liveCanvasRAF = null; }
+        showVideo(modeVid);
+      } else {
+        showCanvas();
+      }
+    }).catch(() => {
+      showCanvas();
+    });
+  } else {
+    showCanvas();
+  }
 
   // Show only the HUD blocks matching this mode (relevant only on the canvas
   // fallback; hidden below once real footage plays).
@@ -602,36 +637,8 @@
     el.style.display = modes.includes(currentMode) ? '' : 'none';
   });
 
-  // ── Real game-stream footage (Task 1 — infrastructure, OFF by default) ──────
-  // Wiring is complete + verified: when enabled, the <video> plays
-  // assets/streams/<mode>.mp4 over the procedural canvas, hides the synthetic HUD,
-  // and falls back to the canvas if a clip is missing/blocked (never blank).
-  // window.LiveStreamVideo lets the split-screen result reuse the footage (Task 2).
-  // DISABLED for now: the real clips couldn't be fetched (YouTube auth), and the
-  // demo shows the polished canvas. To turn on later: drop clips per
-  // assets/streams/README.md and flip LIVE_CLIPS_ENABLED = true. Kept off so the
-  // demo makes no 404 request for a clip that isn't there.
-  const LIVE_CLIPS_ENABLED = false;
-  const liveVideo = dom.video;
-  let liveVideoOn = false;
-  window.LiveStreamVideo = liveVideo;
-  if (LIVE_CLIPS_ENABLED) {
-    liveVideo.muted = true; liveVideo.loop = true; liveVideo.preload = 'auto';
-    liveVideo.setAttribute('playsinline', ''); liveVideo.setAttribute('webkit-playsinline', '');
-    liveVideo.style.display = '';
-    liveVideo.src = 'assets/streams/' + currentMode + '.mp4';
-    const tryPlayLive = () => { try { const p = liveVideo.play(); if (p && p.catch) p.catch(() => {}); } catch (_) {} };
-    liveVideo.addEventListener('playing', () => {
-      if (liveVideoOn) return;
-      liveVideoOn = true;
-      liveVideo.classList.add('on');
-      document.querySelectorAll('#stream-bg [data-show-in]').forEach(el => { el.style.display = 'none'; });
-      setTimeout(() => { if (liveVideoOn) liveCanvas.style.opacity = '0'; }, 220);
-    });
-    liveVideo.addEventListener('error', () => { liveVideo.classList.remove('on'); });  // missing clip → silent canvas fallback
-    tryPlayLive();
-    if (dom.shim) dom.shim.addEventListener('pointerdown', tryPlayLive, { once: true });  // first tap unblocks mobile autoplay
-  }
+  // (Real game-stream footage for the LIVE background is handled by the
+  // MODE_VIDEO / showVideo() block above — zihui's #37, GitHub-hosted clips.)
 
   // Vision detection cache — observer-client populates this when a real
   // V2G highlight is detected. encore-sheet calls pickConfig() to decide

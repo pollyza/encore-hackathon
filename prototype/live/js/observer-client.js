@@ -23,12 +23,30 @@
   const FRAME_MAX_WIDTH       = 480;
 
   let timer = null;
+  let retryTimer = null;
   let inflight = false;
   let totalCost = 0;
   let sampleCount = 0;
   let detectCount = 0;
   let paused = false;
   let cfg = null;
+  let observerAvailable = true;
+  const OFFLINE_RETRY_MS      = 15000;
+
+  function scheduleSample(delay) {
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+    timer = setTimeout(sample, delay);
+  }
+
+  function clearScheduledSample() {
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+  }
 
   function grabFrame(video) {
     if (!video.videoWidth) return null;
@@ -45,10 +63,11 @@
   }
 
   async function sample() {
-    if (paused || inflight) return;
+    if (paused || inflight || !observerAvailable) return;
     const dataUrl = grabFrame(cfg.video);
     if (!dataUrl) {
       cfg.onStatus('idle', 'no video frame available yet…');
+      scheduleSample(SAMPLE_INTERVAL_MS);
       return;
     }
     sampleCount++;
@@ -64,8 +83,10 @@
       const data = await resp.json();
       if (!resp.ok) {
         cfg.onStatus('idle', 'vision error: ' + (data.detail || resp.status));
+        scheduleSample(SAMPLE_INTERVAL_MS);
         return;
       }
+      observerAvailable = true;
       if (data._meta) {
         const m = data._meta;
         const cost = (m.tokens_in * 3 + m.tokens_out * 15) / 1_000_000;
@@ -82,8 +103,19 @@
         const note = sc.description ? ` — ${sc.description}` : '';
         cfg.onStatus('sampling', `· no highlight @ ${t.toFixed(1)}s (conf ${Math.round((data.confidence||0)*100)}%)${note}`);
       }
+      scheduleSample(SAMPLE_INTERVAL_MS);
     } catch (e) {
+      observerAvailable = false;
       cfg.onStatus('idle', 'observer offline: ' + e.message + ' (start observer.py?)');
+      clearScheduledSample();
+      if (retryTimer) {
+        clearTimeout(retryTimer);
+      }
+      retryTimer = setTimeout(() => {
+        observerAvailable = true;
+        retryTimer = null;
+        sample();
+      }, OFFLINE_RETRY_MS);
     } finally {
       inflight = false;
     }
@@ -93,10 +125,14 @@
     start(config) {
       cfg = config;
       paused = false;
+      observerAvailable = true;
       cfg.onStatus('sampling', `👁 sampling every ${SAMPLE_INTERVAL_MS/1000}s`);
-      if (timer) clearInterval(timer);
-      timer = setInterval(sample, SAMPLE_INTERVAL_MS);
-      setTimeout(sample, 2000);
+      clearScheduledSample();
+      if (retryTimer) {
+        clearTimeout(retryTimer);
+        retryTimer = null;
+      }
+      scheduleSample(2000);
     },
     pause() { paused = true; },
     resume() {

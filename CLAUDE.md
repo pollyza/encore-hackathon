@@ -49,7 +49,7 @@
 
 | 文档 | URL |
 |---|---|
-| Product Brief v0.1 (含 §11 用户体验旅程 + §11.7 状态机画板) | https://bytedance.larkoffice.com/docx/Gu2ed1ZOqobDF9xqY7VmjLYMyQe |
+| Product Brief v0.1 (含 §11 用户体验旅程 + §11.7 状态机画板) | https://bytedance.my.larkoffice.com/docx/VdRFd5MkBopEjyxAJ70mqmvJyfc |
 | Demo Dev Plan v0.2 (双形态编排, 7 天 sprint) | https://bytedance.larkoffice.com/docx/LfbydvhwCopawvx6UthmmOcoyNf |
 
 **本地代码是设计的"试探与原型", 飞书文档是设计的"主线真理"。** 修改设计时优先改飞书, 不是改本地。
