@@ -500,16 +500,35 @@
 
     // If we recorded real player gameplay, prefer that as the viewer-half
     // source. Otherwise fall back to the mock scene.
-    const playerUrl = window.PlayerRecorder && window.PlayerRecorder.getLastUrl();
+    //
+    // NOTE the race: encore_done arrives → PlayerRecorder.stop() called →
+    // recorder.onstop fires LATER (event-queue). Meanwhile showResult is
+    // synchronous and lands us here before the blob URL exists. Solution:
+    //   1) check getLastUrl() — usually null on first call
+    //   2) if PlayerRecorder is mid-finalize (waitForReady() returns a
+    //      Promise), await it and swap mock → playback when ready
+    //   3) if no recording in flight, stick with mock for the whole clip
     let usingPlayback = false;
-    if (playerUrl) {
+    function switchToPlayback(url) {
+      if (!url) return;
       const v = ensurePlaybackVideo();
-      if (v.src !== playerUrl) {
-        v.src = playerUrl;
+      if (v.src !== url) {
+        v.src = url;
         v.load();
       }
-      v.play().catch(() => { /* user gesture needed — won't affect drawImage */ });
+      v.play().catch(() => { /* user gesture needed — drawImage still works */ });
       usingPlayback = true;
+    }
+    const initialUrl = window.PlayerRecorder && window.PlayerRecorder.getLastUrl();
+    if (initialUrl) {
+      switchToPlayback(initialUrl);
+    } else if (window.PlayerRecorder && window.PlayerRecorder.waitForReady) {
+      const pending = window.PlayerRecorder.waitForReady();
+      if (pending && typeof pending.then === 'function') {
+        pending.then(out => {
+          if (out && out.url) switchToPlayback(out.url);
+        }).catch(() => { /* recording errored — keep mock */ });
+      }
     }
 
     clipCanvasStart = performance.now();
