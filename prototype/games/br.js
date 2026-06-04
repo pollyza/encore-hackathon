@@ -66,6 +66,7 @@
   function $modeBadge() { return document.getElementById('mode-badge'); }
   function $scoreEl()   { return document.getElementById('score'); }
   function $Iso()       { return window.Iso; }
+  function $Assets()    { return window.Assets || null; }
   function $keys()      { return window.keys || {}; }
   // ── Kenney CC0 audio (Free Fire BR) — sci-fi/digital samples (CC0; see
   //    assets/kenney/CREDITS.md) mapped to the game's sfx names. Overriding $SFX()
@@ -88,6 +89,30 @@
   function $aimAngle()  { return window.aimAngle ? window.aimAngle() : null; }
   function $mouseWorld(){ return window.mouseWorld || null; }
   function $skillHeld() { return window.skillHeld || {}; }
+
+  function drawBrAtlasSprite(c, name, sx, sy, flipX, fallback) {
+    const A = $Assets();
+    const f = A && A.ready && A.manifest && A.manifest[name];
+    if (!f) { if (fallback) fallback(); return false; }
+    if (flipX) {
+      c.save();
+      c.translate(Math.round(sx), 0);
+      c.scale(-1, 1);
+      c.drawImage(A.img, f.x, f.y, f.w, f.h, Math.round(-f.ax), Math.round(sy - f.ay), f.w, f.h);
+      c.restore();
+    } else {
+      c.drawImage(A.img, f.x, f.y, f.w, f.h, Math.round(sx - f.ax), Math.round(sy - f.ay), f.w, f.h);
+    }
+    return true;
+  }
+
+  function brFacingSprite(baseSlot, aimAng) {
+    const ang = aimAng == null ? Math.PI / 2 : aimAng;
+    return {
+      slot: baseSlot + (Math.sin(ang) < -0.18 ? '.back' : '.front'),
+      flipX: Math.cos(ang) > 0,
+    };
+  }
   function $particles() { return window.spawnParticles; }
   function $flashFCT()  { return window.flashFCT; }
   function $showBanner(){ return window.showBanner; }
@@ -2372,7 +2397,12 @@
     }
     // I-frame highlight ring during the dodge (clear "I'm invincible right now")
     const body = p.iframeT > 0 ? '#cfe8ff' : (p.flashT > 0 ? '#ffffff' : theme.playerBody);
-    drawVoxelMan(c, sx, sy, body, theme.playerHead, p.facing, p.iframeT > 0 ? '#cfe8ff' : theme.playerHelmet);
+    const face = brFacingSprite('hero.br', p.aimAng);
+    drawBrAtlasSprite(c, face.slot, sx, sy, face.flipX, () => {
+      drawBrAtlasSprite(c, 'hero.br', sx, sy, face.flipX, () => {
+        drawVoxelMan(c, sx, sy, body, theme.playerHead, p.facing, p.iframeT > 0 ? '#cfe8ff' : theme.playerHelmet);
+      });
+    });
     if (p.frozenT > 0) drawPhone(c, sx, sy);
 
     // Weapon overlay (gun barrel or knife blade) toward aim direction
@@ -2508,7 +2538,13 @@
     if (lift) { c.save(); c.translate(0, -lift); }
     const shrunk = b.shrinkT > 0;
     if (shrunk) { c.save(); c.translate(sx, sy); c.scale(0.32, 0.32); c.translate(-sx, -sy); }   // 缩成小不点(0.32 更夸张)
-    drawVoxelMan(c, sx, sy, bodyCol, '#ffa080', 0, (theme.botHelmet && theme.botHelmet[b.id % 3]) || '#7a2a1a');
+    const botSlot = 'bot.br.' + (b.squadId == null ? (b.id % 3) : b.squadId);
+    const face = brFacingSprite(botSlot, b.aimAng);
+    drawBrAtlasSprite(c, face.slot, sx, sy, face.flipX, () => {
+      drawBrAtlasSprite(c, botSlot, sx, sy, face.flipX, () => {
+        drawVoxelMan(c, sx, sy, bodyCol, '#ffa080', 0, (theme.botHelmet && theme.botHelmet[b.id % 3]) || '#7a2a1a');
+      });
+    });
     if (shrunk) c.restore();
     if (b.iceT > 0) drawIce(c, sx, sy);          // 冻成冰块
     if (b.frozenT > 0) drawPhone(c, sx, sy);
@@ -3226,6 +3262,11 @@
   // black/yellow hazard stripes + corner ribs + pulsing red beacon + SUPPLY mark.
   function drawSupplyCrate(c, sx, cy, loot, pulse) {
     const Iso = $Iso(), TW = Iso.TW, TH = Iso.TH;
+    const A = $Assets();
+    if (A && A.drawSprite) {
+      A.drawSprite('crate.legendary', sx, cy + 2 * TH, null);
+      if (A.ready && A.manifest && A.manifest['crate.legendary']) return;
+    }
     drawBlock(c, sx, cy, 16, '#5b6650');                                 // olive metal body
     c.fillStyle = loot;                                                  // top panel = loot hint
     c.beginPath(); c.moveTo(sx, cy); c.lineTo(sx + TW - 3, cy + TH - 2); c.lineTo(sx, cy + 2 * TH - 4); c.lineTo(sx - TW + 3, cy + TH - 2); c.closePath(); c.fill();
