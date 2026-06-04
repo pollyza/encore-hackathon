@@ -12,6 +12,19 @@
 <link rel="stylesheet" href="css/live-shell.css">
 <link rel="stylesheet" href="css/ai-panel.css?v=3">
 <link rel="stylesheet" href="css/mini-games.css">
+
+<!-- Warm the mini-game cache before the user taps Play. The game loads lazily
+     in an iframe (encore_prototype.html + ~450KB of game modules); on a cold
+     cache that download is the dominant cause of the "black screen on load".
+     Prefetching here means the bytes are usually warm by tap time.
+     NOTE: keep the ?v= queries in sync with encore-sheet.js IFRAME_URL and the
+     <script src> tags in encore_prototype.html, or the prefetch just misses
+     (harmless, never wrong). -->
+<link rel="prefetch" as="document" href="../encore_prototype.html?embedded=1&v=v2g-ready-r4">
+<link rel="prefetch" as="script" href="../games/juice.js?v=r12a">
+<link rel="prefetch" as="script" href="../games/roblox.js?v=r23">
+<link rel="prefetch" as="script" href="../games/gta.js?v=r21">
+<link rel="prefetch" as="script" href="../games/br.js?v=r21">
 </head>
 <body>
 
@@ -33,23 +46,22 @@
 
   <!-- ── Stream background ───────────────────────────────────────────────
        3 game modes, randomly picked on load via data-game-mode:
-       · fps    → Canvas2D wasteland scene + FPS HUD
-       · gta    → Canvas2D top-down city scene + driving HUD
-       · roblox → Canvas2D side-view platforms + parkour HUD
-       Picked mode also drives Encore template selection (br/gta/roblox)
-       so the highlight → mini-game flow is genre-consistent.
-       NOTE: real game footage was tried first but reference/videos/*.mp4
-       is gitignored (423MB) and not mirrored to /tmp/encore-preview, so
-       both local preview and Vercel deploy 404'd. Canvas-only is the
-       hackathon-pragmatic choice; swap in real footage post-M9.
+       · fps    → Free Fire stream  (→ br template)
+       · gta    → GTA V stream      (→ gta template)
+       · roblox → Roblox obby stream(→ roblox template)
+       Picked mode drives Encore template selection so highlight → mini-game is
+       genre-consistent.
+       LAYERS (Task 1): real footage video (assets/streams/<mode>.mp4) over a
+       procedural Canvas2D scene. The video plays muted+looped and covers the
+       canvas; if the clip is missing or autoplay is blocked, the canvas stays
+       visible — the background is NEVER blank. Drop clips per
+       assets/streams/README.md. (Old 423MB gitignored clips are gone; these are
+       small, committed, mirrored by deploy.sh.)
        ──────────────────────────────────────────────────────────────────── -->
   <div id="stream-bg">
-    <!-- Inert video tag — kept so live-room.js's cfg.video.play() doesn't
-         null-deref; never displayed. All 3 modes render via canvas below. -->
-    <video id="live-video" muted playsinline loop preload="none"
-           style="display:none;"></video>
-    <!-- Canvas2D procedural scene for all 3 modes (D's #23 — supersedes the
-         404'ing gitignored LIVE clip; this is the proper fix for that issue). -->
+    <!-- Real game-stream footage (covers the canvas when it plays). -->
+    <video id="live-video" muted playsinline loop preload="auto"></video>
+    <!-- Procedural Canvas2D scene — the always-drawing fallback under the video. -->
     <canvas id="live-canvas" style="display:none;"></canvas>
     <div class="atmosphere"></div>
 
@@ -491,20 +503,51 @@
   // Set data attribute for CSS hooks (HUD blocks visibility, etc.)
   document.getElementById('host').dataset.gameMode = currentMode;
 
-  // All 3 modes render via Canvas2D (see note above the <video> tag for why
-  // we dropped real footage). liveCanvasRAF is declared before any call to
-  // startLiveCanvasScene to avoid a TDZ ReferenceError on first paint.
+  // liveCanvasRAF is declared before any call to startLiveCanvasScene to avoid a
+  // TDZ ReferenceError on first paint. The canvas is the always-drawing fallback;
+  // real footage (below) layers on top when available.
   const liveCanvas = document.getElementById('live-canvas');
   let liveCanvasRAF = null;
-  dom.video.style.display = 'none';
   liveCanvas.style.display = '';
   startLiveCanvasScene(currentMode);
 
-  // Show only HUD blocks matching this mode (via data-show-in attribute)
+  // Show only the HUD blocks matching this mode (relevant only on the canvas
+  // fallback; hidden below once real footage plays).
   document.querySelectorAll('#stream-bg [data-show-in]').forEach(el => {
     const modes = el.dataset.showIn.split(/\s+/);
     el.style.display = modes.includes(currentMode) ? '' : 'none';
   });
+
+  // ── Real game-stream footage (Task 1 — infrastructure, OFF by default) ──────
+  // Wiring is complete + verified: when enabled, the <video> plays
+  // assets/streams/<mode>.mp4 over the procedural canvas, hides the synthetic HUD,
+  // and falls back to the canvas if a clip is missing/blocked (never blank).
+  // window.LiveStreamVideo lets the split-screen result reuse the footage (Task 2).
+  // DISABLED for now: the real clips couldn't be fetched (YouTube auth), and the
+  // demo shows the polished canvas. To turn on later: drop clips per
+  // assets/streams/README.md and flip LIVE_CLIPS_ENABLED = true. Kept off so the
+  // demo makes no 404 request for a clip that isn't there.
+  const LIVE_CLIPS_ENABLED = false;
+  const liveVideo = dom.video;
+  let liveVideoOn = false;
+  window.LiveStreamVideo = liveVideo;
+  if (LIVE_CLIPS_ENABLED) {
+    liveVideo.muted = true; liveVideo.loop = true; liveVideo.preload = 'auto';
+    liveVideo.setAttribute('playsinline', ''); liveVideo.setAttribute('webkit-playsinline', '');
+    liveVideo.style.display = '';
+    liveVideo.src = 'assets/streams/' + currentMode + '.mp4';
+    const tryPlayLive = () => { try { const p = liveVideo.play(); if (p && p.catch) p.catch(() => {}); } catch (_) {} };
+    liveVideo.addEventListener('playing', () => {
+      if (liveVideoOn) return;
+      liveVideoOn = true;
+      liveVideo.classList.add('on');
+      document.querySelectorAll('#stream-bg [data-show-in]').forEach(el => { el.style.display = 'none'; });
+      setTimeout(() => { if (liveVideoOn) liveCanvas.style.opacity = '0'; }, 220);
+    });
+    liveVideo.addEventListener('error', () => { liveVideo.classList.remove('on'); });  // missing clip → silent canvas fallback
+    tryPlayLive();
+    if (dom.shim) dom.shim.addEventListener('pointerdown', tryPlayLive, { once: true });  // first tap unblocks mobile autoplay
+  }
 
   // Vision detection cache — observer-client populates this when a real
   // V2G highlight is detected. encore-sheet calls pickConfig() to decide
@@ -579,6 +622,7 @@
     };
     if (!fit()) { requestAnimationFrame(() => startLiveCanvasScene(mode)); return; }
     const ctx = cv.getContext('2d');
+    if (!ctx) { requestAnimationFrame(() => startLiveCanvasScene(mode)); return; }  // ctx loss — retry rather than throw + kill the loop
     const start = performance.now();
     const draw = (now) => {
       const t = now - start;

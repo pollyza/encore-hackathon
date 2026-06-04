@@ -92,7 +92,7 @@
 
   // IFRAME URL — relative to /live/streamer.html, hits /prototype/encore_prototype.html
   // (which the deploy mirror flattens to /encore_prototype.html). Both work.
-  const IFRAME_URL = '../encore_prototype.html?embedded=1&v=v2g-ready-r3';
+  const IFRAME_URL = '../encore_prototype.html?embedded=1&v=v2g-ready-r4';
 
   // Random V2GResponse — used when no real Vision detection is available.
   // Each open() pulls a fresh config so demo rounds feel varied.
@@ -161,6 +161,8 @@
   let iframe = null;              // active game iframe
   let pendingLaunch = null;       // config waiting for encore_ready
   let messageHandler = null;
+  let blindLaunchTimer = null;    // 2.5s defensive launch timer (cancelled on teardown)
+  let recorderStarted = false;    // gameplay recorder starts once per iframe (on encore_started)
 
   // ── DOM refs (resolved in init) ───────────────────────────────────────
   let dom = {};
@@ -320,11 +322,14 @@
 
     // Queue the launch — will fire when iframe sends encore_ready
     pendingLaunch = currentConfig;
+    recorderStarted = false;
 
-    // Defensive fallback: if encore_ready never arrives within 2.5s,
-    // try to send launch anyway (iframe may have loaded but missed
-    // the postMessage path — happens in some Safari builds).
-    setTimeout(() => {
+    // Defensive fallback: if encore_ready never arrives within 2.5s, send launch
+    // anyway. Tracked so destroyIframe() can cancel it — a stale fire must not
+    // hit the NEXT iframe on the gift re-launch path.
+    if (blindLaunchTimer) clearTimeout(blindLaunchTimer);
+    blindLaunchTimer = setTimeout(() => {
+      blindLaunchTimer = null;
       if (pendingLaunch && iframe && iframe.contentWindow) {
         try {
           iframe.contentWindow.postMessage({ type: 'launch', config: pendingLaunch }, '*');
@@ -332,6 +337,20 @@
         } catch (_) {}
       }
     }, 2500);
+  }
+
+  // Start the gameplay recorder exactly once per iframe. Gated on encore_started
+  // (the iframe's first real game frame) so the recording is real gameplay, never
+  // the loading frame → no more black bottom-half clips.
+  function startRecorderOnce() {
+    if (recorderStarted || !window.PlayerRecorder || !iframe) return;
+    recorderStarted = true;
+    window.PlayerRecorder.findCanvasInIframe(iframe, {
+      onFound: (canvas) => { window.PlayerRecorder.start(canvas); },
+      onTimeout: () => {
+        console.warn('[encore-sheet] game canvas not found within timeout — winner clip will use viewer-half mock');
+      },
+    });
   }
 
   function handleIframeMessage(e) {
@@ -345,17 +364,14 @@
         } catch (_) {}
         pendingLaunch = null;
       }
-      // Start capturing the game canvas so we can use the recording as
-      // the bottom half of the winner clip. Canvas may take a beat to
-      // appear after launch — PlayerRecorder polls for it.
-      if (window.PlayerRecorder && iframe) {
-        window.PlayerRecorder.findCanvasInIframe(iframe, {
-          onFound: (canvas) => { window.PlayerRecorder.start(canvas); },
-          onTimeout: () => {
-            console.warn('[encore-sheet] game canvas not found within timeout — winner clip will use viewer-half mock');
-          },
-        });
-      }
+      if (blindLaunchTimer) { clearTimeout(blindLaunchTimer); blindLaunchTimer = null; }
+      // Defensive: if the iframe is an old build that never posts encore_started,
+      // still start the recorder ~1.6s later (the game has launched by then).
+      setTimeout(startRecorderOnce, 1600);
+    } else if (data.type === 'encore_started') {
+      // First real game frame painted — record now (not while it was still the
+      // loading frame). Primary, immediate path.
+      startRecorderOnce();
     } else if (data.type === 'encore_done') {
       // Stop the gameplay recording — the finalized blob URL becomes
       // available via PlayerRecorder.getLastUrl() shortly after.
@@ -370,6 +386,7 @@
   }
 
   function destroyIframe() {
+    if (blindLaunchTimer) { clearTimeout(blindLaunchTimer); blindLaunchTimer = null; }
     if (iframe) {
       // Setting src to about:blank releases any audio/timers running inside
       try { iframe.src = 'about:blank'; } catch (_) {}
@@ -377,6 +394,7 @@
       iframe = null;
     }
     pendingLaunch = null;
+    recorderStarted = false;
   }
 
   // ── RESULT phase ──────────────────────────────────────────────────────
@@ -497,6 +515,7 @@
       return;
     }
     const ctx = cv.getContext('2d');
+    if (!ctx) { setTimeout(startClipCanvasAnimation, 33); return; }   // ctx loss — retry, don't throw
 
     // If we recorded real player gameplay, prefer that as the viewer-half
     // source. Otherwise fall back to the mock scene.
@@ -551,13 +570,22 @@
       return;
     }
     const ctx = cv.getContext('2d');
+    if (!ctx) { setTimeout(startClipHostCanvasAnimation, 33); return; }   // ctx loss — retry, don't throw
     const mode = (window.LiveMode || 'fps');
     const sceneFn = (window.LiveScenes && window.LiveScenes[mode]) || null;
-    if (!sceneFn) return;     // streamer.html scenes not loaded — degrade gracefully
+    const liveVid = window.LiveStreamVideo || null;
     clipHostCanvasStart = performance.now();
     const draw = () => {
       const t = performance.now() - clipHostCanvasStart;
-      sceneFn(ctx, cv.width, cv.height, t);
+      const v = liveVid;
+      if (v && v.classList && v.classList.contains('on') && v.readyState >= 2 && v.videoWidth) {
+        // real game footage as the top half — same stream the audience watched
+        const dw = cv.width, dh = cv.height, sw = v.videoWidth, sh = v.videoHeight;
+        const sc = Math.max(dw / sw, dh / sh), cw = dw / sc, ch = dh / sc;
+        ctx.drawImage(v, (sw - cw) / 2, (sh - ch) / 2, cw, ch, 0, 0, dw, dh);
+      } else if (sceneFn) {
+        sceneFn(ctx, cv.width, cv.height, t);   // procedural fallback (no clip yet)
+      }
     };
     // setInterval — keep drawing through backgrounded tabs so the recorder
     // doesn't see an empty canvas. See same comment on viewer-half above.
