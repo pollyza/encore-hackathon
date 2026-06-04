@@ -904,6 +904,12 @@ h2.section-title .red { color: var(--c-red); }
     font-weight: 700;
     letter-spacing: 0.5px;
 }
+.demo-qr-hint {
+    font-family: var(--font-mono);
+    font-size: clamp(0.65rem, 0.9vw, 0.8rem);
+    color: var(--c-teal);
+    letter-spacing: 0.5px;
+}
 
 .demo-redesign-right {
     display: flex;
@@ -1699,33 +1705,34 @@ h2.section-title .red { color: var(--c-red); }
         <div class="eyebrow reveal" style="--delay:0.05s">⚡ 现场演示</div>
         <h2 class="section-title reveal" style="--delay:0.15s">扫码 <span class="accent">就能玩。</span></h2>
         <div class="demo-redesign">
-            <!-- LEFT: Big QR + URL -->
+            <!-- LEFT: Big QR + URL (encodes /prototype/live/feed.html) -->
             <div class="demo-qr-hero reveal-scale" style="--delay:0.3s">
                 <div class="demo-qr-label">SCAN ME · 扫码体验</div>
-                <img src="qr-encore.svg" alt="QR · encore-deploy.vercel.app" class="demo-qr-large">
+                <img src="qr-encore.svg" alt="QR · feed.html · 3 直播间" class="demo-qr-large">
                 <div class="demo-qr-url">encore-deploy.vercel.app</div>
+                <div class="demo-qr-hint">↕ 上下滑动 3 个直播间</div>
             </div>
-            <!-- RIGHT: 3 game tiles + outcome chips -->
+            <!-- RIGHT: 3 room tiles (one per game mode) + outcome chips -->
             <div class="demo-redesign-right">
-                <div class="demo-section-label reveal" style="--delay:0.4s">3 套游戏 · 开局随机一套</div>
+                <div class="demo-section-label reveal" style="--delay:0.4s">3 个直播间 · 上下滑动切换</div>
                 <div class="demo-game-tiles">
-                    <div class="demo-game-tile gta reveal-left" style="--delay:0.5s">
+                    <div class="demo-game-tile br reveal-left" style="--delay:0.5s">
+                        <div class="tile-badge">FPS</div>
+                        <div class="tile-name">TK SÓI</div>
+                        <div class="tile-hint">Free Fire BR · 缩圈</div>
+                    </div>
+                    <div class="demo-game-tile gta reveal-left" style="--delay:0.6s">
                         <div class="tile-badge">GTA</div>
-                        <div class="tile-name">GTA HEIST</div>
-                        <div class="tile-hint">抢店开车 · 30s</div>
+                        <div class="tile-name">ROADKING88</div>
+                        <div class="tile-hint">GTA Heist · 抢店开车</div>
                     </div>
-                    <div class="demo-game-tile obby reveal-left" style="--delay:0.6s">
+                    <div class="demo-game-tile obby reveal-left" style="--delay:0.7s">
                         <div class="tile-badge">OBBY</div>
-                        <div class="tile-name">OBBY PARKOUR</div>
-                        <div class="tile-hint">跳平台 · 30s</div>
-                    </div>
-                    <div class="demo-game-tile br reveal-left" style="--delay:0.7s">
-                        <div class="tile-badge">BR</div>
-                        <div class="tile-name">FREE FIRE BR</div>
-                        <div class="tile-hint">缩圈生还 · 30s</div>
+                        <div class="tile-name">PIXELMAX</div>
+                        <div class="tile-hint">Obby Parkour · 跳平台</div>
                     </div>
                 </div>
-                <div class="demo-section-label reveal" style="--delay:0.8s" style="margin-top:1.2rem;">玩过之后</div>
+                <div class="demo-section-label reveal" style="--delay:0.8s" style="margin-top:1.2rem;">每个直播间触发高光后</div>
                 <div class="demo-outcomes">
                     <div class="demo-outcome video reveal-left" style="--delay:0.9s">
                         <span class="outcome-icon">📹</span>
