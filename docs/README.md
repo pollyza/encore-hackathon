@@ -4,7 +4,7 @@
 
 | 文档 | URL | 当前版本 |
 |---|---|---|
-| **Product Brief** (产品定义 + UX 旅程 + 状态机) | https://bytedance.larkoffice.com/docx/Gu2ed1ZOqobDF9xqY7VmjLYMyQe | v0.9 (本地 `docs/encore_product_brief_v0.8.md` 已含 Phase 2 cost 重算) |
+| **Product Brief** (产品定义 + UX 旅程 + 状态机) | https://bytedance.my.larkoffice.com/docx/VdRFd5MkBopEjyxAJ70mqmvJyfc | v0.9 (本地 `docs/encore_product_brief_v0.8.md` 已含 Phase 2 cost 重算) |
 | **Demo Dev Plan** (双形态编排, 7 天 sprint) | https://bytedance.larkoffice.com/docx/LfbydvhwCopawvx6UthmmOcoyNf | v0.2 |
 | **Onepager** (给评委 + 跨部门) | (见 `docs/encore_judge_onepager.md`) | v0.4 (Phase 2 cost 3 档已更新) |
 | **Slides** (Pitch deck) | https://encore-deploy.vercel.app/docs/encore_slides.html | 11 张 · slide 7 已跟 feed.html demo 对齐 |

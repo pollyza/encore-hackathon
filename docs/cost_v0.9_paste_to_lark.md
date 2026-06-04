@@ -1,9 +1,12 @@
 # 飞书 canonical 文档同步 — 新成本测算 v0.9
 
+> **状态**: PM 已于 2026-06-04 手动 paste 到新 Lark canonical Brief
+> (`VdRFd5MkBopEjyxAJ70mqmvJyfc`),本文件留作归档。
+>
 > 来源:Lark doc `CJd8dy2Bvom9RZxa2i1lEd45gSe` (2026-06-04 重算)
-> 已同步到本地 3 个文档:onepager / brief §6.2 / slides slide 07
+> 已同步到本地:onepager / brief §6.2 / slides slide 07
 
-## 1️⃣ Lark Product Brief 替换 §6.2 (Gu2ed1ZOqobDF9xqY7VmjLYMyQe)
+## 1️⃣ Lark Product Brief 替换 §6.2 (新 canonical: VdRFd5MkBopEjyxAJ70mqmvJyfc) ✅ 已完成
 
 把 §6.2 整段替换成下面这块,可直接粘贴:
 

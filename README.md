@@ -133,7 +133,7 @@ CODEOWNERS 在 `.github/CODEOWNERS`,改别人的代码先 @。
 | **V2G 真实测试** | [`docs/v2g_demo.md`](docs/v2g_demo.md) |
 | **协作工作流** | [`docs/encore_team_workflow.md`](docs/encore_team_workflow.md) |
 
-**Lark canonical 文档** (设计真理): [Product Brief](https://bytedance.larkoffice.com/docx/Gu2ed1ZOqobDF9xqY7VmjLYMyQe) · [Demo Dev Plan](https://bytedance.larkoffice.com/docx/LfbydvhwCopawvx6UthmmOcoyNf)
+**Lark canonical 文档** (设计真理): [Product Brief](https://bytedance.my.larkoffice.com/docx/VdRFd5MkBopEjyxAJ70mqmvJyfc) · [Demo Dev Plan](https://bytedance.larkoffice.com/docx/LfbydvhwCopawvx6UthmmOcoyNf)
 
 ---
 

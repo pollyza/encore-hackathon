@@ -1,7 +1,7 @@
 # Encore — Product Brief v0.9
 
 > **写在前面**:这版用大白话重写, 跟飞书 canonical 保持一致(结构 v0.9)。设计真理在飞书, 本地文档/代码是实现试探。
-> 配套:飞书 [Product Brief 飞书 doc](https://bytedance.larkoffice.com/docx/PzXnd27k8oWMRYxJIx4mgw4uy8c)(canonical, 需同步) · [Demo URL](https://encore-deploy.vercel.app) · [GitHub](https://github.com/pollyza/encore-hackathon)
+> 配套:飞书 [Product Brief 飞书 doc](https://bytedance.my.larkoffice.com/docx/VdRFd5MkBopEjyxAJ70mqmvJyfc)(canonical, 需同步) · [Demo URL](https://encore-deploy.vercel.app) · [GitHub](https://github.com/pollyza/encore-hackathon)
 
 ---
 
