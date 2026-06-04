@@ -471,6 +471,12 @@
   // instead of running drawMockEncoreScene. Reused across rounds; lazily
   // built the first time a real recording is available.
   let playbackVideoEl = null;
+  let fallbackViewerVideoEl = null;
+  const MODE_VIDEO = {
+    fps:    '../../reference/videos/FF.mp4',
+    gta:    '../../reference/videos/GTA.mp4',
+    roblox: '../../reference/videos/roblox.mp4',
+  };
   function ensurePlaybackVideo() {
     if (playbackVideoEl) return playbackVideoEl;
     const v = document.createElement('video');
@@ -483,6 +489,34 @@
     document.body.appendChild(v);
     playbackVideoEl = v;
     return v;
+  }
+  function ensureFallbackViewerVideo() {
+    if (fallbackViewerVideoEl) return fallbackViewerVideoEl;
+    const v = document.createElement('video');
+    v.muted = true;
+    v.loop  = true;
+    v.playsInline = true;
+    v.autoplay = true;
+    v.preload = 'auto';
+    v.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;pointer-events:none;';
+    v.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(v);
+    fallbackViewerVideoEl = v;
+    return v;
+  }
+  function getViewerVideoEl() {
+    if (playbackVideoEl && playbackVideoEl.readyState >= 2) return playbackVideoEl;
+    const liveVideo = document.getElementById('live-video');
+    if (liveVideo && liveVideo.readyState >= 2) return liveVideo;
+    const mode = window.LiveMode || 'fps';
+    const url = MODE_VIDEO[mode] || MODE_VIDEO.fps;
+    const v = ensureFallbackViewerVideo();
+    if (v.src !== url) {
+      v.src = url;
+      v.load();
+      v.play().catch(() => {});
+    }
+    return v.readyState >= 2 ? v : null;
   }
 
   function startClipCanvasAnimation() {
@@ -534,9 +568,19 @@
     clipCanvasStart = performance.now();
     const draw = () => {
       const t = performance.now() - clipCanvasStart;
+      const viewerVideo = getViewerVideoEl();
       if (usingPlayback && playbackVideoEl && playbackVideoEl.readyState >= 2) {
-        // drawImage scaled to cover the viewer canvas (CSS object-fit:cover).
-        const v = playbackVideoEl, dw = cv.width, dh = cv.height;
+        const v = playbackVideoEl;
+        const dw = cv.width, dh = cv.height;
+        const sw = v.videoWidth || 1, sh = v.videoHeight || 1;
+        const dr = dw / dh, sr = sw / sh;
+        let sx = 0, sy = 0, cropW = sw, cropH = sh;
+        if (sr > dr) { cropW = sh * dr; sx = (sw - cropW) / 2; }
+        else         { cropH = sw / dr; sy = (sh - cropH) / 2; }
+        ctx.drawImage(v, sx, sy, cropW, cropH, 0, 0, dw, dh);
+      } else if (viewerVideo && viewerVideo.readyState >= 2) {
+        const v = viewerVideo;
+        const dw = cv.width, dh = cv.height;
         const sw = v.videoWidth || 1, sh = v.videoHeight || 1;
         const dr = dw / dh, sr = sw / sh;
         let sx = 0, sy = 0, cropW = sw, cropH = sh;
@@ -572,11 +616,22 @@
     const ctx = cv.getContext('2d');
     const mode = (window.LiveMode || 'fps');
     const sceneFn = (window.LiveScenes && window.LiveScenes[mode]) || null;
-    if (!sceneFn) return;     // streamer.html scenes not loaded — degrade gracefully
+    const liveVideo = document.getElementById('live-video');
     clipHostCanvasStart = performance.now();
     const draw = () => {
       const t = performance.now() - clipHostCanvasStart;
-      sceneFn(ctx, cv.width, cv.height, t);
+      if (liveVideo && liveVideo.readyState >= 2) {
+        const v = liveVideo;
+        const dw = cv.width, dh = cv.height;
+        const sw = v.videoWidth || 1, sh = v.videoHeight || 1;
+        const dr = dw / dh, sr = sw / sh;
+        let sx = 0, sy = 0, cropW = sw, cropH = sh;
+        if (sr > dr) { cropW = sh * dr; sx = (sw - cropW) / 2; }
+        else         { cropH = sw / dr; sy = (sh - cropH) / 2; }
+        ctx.drawImage(v, sx, sy, cropW, cropH, 0, 0, dw, dh);
+      } else if (sceneFn) {
+        sceneFn(ctx, cv.width, cv.height, t);
+      }
     };
     // setInterval — keep drawing through backgrounded tabs so the recorder
     // doesn't see an empty canvas. See same comment on viewer-half above.

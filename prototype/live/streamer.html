@@ -38,14 +38,13 @@
        · roblox → Canvas2D side-view platforms + parkour HUD
        Picked mode also drives Encore template selection (br/gta/roblox)
        so the highlight → mini-game flow is genre-consistent.
-       NOTE: real game footage was tried first but reference/videos/*.mp4
-       is gitignored (423MB) and not mirrored to /tmp/encore-preview, so
-       both local preview and Vercel deploy 404'd. Canvas-only is the
-       hackathon-pragmatic choice; swap in real footage post-M9.
+       NOTE: real game footage is now used for mode-specific preview when
+       the local sample asset exists. Canvas remains available as a fallback
+       for modes where a video asset isn't found or if the fetch fails.
        ──────────────────────────────────────────────────────────────────── -->
   <div id="stream-bg">
-    <!-- Inert video tag — kept so live-room.js's cfg.video.play() doesn't
-         null-deref; never displayed. All 3 modes render via canvas below. -->
+    <!-- Video tag for mode-specific live preview. If the local MP4 exists,
+         it is shown; otherwise the procedural Canvas fallback is used. -->
     <video id="live-video" muted playsinline loop preload="none"
            style="display:none;"></video>
     <!-- Canvas2D procedural scene for all 3 modes (D's #23 — supersedes the
@@ -484,7 +483,7 @@
      Note: mini-games.js (Aim/Rhythm/Dodge demos) is retained on disk but
      no longer loaded — the game phase now renders Mario's iframe templates
      (GTA/Roblox/Free Fire BR) via the V2G postMessage protocol. -->
-<script src="js/observer-client.js?v=8"></script>
+<script src="js/observer-client.js?v=9"></script>
 <script src="js/player-recorder.js?v=3"></script>
 <script src="js/clip-composer.js?v=1"></script>
 <script src="js/encore-sheet.js?v=16"></script>
@@ -516,7 +515,7 @@
 
   // ── LIVE game-mode selection ────────────────────────────────────────
   // 3 modes, picked once on load (fps/gta/roblox). Drives:
-  //  · which background renders (video for fps, Canvas for gta/roblox)
+  //  · which background renders (mode-specific sample video when available)
   //  · which HUD blocks show (data-show-in attribute)
   //  · which Encore template launches when highlight triggers (genre match)
   const GAME_MODES = ['fps', 'gta', 'roblox'];
@@ -580,9 +579,44 @@
   // startLiveCanvasScene to avoid a TDZ ReferenceError on first paint.
   const liveCanvas = document.getElementById('live-canvas');
   let liveCanvasRAF = null;
-  dom.video.style.display = 'none';
-  liveCanvas.style.display = '';
-  startLiveCanvasScene(currentMode);
+
+  const MODE_VIDEO = {
+    br: '../../reference/videos/FF.mp4',
+    gta: '../../reference/videos/GTA.mp4',
+    roblox: '../../reference/videos/roblox.mp4',
+  };
+  const vidKey = (currentMode === 'fps') ? 'br' : currentMode;
+  const modeVid = MODE_VIDEO[vidKey];
+
+  function showCanvas() {
+    dom.video.style.display = 'none';
+    liveCanvas.style.display = '';
+    if (!liveCanvasRAF) startLiveCanvasScene(currentMode);
+  }
+
+  function showVideo(url) {
+    if (liveCanvasRAF) { cancelAnimationFrame(liveCanvasRAF); liveCanvasRAF = null; }
+    liveCanvas.style.display = 'none';
+    dom.video.style.display = '';
+    dom.video.setAttribute('src', url);
+    dom.video.load();
+    dom.video.play().catch(() => {});
+  }
+
+  if (modeVid) {
+    fetch(modeVid, { method: 'HEAD' }).then(res => {
+      if (res.ok) {
+        if (liveCanvasRAF) { cancelAnimationFrame(liveCanvasRAF); liveCanvasRAF = null; }
+        showVideo(modeVid);
+      } else {
+        showCanvas();
+      }
+    }).catch(() => {
+      showCanvas();
+    });
+  } else {
+    showCanvas();
+  }
 
   // Show only HUD blocks matching this mode (via data-show-in attribute)
   document.querySelectorAll('#stream-bg [data-show-in]').forEach(el => {
