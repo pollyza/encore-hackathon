@@ -19,24 +19,95 @@
   const ENTRY_MODE = 'auto';   // 'auto' | 'bar' | 'highlight' | 'all'
   const HL_AUTO_POP_MS = 0;    // 0 = show immediately, >0 = delay after start
 
-  // ── Fake chat pool ────────────────────────────────────────────────────
-  const CHAT_POOL = [
-    { name: 'Thanh',         text: 'Sick play 🔥',         joined: false },
-    { name: 'Polly_zazaza',  joined: true },
-    { name: 'minhquan',      text: 'GG host',              joined: false },
-    { name: 'TK Sói',        text: 'cmt nhe ace',          joined: false, host: true },
-    { name: 'echo.cat',      text: 'this clutch tho 🙌',   joined: false },
-    { name: 'duy.le',        joined: true },
-    { name: 'soimoon',       text: 'wait that was insane', joined: false },
-    { name: 'LunaWolf_92',   text: '+1 follow done',       joined: false },
-    { name: 'PixelHawk',     text: 'lmao what',            joined: false },
-    { name: 'Khoa.real',     text: 'top 1 baby',           joined: false },
-    { name: 'gigi.tt',       joined: true },
-    { name: 'TK Sói',        text: 'thanks ae 💪',         joined: false, host: true },
-    { name: 'a1.zhao',       text: '🌹🌹🌹',                joined: false },
-    { name: 'mido.99',       text: 'kèo gì tiếp host',     joined: false },
-    { name: 'pinkfox',       text: 'omg',                  joined: false },
-  ];
+  // ── Fake chat pools — per game mode ────────────────────────────────────
+  // Each LIVE room in feed.html embeds streamer.html with a different
+  // ?mode=… + ?host=…. The chat content should match the room's vibe, not
+  // be a single shared pool. We read #host's data-game-mode at startChat()
+  // time and pick the matching pool; host-tagged messages get the live
+  // host name substituted in (so "TK Sói" doesn't appear in the GTA room).
+  //
+  // Sentinel "$HOST" in `name` is replaced with the current top-bar host
+  // name on append. That way the same pool definitions work no matter
+  // which streamer name the URL passes in.
+  const CHAT_POOLS = {
+    // FPS — Vietnamese clutch / shooter community (existing tone)
+    fps: [
+      { name: 'Thanh',         text: 'Sick play 🔥',         joined: false },
+      { name: 'Polly_zazaza',  joined: true },
+      { name: 'minhquan',      text: 'GG host',              joined: false },
+      { name: '$HOST',         text: 'cmt nhe ace',          joined: false, host: true },
+      { name: 'echo.cat',      text: 'this clutch tho 🙌',   joined: false },
+      { name: 'duy.le',        joined: true },
+      { name: 'soimoon',       text: 'wait that was insane', joined: false },
+      { name: 'LunaWolf_92',   text: '+1 follow done',       joined: false },
+      { name: 'PixelHawk',     text: 'lmao what',            joined: false },
+      { name: 'Khoa.real',     text: 'top 1 baby',           joined: false },
+      { name: 'gigi.tt',       joined: true },
+      { name: '$HOST',         text: 'thanks ae 💪',         joined: false, host: true },
+      { name: 'a1.zhao',       text: '🌹🌹🌹',                joined: false },
+      { name: 'mido.99',       text: 'kèo gì tiếp host',     joined: false },
+      { name: 'pinkfox',       text: 'omg',                  joined: false },
+    ],
+    // GTA — driver / heist / police-chase chatter, mix of EN + 中文
+    gta: [
+      { name: 'NeonDrip',      text: 'cops on you 🚓',       joined: false },
+      { name: 'driftking',     joined: true },
+      { name: 'Mira_88',       text: '87mph chill lol',      joined: false },
+      { name: '$HOST',         text: 'hold tight, ramp incoming', joined: false, host: true },
+      { name: '陈大锤',         text: '这操作牛批',            joined: false },
+      { name: 'lola.exe',      joined: true },
+      { name: 'wraith_07',     text: 'nitro pls',            joined: false },
+      { name: 'duskrider',     text: 'wanted 3 stars when?', joined: false },
+      { name: 'kobe.gg',       text: '一星二星三星 💥',        joined: false },
+      { name: 'Vince_22',      text: 'send the bank pin',    joined: false },
+      { name: 'zoey.x',        joined: true },
+      { name: '$HOST',         text: 'shake them then heist 🏦', joined: false, host: true },
+      { name: 'midnight_v8',   text: 'drift that corner!!',  joined: false },
+      { name: 'turbo_yui',     text: 'save the clip plz',    joined: false },
+      { name: 'ghostlane',     text: 'host carry me',        joined: false },
+    ],
+    // Roblox — English kid-gamer parkour / W-energy chatter
+    roblox: [
+      { name: 'BloxBuddyX',    text: 'EZ parkour',           joined: false },
+      { name: 'sk8r_kiddo',    joined: true },
+      { name: 'maxxieee',      text: 'W jump 🦘',            joined: false },
+      { name: '$HOST',         text: 'attempt 47 lets go',   joined: false, host: true },
+      { name: 'PiXeLPaL_99',   text: 'pog moment',           joined: false },
+      { name: 'tiny.ash',      joined: true },
+      { name: 'Vexora_xx',     text: 'thats cap no way',     joined: false },
+      { name: 'JumpJumpJG',    text: 'speedrun any%',        joined: false },
+      { name: 'cookieKong',    text: 'skill issue lmao',     joined: false },
+      { name: 'Nova7',         text: 'plat 13 is a trap',    joined: false },
+      { name: 'rblx_owen',     joined: true },
+      { name: '$HOST',         text: 'one more, last try 🙏', joined: false, host: true },
+      { name: 'GlitchyMe',     text: 'LETS GOOOO',           joined: false },
+      { name: 'bloxy.luna',    text: 'can u 1v1 me after',   joined: false },
+      { name: 'midnight_owl',  text: 'skip the lava!!',      joined: false },
+    ],
+  };
+  // First 3 messages shown immediately so chat doesn't look empty
+  const SEED_BY_MODE = {
+    fps: [
+      { name: 'Polly_zazaza', joined: true },
+      { name: 'Thanh',        text: 'Sick play 🔥' },
+      { name: '$HOST',        text: 'ecc vip to ts linkbio gg', host: true },
+    ],
+    gta: [
+      { name: 'driftking',    joined: true },
+      { name: 'NeonDrip',     text: 'cops on you 🚓' },
+      { name: '$HOST',        text: 'buckle up, heist run', host: true },
+    ],
+    roblox: [
+      { name: 'sk8r_kiddo',   joined: true },
+      { name: 'BloxBuddyX',   text: 'EZ parkour' },
+      { name: '$HOST',        text: 'attempt 47, watch this', host: true },
+    ],
+  };
+  // Resolved per init — set in startChat()
+  let activePool = CHAT_POOLS.fps;
+  let activeSeed = SEED_BY_MODE.fps;
+  let activeHost = 'host';
+  function resolveName(name) { return name === '$HOST' ? activeHost : name; }
 
   // Avatar palette — generated from name hash
   function avatarFor(name) {
@@ -70,8 +141,10 @@
   }
 
   // ── Chat scroll ───────────────────────────────────────────────────────
-  function appendChatRow({ name, text, joined, host, system }) {
+  function appendChatRow({ name, text, joined, host, system, freshJoin }) {
     const row = document.createElement('div');
+    // Resolve $HOST sentinel → actual host name (set per room)
+    name = resolveName(name);
 
     if (system) {
       row.className = 'chat-system';
@@ -105,7 +178,7 @@
       }
       const body = document.createElement('div');
       body.className = 'text';
-      body.textContent = joined ? `joined ${name === 'Polly_zazaza' ? 'just now' : ''}`.trim() : (text || '');
+      body.textContent = joined ? (freshJoin ? 'joined just now' : 'joined') : (text || '');
       bubble.appendChild(nameRow);
       bubble.appendChild(body);
       row.appendChild(bubble);
@@ -120,14 +193,24 @@
   }
 
   function pickRandomChat() {
-    return CHAT_POOL[Math.floor(Math.random() * CHAT_POOL.length)];
+    return activePool[Math.floor(Math.random() * activePool.length)];
   }
 
   function startChat() {
-    // Seed 3 messages immediately so it doesn't look empty
-    appendChatRow({ name: 'Polly_zazaza', joined: true });
-    appendChatRow({ name: 'Thanh',       text: 'Sick play 🔥' });
-    appendChatRow({ name: 'TK Sói',      text: 'ecc vip to ts linkbio gg', host: true });
+    // Resolve which pool + host this room uses. data-game-mode is set by
+    // streamer.html based on the ?mode= URL param (fps / gta / roblox).
+    const mode = (document.getElementById('host')?.dataset.gameMode) || 'fps';
+    activePool = CHAT_POOLS[mode] || CHAT_POOLS.fps;
+    activeSeed = SEED_BY_MODE[mode] || SEED_BY_MODE.fps;
+    // Host name lives in the top-bar pill (already overridden by streamer's
+    // URL-param block before LiveRoom.init runs)
+    activeHost = document.querySelector('#top-bar .host-pill .name')?.textContent?.trim() || 'host';
+
+    // Seed 3 messages immediately so it doesn't look empty. First seeded
+    // joined-user gets the "just now" suffix so the room feels fresh.
+    activeSeed.forEach((msg, i) => {
+      appendChatRow({ ...msg, freshJoin: msg.joined && i === 0 });
+    });
 
     const schedule = () => {
       const delay = 3000 + Math.random() * 4000;
