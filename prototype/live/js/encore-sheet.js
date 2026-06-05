@@ -473,7 +473,7 @@
   let playbackVideoEl = null;
   let fallbackViewerVideoEl = null;
   const MODE_VIDEO = {
-    fps:    '../../reference/videos/FF.mp4',
+    fps:    '../../FF.2.mp4',
     gta:    '../../reference/videos/GTA.mp4',
     roblox: '../../reference/videos/roblox.mp4',
   };
