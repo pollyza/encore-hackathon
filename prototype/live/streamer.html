@@ -9,9 +9,22 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 
-<link rel="stylesheet" href="css/live-shell.css">
-<link rel="stylesheet" href="css/ai-panel.css?v=3">
+<link rel="stylesheet" href="css/live-shell.css?v=6">
+<link rel="stylesheet" href="css/ai-panel.css?v=4">
 <link rel="stylesheet" href="css/mini-games.css">
+
+<!-- Warm the mini-game cache before the user taps Play. The game loads lazily
+     in an iframe (encore_prototype.html + ~450KB of game modules); on a cold
+     cache that download is the dominant cause of the "black screen on load".
+     Prefetching here means the bytes are usually warm by tap time.
+     NOTE: keep the ?v= queries in sync with encore-sheet.js IFRAME_URL and the
+     <script src> tags in encore_prototype.html, or the prefetch just misses
+     (harmless, never wrong). -->
+<link rel="prefetch" as="document" href="../encore_prototype.html?embedded=1&v=v2g-ready-r4">
+<link rel="prefetch" as="script" href="../games/juice.js?v=r12a">
+<link rel="prefetch" as="script" href="../games/roblox.js?v=r23">
+<link rel="prefetch" as="script" href="../games/gta.js?v=r21">
+<link rel="prefetch" as="script" href="../games/br.js?v=r24">
 </head>
 <body>
 
@@ -44,8 +57,20 @@
        ──────────────────────────────────────────────────────────────────── -->
   <div id="stream-bg">
     <!-- Video tag for mode-specific live preview. If the local MP4 exists,
-         it is shown; otherwise the procedural Canvas fallback is used. -->
-    <video id="live-video" muted playsinline loop preload="none"
+         it is shown; otherwise the procedural Canvas fallback is used.
+
+         WeChat / QQ in-app browser compat:
+         - webkit-playsinline: older iOS WebKit (pre-iOS 10)
+         - x5-playsinline: Tencent X5 kernel (WeChat Android)
+         - x5-video-player-type="h5": force HTML5 player (NOT native player)
+         - x5-video-player-fullscreen="false": don't take over fullscreen
+         preload="metadata" (was "none") so the first frame is decoded even
+         before play() — when WeChat blocks autoplay, we still show a still
+         frame instead of a black box, then retry play() on first tap. -->
+    <video id="live-video" muted playsinline webkit-playsinline
+           x5-playsinline x5-video-player-type="h5" x5-video-player-fullscreen="false"
+           loop preload="metadata"
+           style="display:none;"></video>
            style="display:none;"></video>
     <!-- Canvas2D procedural scene for all 3 modes (D's #23 — supersedes the
          404'ing gitignored LIVE clip; this is the proper fix for that issue). -->
@@ -103,19 +128,22 @@
   </div>
 
   <!-- ── Top bar (host + viewer pill) ───────────────────────────────── -->
+  <!-- TikTok-fidelity pass (Figma BGZQ3m9R...):
+       - host-pill avatar gets a small red online dot
+       - viewer-pill shows 3 stacked viewer avatars (was 2) + "±" prefix on count -->
   <div id="top-bar">
     <div class="host-pill">
-      <div class="avatar">🧑</div>
+      <div class="avatar"><span class="initial" id="host-initial">T</span><span class="live-dot"></span></div>
       <div class="meta">
-        <div class="name">TK Sói</div>
-        <div class="hearts"><span class="hi">♥</span> 118.1K</div>
+        <div class="name" id="host-name">TK Sói</div>
+        <div class="hearts"><span id="host-likes">118.1K</span> likes</div>
       </div>
       <button id="follow-btn" class="follow">+ Follow</button>
     </div>
     <div class="top-right">
       <div class="viewer-pill">
-        <div class="stack"><div></div><div>20+</div></div>
-        <span class="count">476</span>
+        <div class="stack"><div class="a1"></div><div class="a2"></div><div class="a3"></div></div>
+        <span class="count">± <span id="viewer-count">476</span></span>
       </div>
       <button id="close-btn" class="close">✕</button>
     </div>
@@ -152,16 +180,41 @@
   <!-- ── Chat overlay ────────────────────────────────────────────────── -->
   <div id="chat"></div>
 
-  <!-- ── Bottom bar (Type… + emoji + Encore + gift + share) ──────────── -->
+  <!-- ── Bottom bar (Figma TikTok fidelity pass) ─────────────────────────
+       Real TikTok bottom bar = pill input + bare 24px icons w/ 10px labels.
+       The old emoji-in-circle buttons were the #1 give-away that this wasn't
+       real TikTok. Replaced with inline SVG icons + Rose/Gift/Share labels.
+
+       Encore-btn (gradient pill) still slides in when a highlight fires —
+       takes the slot between input and Rose. Smile + audience buttons are
+       kept in markup (live-room.js still wires them up) but hidden via CSS
+       to match the simpler real-TikTok layout (only Rose/Gift/Share visible
+       in default state). -->
   <div id="bottom-bar">
-    <input id="chat-input" class="input" placeholder="Type…" />
-    <button class="icon-btn" data-action="smile">☺</button>
-    <button class="icon-btn" id="audience-btn" data-action="audience">🤝</button>
+    <input id="chat-input" class="input" placeholder="Say something…" />
+    <button class="icon-btn legacy-hidden" data-action="smile">☺</button>
+    <button class="icon-btn legacy-hidden" id="audience-btn" data-action="audience">🤝</button>
     <button class="encore-btn" id="encore-btn" style="display:none;">
       <span class="star">✦</span> Encore
     </button>
-    <button class="icon-btn" data-action="gift">🎁</button>
-    <button class="icon-btn" data-action="share">↗<span class="badge">12</span></button>
+    <!-- v0.9 Figma-fidelity round 3: use the actual TikTok icon assets
+         from the Figma design (rose = 3D illustration, gift = pink 3D box,
+         share = white outline arrow). Replaces the earlier line-SVG icons
+         that didn't match real TikTok's visual style. Asset paths point
+         at prototype/live/assets/icons/ which is synced by deploy.sh. -->
+    <button class="bb-icon" data-action="rose" aria-label="Rose">
+      <img class="ico" src="assets/icons/rose.png" alt="" />
+      <span class="lbl">Rose</span>
+    </button>
+    <button class="bb-icon" data-action="gift" aria-label="Gift">
+      <img class="ico" src="assets/icons/gift.png" alt="" />
+      <span class="lbl">Gift</span>
+    </button>
+    <button class="bb-icon" data-action="share" aria-label="Share">
+      <img class="ico" src="assets/icons/share.svg" alt="" />
+      <span class="lbl">Share</span>
+      <span class="badge">12</span>
+    </button>
   </div>
 
   <!-- ── Floating ack pills layer ────────────────────────────────────── -->
@@ -458,8 +511,8 @@
 <script src="js/observer-client.js?v=9"></script>
 <script src="js/player-recorder.js?v=3"></script>
 <script src="js/clip-composer.js?v=1"></script>
-<script src="js/encore-sheet.js?v=16"></script>
-<script src="js/live-room.js?v=9"></script>
+<script src="js/encore-sheet.js?v=18"></script>
+<script src="js/live-room.js?v=11"></script>
 <script>
 (() => {
   // ── Wire all modules together ──────────────────────────────────────
@@ -514,15 +567,24 @@
     const hearts  = qp.get('hearts');
     const viewers = qp.get('viewers');
     if (host) {
-      const n = document.querySelector('#top-bar .host-pill .name');
+      // v0.9 TikTok-fidelity: also set the avatar initial letter so each
+      // host pill reads as their own person (TK Sói→T, RoadKing88→R,
+      // PixelMax→P). Color theming for the avatar gradient is delegated
+      // to a data-mode-* attribute below.
+      const n = document.getElementById('host-name');
       if (n) n.textContent = host;
+      const init = document.getElementById('host-initial');
+      if (init) init.textContent = host.trim().charAt(0).toUpperCase() || '?';
     }
     if (hearts) {
-      const el = document.querySelector('#top-bar .host-pill .hearts');
-      if (el) el.innerHTML = `<span class="hi">♥</span> ${hearts}`;
+      // v0.9 format: <number> likes — no heart icon prefix
+      const el = document.getElementById('host-likes');
+      if (el) el.textContent = hearts;
     }
     if (viewers) {
-      const c = document.querySelector('#top-bar .viewer-pill .count');
+      // v0.9: viewer-pill count is "± <span id=viewer-count>N</span>", so
+      // only update the inner span — don't blow away the "±" prefix.
+      const c = document.getElementById('viewer-count');
       if (c) c.textContent = viewers;
     }
     if (qp.get('feed') === '1') {
@@ -537,9 +599,9 @@
     }
   })();
 
-  // All 3 modes render via Canvas2D (see note above the <video> tag for why
-  // we dropped real footage). liveCanvasRAF is declared before any call to
-  // startLiveCanvasScene to avoid a TDZ ReferenceError on first paint.
+  // liveCanvasRAF is declared before any call to startLiveCanvasScene to avoid a
+  // TDZ ReferenceError on first paint. The canvas is the always-drawing fallback;
+  // real footage (below) layers on top when available.
   const liveCanvas = document.getElementById('live-canvas');
   let liveCanvasRAF = null;
 
@@ -552,6 +614,7 @@
   const modeVid = MODE_VIDEO[vidKey];
 
   function showCanvas() {
+    dom.video.classList.remove('on');   // back to opacity:0 (CSS handles fade-out)
     dom.video.style.display = 'none';
     liveCanvas.style.display = '';
     if (!liveCanvasRAF) startLiveCanvasScene(currentMode);
@@ -563,7 +626,27 @@
     dom.video.style.display = '';
     dom.video.setAttribute('src', url);
     dom.video.load();
-    dom.video.play().catch(() => {});
+    // PR #43 CSS gives <video> default opacity:0 + transitions to opacity:1
+    // only when class "on" is present. Without this line the video plays
+    // invisibly underneath (display:block but opacity:0) — the bug PM saw.
+    const reveal = () => dom.video.classList.add('on');
+    dom.video.addEventListener('playing', reveal, { once: true });
+    const tryPlay = () => dom.video.play().then(reveal).catch(() => {
+      reveal();
+      const gestureRetry = () => {
+        dom.video.play().catch(() => { /* still blocked — user can tap again */ });
+        document.removeEventListener('touchend', gestureRetry, true);
+        document.removeEventListener('click', gestureRetry, true);
+      };
+      document.addEventListener('touchend', gestureRetry, { capture: true, once: true });
+      document.addEventListener('click', gestureRetry, { capture: true, once: true });
+    });
+    tryPlay();
+    if (typeof WeixinJSBridge !== 'undefined') {
+      try { WeixinJSBridge.invoke('getNetworkType', {}, () => tryPlay()); } catch (_) {}
+    } else {
+      document.addEventListener('WeixinJSBridgeReady', tryPlay, { once: true });
+    }
   }
 
   if (modeVid) {
@@ -581,11 +664,72 @@
     showCanvas();
   }
 
-  // Show only HUD blocks matching this mode (via data-show-in attribute)
+  function showVideo(url) {
+    if (liveCanvasRAF) { cancelAnimationFrame(liveCanvasRAF); liveCanvasRAF = null; }
+    liveCanvas.style.display = 'none';
+    dom.video.style.display = '';
+    dom.video.setAttribute('src', url);
+    dom.video.load();
+    // PR #43 CSS gives <video> default opacity:0 + transitions to opacity:1
+    // only when class "on" is present. Without this line the video plays
+    // invisibly underneath (display:block but opacity:0) — the bug PM saw.
+    const reveal = () => dom.video.classList.add('on');
+    dom.video.addEventListener('playing', reveal, { once: true });
+    // Try immediate play. If browser allows (Chrome/Safari w/ muted+playsinline),
+    // the playing event fires → reveal. Otherwise fall back to WeChat path below.
+    const tryPlay = () => dom.video.play().then(reveal).catch(() => {
+      // WeChat / QQ in-app browser: autoplay blocked even with muted+playsinline.
+      // Strategy:
+      //   1. Reveal anyway so the first decoded frame (from preload=metadata)
+      //      is visible — a still frame is way better than a black box.
+      //   2. Bind a one-shot global gesture (any tap inside the iframe) that
+      //      retries play(); WeChat then permits it.
+      //   3. Hook WeixinJSBridgeReady — if the bridge fires before any tap,
+      //      autoplay is also unlocked at that point on iOS WeChat 8.0+.
+      reveal();
+      const gestureRetry = () => {
+        dom.video.play().catch(() => { /* still blocked — user can tap again */ });
+        document.removeEventListener('touchend', gestureRetry, true);
+        document.removeEventListener('click', gestureRetry, true);
+      };
+      document.addEventListener('touchend', gestureRetry, { capture: true, once: true });
+      document.addEventListener('click', gestureRetry, { capture: true, once: true });
+    });
+    tryPlay();
+    // WeChat-specific: WeixinJSBridge fires after the in-app browser inits,
+    // and at that point muted-autoplay is allowed even without user gesture.
+    // No-op outside WeChat. Listen as both event + 'ready' bridge call.
+    if (typeof WeixinJSBridge !== 'undefined') {
+      try { WeixinJSBridge.invoke('getNetworkType', {}, () => tryPlay()); } catch (_) {}
+    } else {
+      document.addEventListener('WeixinJSBridgeReady', tryPlay, { once: true });
+    }
+  }
+
+  if (modeVid) {
+    fetch(modeVid, { method: 'HEAD' }).then(res => {
+      if (res.ok) {
+        if (liveCanvasRAF) { cancelAnimationFrame(liveCanvasRAF); liveCanvasRAF = null; }
+        showVideo(modeVid);
+      } else {
+        showCanvas();
+      }
+    }).catch(() => {
+      showCanvas();
+    });
+  } else {
+    showCanvas();
+  }
+
+  // Show only the HUD blocks matching this mode (relevant only on the canvas
+  // fallback; hidden below once real footage plays).
   document.querySelectorAll('#stream-bg [data-show-in]').forEach(el => {
     const modes = el.dataset.showIn.split(/\s+/);
     el.style.display = modes.includes(currentMode) ? '' : 'none';
   });
+
+  // (Real game-stream footage for the LIVE background is handled by the
+  // MODE_VIDEO / showVideo() block above — zihui's #37, GitHub-hosted clips.)
 
   // Vision detection cache — observer-client populates this when a real
   // V2G highlight is detected. encore-sheet calls pickConfig() to decide
@@ -674,6 +818,7 @@
     };
     if (!fit()) { requestAnimationFrame(() => startLiveCanvasScene(mode)); return; }
     const ctx = cv.getContext('2d');
+    if (!ctx) { requestAnimationFrame(() => startLiveCanvasScene(mode)); return; }  // ctx loss — retry rather than throw + kill the loop
     const start = performance.now();
     const draw = (now) => {
       const t = now - start;

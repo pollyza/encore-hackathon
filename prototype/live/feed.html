@@ -25,9 +25,15 @@
     overscroll-behavior: none;
   }
 
+  /* Mobile fix: use 100dvh (dynamic viewport height) instead of 100vh —
+     100vh on mobile Safari INCLUDES the address bar height, so each
+     iframe got allocated ~85px more than the visible area and the
+     streamer's bottom bar / last chat row fell behind the URL bar.
+     100dvh sizes to the actual visible viewport, no overlap. Desktop
+     and Android Chrome both support dvh now. */
   #feed {
     width: 100vw;
-    height: 100vh;
+    height: 100dvh;
     overflow-y: scroll;
     scroll-snap-type: y mandatory;
     scroll-behavior: smooth;
@@ -38,7 +44,7 @@
 
   .room {
     width: 100vw;
-    height: 100vh;
+    height: 100dvh;
     scroll-snap-align: start;
     scroll-snap-stop: always;
     position: relative;
@@ -179,13 +185,20 @@
   }
   loadRoom(0);
 
+  // Mobile fix: use feed.clientHeight (the scroll container's actual
+  // visible height, locked to 100dvh) instead of window.innerHeight,
+  // which on mobile Safari drifts as the URL bar hides/shows during
+  // scroll. Drift was causing the round() snap target to lag by a
+  // partial-page and the wrong room would briefly show as active.
+  const roomH = () => feed.clientHeight;
+
   let lastIdx = 0;
   let scrollRAF = null;
   feed.addEventListener('scroll', () => {
     if (scrollRAF) return;
     scrollRAF = requestAnimationFrame(() => {
       scrollRAF = null;
-      const idx = Math.round(feed.scrollTop / window.innerHeight);
+      const idx = Math.round(feed.scrollTop / roomH());
       if (idx !== lastIdx) {
         lastIdx = idx;
         dots.forEach((d, i) => d.classList.toggle('active', i === idx));
@@ -210,7 +223,7 @@
     wheelLock = true;
     const dir = e.deltaY > 0 ? 1 : -1;
     const next = Math.max(0, Math.min(frames.length - 1, lastIdx + dir));
-    feed.scrollTo({ top: next * window.innerHeight, behavior: 'smooth' });
+    feed.scrollTo({ top: next * roomH(), behavior: 'smooth' });
     setTimeout(() => { wheelLock = false; }, 500);
     e.preventDefault();
   }, { passive: false });
@@ -222,8 +235,19 @@
     if (e.key === 'ArrowUp'   || e.key === 'PageUp')                    dir = -1;
     if (!dir) return;
     const next = Math.max(0, Math.min(frames.length - 1, lastIdx + dir));
-    feed.scrollTo({ top: next * window.innerHeight, behavior: 'smooth' });
+    feed.scrollTo({ top: next * roomH(), behavior: 'smooth' });
     e.preventDefault();
+  });
+
+  // Re-snap to current room if viewport size changes mid-session
+  // (Safari URL-bar toggle, orientation change). Otherwise scrollTop
+  // sits at the wrong offset and the user sees a half-room.
+  let resizeRAF = null;
+  window.addEventListener('resize', () => {
+    if (resizeRAF) cancelAnimationFrame(resizeRAF);
+    resizeRAF = requestAnimationFrame(() => {
+      feed.scrollTo({ top: lastIdx * roomH(), behavior: 'auto' });
+    });
   });
 })();
 </script>

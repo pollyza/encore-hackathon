@@ -1,6 +1,6 @@
 # Encore — 产品规划 v0.8
 
-> 本地 staging 文档,与飞书 [Product Brief v0.8](https://bytedance.larkoffice.com/docx/PzXnd27k8oWMRYxJIx4mgw4uy8c) 同步。**设计真理在飞书**,本地是实现试探。
+> 本地 staging 文档,与飞书 [Product Brief v0.8](https://bytedance.my.larkoffice.com/docx/VdRFd5MkBopEjyxAJ70mqmvJyfc) 同步。**设计真理在飞书**,本地是实现试探。
 > 配套资源:[Demo Dev Plan v0.2 (飞书)](https://bytedance.larkoffice.com/docx/LfbydvhwCopawvx6UthmmOcoyNf) · [LIVE 交互模块 sub-doc (飞书 wiki)](https://www.feishu.cn/wiki/DqOXwN2hzig5cUkX6zxcCFmGnXd) · [GitHub](https://github.com/pollyza/encore-hackathon) · [Live demo](https://encore-deploy.vercel.app) · [D-module 状态卡](./polly_d_module_status.md)
 > 维护者:Encore PM。
 > **v0.8 vs v0.7 主要变化**:删除未验证数据(`5 秒高光黑洞` / `3.5s 弹幕延迟` / 各种百分比预测) · 新增 non-interference 第一原则 · 礼物经济从 4 层(Enhance/Spotlight/Sponsor/Loot)砍到 1 层 + Phase 2 拓展 · 新增 §4 机制设计 / §5 商业价值 / §6 创新性 / §7 可落地性 / §8 MVP 局限 / §9 护城河 / §10 风险共 7 章诚实评估。
@@ -240,7 +240,7 @@ bottom sheet 自动滑下 → fatigue cooldown → 继续看 LIVE
 
 `SAMPLING / DETECTED / WARMUP / PLAY / END / REPLAY_PEEK / GIFT / RESET`
 
-详见 [Brief 飞书文档 §11.7 状态机画板](https://bytedance.larkoffice.com/docx/PzXnd27k8oWMRYxJIx4mgw4uy8c)。
+详见 [Brief 飞书文档 §11.7 状态机画板](https://bytedance.my.larkoffice.com/docx/VdRFd5MkBopEjyxAJ70mqmvJyfc)。
 
 ---
 
@@ -842,7 +842,7 @@ DAY 2 ────────────────────────�
 
 | 类别 | 内容 |
 |---|---|
-| **设计真理** | 飞书 [Brief v0.8](https://bytedance.larkoffice.com/docx/PzXnd27k8oWMRYxJIx4mgw4uy8c) 锁定;3 铁律确认(non-interference / UX 不压缩 LIVE / 主播分成 ≥) |
+| **设计真理** | 飞书 [Brief v0.8](https://bytedance.my.larkoffice.com/docx/VdRFd5MkBopEjyxAJ70mqmvJyfc) 锁定;3 铁律确认(non-interference / UX 不压缩 LIVE / 主播分成 ≥) |
 | **内容素材** | 5 段真实 TikTok 游戏 LIVE 录屏;3 套参考游戏调色板;5 个参考精灵风格图 |
 | **技术准备** | Claude API key + 预算(估算 $2.25 / 30 分钟 demo);Vercel 项目预创;`scripts/deploy.sh` 部署链路打通(✅ 已打通)|
 | **环境 self-check** | 每人本地能跑 `python3 -m http.server 8080` + 看到 prototype;`vercel --prod` 能跑通;Lark CLI 能用 |
@@ -968,4 +968,4 @@ Demo 之前必须有的:
 
 ---
 
-**文档维护**:本文档为本地 staging,与飞书 [Product Brief v0.8](https://bytedance.larkoffice.com/docx/PzXnd27k8oWMRYxJIx4mgw4uy8c) 同步。**设计真理在飞书,本地是实现试探**。修改设计时:先改飞书,review 完再回贴本地。
+**文档维护**:本文档为本地 staging,与飞书 [Product Brief v0.8](https://bytedance.my.larkoffice.com/docx/VdRFd5MkBopEjyxAJ70mqmvJyfc) 同步。**设计真理在飞书,本地是实现试探**。修改设计时:先改飞书,review 完再回贴本地。

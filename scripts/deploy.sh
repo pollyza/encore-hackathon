@@ -106,6 +106,15 @@ if [[ -f "$REPO_ROOT/docs/encore_slides.html" ]]; then
     [[ -d "$PREVIEW_DIR" ]] && sync_file "$REPO_ROOT/docs/encore_slides.html" "$PREVIEW_DIR/encore_slides.html"
 fi
 
+# vercel.json — defines the `/` → /docs/landing.html rewrite + qr-encore.svg
+# shortcut. Without this in the deploy bundle, Vercel serves the bare bundle
+# and `/` returns 404 NOT_FOUND (since there's no index.html at the root).
+# This was a real outage on 2026-06-04 after the icon-asset sync change —
+# the bundle was missing vercel.json entirely.
+if [[ -f "$REPO_ROOT/vercel.json" ]]; then
+    sync_file "$REPO_ROOT/vercel.json" "$DEPLOY_DIR/vercel.json"
+fi
+
 # Landing + QR — the Vercel root rewrite points at docs/landing.html. Keep the
 # local mirrors current so QR/link QA uses the same entry page as production.
 if [[ -f "$REPO_ROOT/docs/landing.html" ]]; then
@@ -117,6 +126,26 @@ if [[ -f "$REPO_ROOT/docs/qr-encore.svg" ]]; then
     mkdir -p "$DEPLOY_DIR/docs" "$PREVIEW_DIR/docs"
     sync_file "$REPO_ROOT/docs/qr-encore.svg" "$DEPLOY_DIR/docs/qr-encore.svg"
     sync_file "$REPO_ROOT/docs/qr-encore.svg" "$PREVIEW_DIR/docs/qr-encore.svg"
+fi
+
+# Reference videos — streamer.html + encore-sheet.js reference these via
+# `../../reference/videos/{FF,GTA,roblox}.mp4` as the live preview background
+# AND the host half of the split-screen winner clip. PR #37 (Zihui)
+# committed them to the repo despite .gitignore *.mp4 (via git add -f) so
+# they ride along in checkouts, but deploy.sh wasn't syncing them — Vercel
+# 404'd, the live-video element silently fell back to the procedural Canvas,
+# and the host half of the recorded clip went black.
+# Ship the 3 small (~1-2MB each) demo videos to the bundle.
+if [[ -d "$REPO_ROOT/reference/videos" ]]; then
+    for target_dir in "$DEPLOY_DIR/reference/videos" "$PREVIEW_DIR/reference/videos"; do
+        mkdir -p "$target_dir"
+        for vid in "$REPO_ROOT/reference/videos/FF.mp4" \
+                   "$REPO_ROOT/reference/videos/GTA.mp4" \
+                   "$REPO_ROOT/reference/videos/roblox.mp4"; do
+            [[ -f "$vid" ]] || continue
+            sync_file "$vid" "$target_dir/$(basename "$vid")"
+        done
+    done
 fi
 
 # LIVE streamer host — now under prototype/live/ (was prototype/) as of v0.6.1
@@ -142,13 +171,24 @@ if [[ -f "$REPO_ROOT/prototype/live/streamer.html" ]]; then
             [[ -f "$html" ]] || continue
             sync_file "$html" "$target_dir/live/$(basename "$html")"
         done
-        for src in "$REPO_ROOT/prototype/live/css/"*.css "$REPO_ROOT/prototype/live/js/"*.js; do
+        for src in "$REPO_ROOT/prototype/live/css/"*.css \
+                   "$REPO_ROOT/prototype/live/js/"*.js \
+                   "$REPO_ROOT/prototype/live/assets/icons/"*.png \
+                   "$REPO_ROOT/prototype/live/assets/icons/"*.svg; do
             [[ -f "$src" ]] || continue
             rel="${src#$REPO_ROOT/prototype/live/}"
             dst="$target_dir/live/$rel"
             mkdir -p "$(dirname "$dst")"
             sync_file "$src" "$dst"
         done
+        # Real game-stream clips live under live/assets/streams/*.mp4. The css/js
+        # glob above doesn't recurse into assets/, so mirror that whole tree here
+        # (same reason as the kenney/ special-case). Missing dir = no-op (the
+        # streamer falls back to the procedural canvas).
+        if [[ -d "$REPO_ROOT/prototype/live/assets/streams" ]]; then
+            mkdir -p "$target_dir/live/assets/streams"
+            cp -R "$REPO_ROOT/prototype/live/assets/streams/." "$target_dir/live/assets/streams/" 2>/dev/null || true
+        fi
     done
 fi
 
