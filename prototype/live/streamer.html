@@ -71,6 +71,7 @@
            x5-playsinline x5-video-player-type="h5" x5-video-player-fullscreen="false"
            loop preload="metadata"
            style="display:none;"></video>
+           style="display:none;"></video>
     <!-- Canvas2D procedural scene for all 3 modes (D's #23 — supersedes the
          404'ing gitignored LIVE clip; this is the proper fix for that issue). -->
     <canvas id="live-canvas" style="display:none;"></canvas>
@@ -603,8 +604,9 @@
   // real footage (below) layers on top when available.
   const liveCanvas = document.getElementById('live-canvas');
   let liveCanvasRAF = null;
+
   const MODE_VIDEO = {
-    br: '../../reference/videos/FF.mp4',
+    br: '../../FF.2.mp4',
     gta: '../../reference/videos/GTA.mp4',
     roblox: '../../reference/videos/roblox.mp4',
   };
@@ -616,6 +618,50 @@
     dom.video.style.display = 'none';
     liveCanvas.style.display = '';
     if (!liveCanvasRAF) startLiveCanvasScene(currentMode);
+  }
+
+  function showVideo(url) {
+    if (liveCanvasRAF) { cancelAnimationFrame(liveCanvasRAF); liveCanvasRAF = null; }
+    liveCanvas.style.display = 'none';
+    dom.video.style.display = '';
+    dom.video.setAttribute('src', url);
+    dom.video.load();
+    // PR #43 CSS gives <video> default opacity:0 + transitions to opacity:1
+    // only when class "on" is present. Without this line the video plays
+    // invisibly underneath (display:block but opacity:0) — the bug PM saw.
+    const reveal = () => dom.video.classList.add('on');
+    dom.video.addEventListener('playing', reveal, { once: true });
+    const tryPlay = () => dom.video.play().then(reveal).catch(() => {
+      reveal();
+      const gestureRetry = () => {
+        dom.video.play().catch(() => { /* still blocked — user can tap again */ });
+        document.removeEventListener('touchend', gestureRetry, true);
+        document.removeEventListener('click', gestureRetry, true);
+      };
+      document.addEventListener('touchend', gestureRetry, { capture: true, once: true });
+      document.addEventListener('click', gestureRetry, { capture: true, once: true });
+    });
+    tryPlay();
+    if (typeof WeixinJSBridge !== 'undefined') {
+      try { WeixinJSBridge.invoke('getNetworkType', {}, () => tryPlay()); } catch (_) {}
+    } else {
+      document.addEventListener('WeixinJSBridgeReady', tryPlay, { once: true });
+    }
+  }
+
+  if (modeVid) {
+    fetch(modeVid, { method: 'HEAD' }).then(res => {
+      if (res.ok) {
+        if (liveCanvasRAF) { cancelAnimationFrame(liveCanvasRAF); liveCanvasRAF = null; }
+        showVideo(modeVid);
+      } else {
+        showCanvas();
+      }
+    }).catch(() => {
+      showCanvas();
+    });
+  } else {
+    showCanvas();
   }
 
   function showVideo(url) {
