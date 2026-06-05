@@ -57,8 +57,19 @@
        ──────────────────────────────────────────────────────────────────── -->
   <div id="stream-bg">
     <!-- Video tag for mode-specific live preview. If the local MP4 exists,
-         it is shown; otherwise the procedural Canvas fallback is used. -->
-    <video id="live-video" muted playsinline loop preload="none"
+         it is shown; otherwise the procedural Canvas fallback is used.
+
+         WeChat / QQ in-app browser compat:
+         - webkit-playsinline: older iOS WebKit (pre-iOS 10)
+         - x5-playsinline: Tencent X5 kernel (WeChat Android)
+         - x5-video-player-type="h5": force HTML5 player (NOT native player)
+         - x5-video-player-fullscreen="false": don't take over fullscreen
+         preload="metadata" (was "none") so the first frame is decoded even
+         before play() — when WeChat blocks autoplay, we still show a still
+         frame instead of a black box, then retry play() on first tap. -->
+    <video id="live-video" muted playsinline webkit-playsinline
+           x5-playsinline x5-video-player-type="h5" x5-video-player-fullscreen="false"
+           loop preload="metadata"
            style="display:none;"></video>
     <!-- Canvas2D procedural scene for all 3 modes (D's #23 — supersedes the
          404'ing gitignored LIVE clip; this is the proper fix for that issue). -->
@@ -616,11 +627,37 @@
     // PR #43 CSS gives <video> default opacity:0 + transitions to opacity:1
     // only when class "on" is present. Without this line the video plays
     // invisibly underneath (display:block but opacity:0) — the bug PM saw.
-    // Add .on after the play() promise resolves OR on `playing` event so
-    // the fade-in doesn't reveal a frozen first frame.
     const reveal = () => dom.video.classList.add('on');
     dom.video.addEventListener('playing', reveal, { once: true });
-    dom.video.play().then(reveal).catch(() => { /* user-gesture pending */ });
+    // Try immediate play. If browser allows (Chrome/Safari w/ muted+playsinline),
+    // the playing event fires → reveal. Otherwise fall back to WeChat path below.
+    const tryPlay = () => dom.video.play().then(reveal).catch(() => {
+      // WeChat / QQ in-app browser: autoplay blocked even with muted+playsinline.
+      // Strategy:
+      //   1. Reveal anyway so the first decoded frame (from preload=metadata)
+      //      is visible — a still frame is way better than a black box.
+      //   2. Bind a one-shot global gesture (any tap inside the iframe) that
+      //      retries play(); WeChat then permits it.
+      //   3. Hook WeixinJSBridgeReady — if the bridge fires before any tap,
+      //      autoplay is also unlocked at that point on iOS WeChat 8.0+.
+      reveal();
+      const gestureRetry = () => {
+        dom.video.play().catch(() => { /* still blocked — user can tap again */ });
+        document.removeEventListener('touchend', gestureRetry, true);
+        document.removeEventListener('click', gestureRetry, true);
+      };
+      document.addEventListener('touchend', gestureRetry, { capture: true, once: true });
+      document.addEventListener('click', gestureRetry, { capture: true, once: true });
+    });
+    tryPlay();
+    // WeChat-specific: WeixinJSBridge fires after the in-app browser inits,
+    // and at that point muted-autoplay is allowed even without user gesture.
+    // No-op outside WeChat. Listen as both event + 'ready' bridge call.
+    if (typeof WeixinJSBridge !== 'undefined') {
+      try { WeixinJSBridge.invoke('getNetworkType', {}, () => tryPlay()); } catch (_) {}
+    } else {
+      document.addEventListener('WeixinJSBridgeReady', tryPlay, { once: true });
+    }
   }
 
   if (modeVid) {
